@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>광주 동구 건축물대장 일괄조회</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --ink:#15263b;
+    --ink-2:#2c4760;
+    --ink-soft:#3a5573;
+    --paper:#f4f1ea;
+    --paper-2:#ece7db;
+    --card:#fffdf8;
+    --line:#d9d2c4;
+    --line-2:#c3baa8;
+    --accent:#1d5e8c;
+    --accent-deep:#123f60;
+    --ok:#2f7d5b;
+    --ok-bg:#e7f3ec;
+    --warn:#a4720e;
+    --warn-bg:#f8efd6;
+    --err:#a4322f;
+    --err-bg:#f6e3e1;
+    --mute:#7b8794;
+    --mute-bg:#eceae4;
+    --mono:"IBM Plex Mono",ui-monospace,monospace;
+    --sans:"IBM Plex Sans KR",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:var(--sans);
+    background:var(--paper);
+    background-image:radial-gradient(var(--paper-2) 1px,transparent 1px);
+    background-size:22px 22px;
+    color:var(--ink);
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+    padding:0 0 80px;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:0 24px}
+
+  /* Header */
+  header{
+    border-bottom:2px solid var(--ink);
+    padding:34px 0 22px;
+    margin-bottom:30px;
+    background:linear-gradient(180deg,rgba(255,253,248,.6),transparent);
+  }
+  .eyebrow{
+    font-family:var(--mono);
+    font-size:11px;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--accent);font-weight:600;margin-bottom:10px;
+    display:flex;align-items:center;gap:10px;
+  }
+  .eyebrow::before{content:"";width:26px;height:1.5px;background:var(--accent)}
+  h1{font-size:30px;font-weight:700;letter-spacing:-.02em;line-height:1.15}
+  h1 .light{font-weight:300;color:var(--ink-soft)}
+  .sub{margin-top:8px;color:var(--ink-soft);font-size:14px;max-width:640px}
+  .demo-badge{
+    display:inline-flex;align-items:center;gap:7px;
+    margin-top:14px;padding:6px 12px;border-radius:999px;
+    background:var(--warn-bg);border:1px solid #e6d29a;
+    color:var(--warn);font-size:12px;font-weight:500;
+  }
+  .demo-badge .dot{width:7px;height:7px;border-radius:50%;background:var(--warn);
+    box-shadow:0 0 0 0 rgba(164,114,14,.5);animation:pulse 2s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(164,114,14,.45)}70%{box-shadow:0 0 0 6px rgba(164,114,14,0)}100%{box-shadow:0 0 0 0 rgba(164,114,14,0)}}
+
+  /* Cards */
+  .card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:6px;
+    box-shadow:0 1px 0 rgba(0,0,0,.02),0 8px 24px -18px rgba(21,38,59,.35);
+  }
+  .card-head{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:16px 20px;border-bottom:1px solid var(--line);
+  }
+  .card-head h2{font-size:14px;font-weight:600;letter-spacing:.01em;display:flex;align-items:center;gap:9px}
+  .num-tag{
+    font-family:var(--mono);font-size:11px;font-weight:600;
+    width:20px;height:20px;display:grid;place-items:center;
+    background:var(--ink);color:var(--paper);border-radius:4px;
+  }
+  .card-body{padding:20px}
+
+  textarea{
+    width:100%;min-height:150px;resize:vertical;
+    font-family:var(--mono);font-size:13.5px;line-height:1.7;
+    padding:14px 16px;border:1px solid var(--line-2);border-radius:5px;
+    background:#fffefb;color:var(--ink);
+  }
+  textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(29,94,140,.12)}
+  .hint{margin-top:10px;font-size:12.5px;color:var(--mute);font-family:var(--mono)}
+  .hint b{color:var(--ink-soft);font-weight:500}
+
+  .controls{display:flex;align-items:center;gap:12px;margin-top:18px;flex-wrap:wrap}
+  button.run{
+    font-family:var(--sans);font-size:14px;font-weight:600;
+    padding:11px 26px;border:none;border-radius:5px;cursor:pointer;
+    background:var(--accent);color:#fff;letter-spacing:.01em;
+    display:inline-flex;align-items:center;gap:9px;
+    transition:background .15s,transform .05s;
+  }
+  button.run:hover{background:var(--accent-deep)}
+  button.run:active{transform:translateY(1px)}
+  button.run:disabled{background:var(--line-2);cursor:not-allowed}
+  button.ghost{
+    font-family:var(--sans);font-size:13px;font-weight:500;
+    padding:10px 16px;border:1px solid var(--line-2);border-radius:5px;
+    background:transparent;color:var(--ink-soft);cursor:pointer;
+  }
+  button.ghost:hover{background:var(--paper-2)}
+
+  /* Progress */
+  .progress-wrap{margin-top:18px;display:none}
+  .progress-wrap.on{display:block}
+  .progress-bar{height:6px;background:var(--paper-2);border-radius:3px;overflow:hidden}
+  .progress-fill{height:100%;width:0;background:linear-gradient(90deg,var(--accent),#2f86bf);transition:width .25s ease}
+  .progress-text{margin-top:8px;font-family:var(--mono);font-size:12px;color:var(--ink-soft)}
+
+  /* Stats */
+  .stats{display:flex;gap:10px;margin:26px 0 14px;flex-wrap:wrap}
+  .stat{
+    flex:1;min-width:120px;background:var(--card);border:1px solid var(--line);
+    border-radius:6px;padding:14px 16px;
+  }
+  .stat .k{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute)}
+  .stat .v{font-size:26px;font-weight:700;margin-top:4px;font-variant-numeric:tabular-nums}
+  .stat.ok .v{color:var(--ok)} .stat.warn .v{color:var(--warn)}
+  .stat.err .v{color:var(--err)} .stat.total .v{color:var(--ink)}
+
+  /* Legend + actions */
+  .result-head{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:12px}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--ink-soft)}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .chip{width:11px;height:11px;border-radius:3px;display:inline-block}
+  .chip.ok{background:var(--ok)} .chip.warn{background:var(--warn)}
+  .chip.err{background:var(--err)} .chip.mute{background:var(--mute)}
+  button.export{
+    font-family:var(--sans);font-size:13px;font-weight:600;
+    padding:9px 18px;border:1px solid var(--ok);border-radius:5px;cursor:pointer;
+    background:var(--ok-bg);color:var(--ok);display:inline-flex;align-items:center;gap:8px;
+  }
+  button.export:hover{background:#dcecdf}
+  button.export:disabled{opacity:.4;cursor:not-allowed}
+
+  /* Table */
+  .table-scroll{overflow-x:auto;border:1px solid var(--line);border-radius:6px;background:var(--card)}
+  table{border-collapse:collapse;width:100%;min-width:1080px;font-size:12.5px}
+  thead th{
+    background:var(--ink);color:var(--paper);font-weight:500;
+    padding:11px 12px;text-align:left;white-space:nowrap;
+    font-size:11.5px;letter-spacing:.02em;position:sticky;top:0;
+  }
+  tbody td{padding:10px 12px;border-bottom:1px solid var(--line);white-space:nowrap;vertical-align:middle}
+  tbody tr:last-child td{border-bottom:none}
+  tbody tr{animation:rowin .35s ease backwards}
+  @keyframes rowin{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+  td.num,th.num{font-family:var(--mono);text-align:right;font-variant-numeric:tabular-nums}
+  td.code{font-family:var(--mono);font-size:11.5px;color:var(--ink-soft)}
+  td.addr{font-weight:500;min-width:160px;white-space:normal}
+  tr.r-ok{} 
+  tr.r-warn{background:var(--warn-bg)}
+  tr.r-err{background:var(--err-bg)}
+  tr.r-mute{background:var(--mute-bg);color:var(--mute)}
+  /* 펼치기 */
+  tr.expandable{cursor:pointer}
+  tr.expandable:hover{background:#eef4f8}
+  .caret{display:inline-block;margin-right:7px;color:var(--accent);font-size:11px;transition:transform .18s;transform:rotate(0deg)}
+  tr.expandable.open .caret{transform:rotate(90deg)}
+  .cplx{font-size:10px;font-weight:600;color:var(--accent);background:#e4eef5;border:1px solid #c5dcea;padding:1px 6px;border-radius:4px;margin-left:6px;vertical-align:middle}
+  tr.sub-row td{background:#faf8f2;font-size:12px;border-bottom:1px solid var(--line)}
+  tr.sub-row.r-warn td{background:#fbf6e8}
+  .sub-dong{color:var(--ink-soft);font-weight:500}
+  .atch{font-size:10px;font-weight:600;color:var(--ok);background:var(--ok-bg);padding:1px 6px;border-radius:4px;margin-left:6px}
+  .atch.sub{color:var(--mute);background:#e6e4de}
+  .badge{
+    display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;
+    padding:3px 9px;border-radius:999px;font-family:var(--sans);
+  }
+  .badge.ok{background:var(--ok-bg);color:var(--ok)}
+  .badge.warn{background:#f8efd6;color:var(--warn)}
+  .badge.err{background:var(--err-bg);color:var(--err)}
+  .badge.mute{background:#e2e0da;color:var(--mute)}
+  .empty{padding:54px 20px;text-align:center;color:var(--mute);font-size:14px}
+  .empty .big{font-size:15px;color:var(--ink-soft);margin-bottom:6px;font-weight:500}
+
+  .footnote{margin-top:26px;font-size:12px;color:var(--mute);line-height:1.7;border-top:1px solid var(--line);padding-top:16px}
+  .footnote code{font-family:var(--mono);background:var(--paper-2);padding:1px 6px;border-radius:3px;color:var(--ink-soft)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">광주광역시 동구</div>
+    <h1>건축물대장 <span class="light">일괄조회</span></h1>
+  </header>
+
+  <!-- INPUT -->
+  <div class="card">
+    <div class="card-head">
+      <h2><span class="num-tag">1</span>주소 입력</h2>
+    </div>
+    <div class="card-body">
+      <textarea id="input" placeholder="한 줄에 하나씩 주소를 입력하세요&#10;예) 동명동 123-4&#10;예) 동구 제봉로 56"></textarea>
+      <div class="controls">
+        <button class="run" id="runBtn" onclick="runLookup()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+          일괄 조회
+        </button>
+        <button class="ghost" onclick="clearAll()">초기화</button>
+      </div>
+      <div class="progress-wrap" id="progWrap">
+        <div class="progress-bar"><div class="progress-fill" id="progFill"></div></div>
+        <div class="progress-text" id="progText">대기 중…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats" id="stats" style="display:none">
+    <div class="stat total"><div class="k">총 건수</div><div class="v" id="s-total">0</div></div>
+    <div class="stat ok"><div class="k">정상</div><div class="v" id="s-ok">0</div></div>
+    <div class="stat warn"><div class="k">확인 필요</div><div class="v" id="s-warn">0</div></div>
+    <div class="stat err"><div class="k">실패·제외</div><div class="v" id="s-err">0</div></div>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="resultArea" style="display:none">
+    <div class="result-head">
+      <div class="legend">
+        <span><i class="chip ok"></i>정상</span>
+        <span><i class="chip warn"></i>후보 모호 — 확인 필요</span>
+        <span><i class="chip err"></i>조회 실패</span>
+        <span><i class="chip mute"></i>동구 외 주소</span>
+      </div>
+      <button class="export" id="exportBtn" onclick="exportExcel()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg>
+        엑셀 다운로드
+      </button>
+    </div>
+    <div class="table-scroll">
+      <table id="resultTable">
+        <thead><tr>
+          <th class="num">#</th>
+          <th>입력주소</th>
+          <th>지번주소</th>
+          <th>도로명주소</th>
+          <th>건물명</th>
+          <th>대장종류</th>
+          <th>주용도</th>
+          <th>주구조</th>
+          <th class="num">대지(㎡)</th>
+          <th class="num">건축(㎡)</th>
+          <th class="num">연면적(㎡)</th>
+          <th class="num">건폐율</th>
+          <th class="num">용적률</th>
+          <th class="num">지상층</th>
+          <th class="num">지하층</th>
+          <th>사용승인일</th>
+          <th>상태</th>
+        </tr></thead>
+        <tbody id="resultBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="footnote">
+    조회 범위: 광주광역시 동구(<code>29110</code>) · 입력은 지번·도로명 모두 가능 · 동구 외 주소는 자동 제외됩니다.
+    데이터 출처: 행정안전부 도로명주소 검색 API + 국토교통부 건축HUB(표제부·기본개요).
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   1. 변환 로직 — Vercel에 그대로 이식되는 실제 코드
+   ============================================================ */
+
+// juso 검색 API 응답 1건 → 건축HUB 파라미터
+// (정부 문서상 lnbrSlno 가 '읍면동일련번호'로 잘못 표기돼 있으나
+//  실제 응답에서는 지번부번 값이 들어옴. OCR상 InbrMnnm=lnbrMnnm)
+function jusoToBldParams(j){
+  const admCd = String(j.admCd || "").padEnd(10,"0");
+  return {
+    sigunguCd: admCd.substring(0,5),                 // 시군구코드 (동구=29110)
+    bjdongCd:  admCd.substring(5,10),                // 법정동코드
+    platGbCd:  j.mtYn === "1" ? "1" : "0",           // 0:대지 / 1:산
+    bun:       String(j.lnbrMnnm ?? 0).padStart(4,"0"),
+    ji:        String(j.lnbrSlno ?? 0).padStart(4,"0"),
+  };
+}
+
+// 동구 전용 필터
+function isDonggu(p){ return p.sigunguCd === "29110"; }
+
+// 표제부(동 1개) + 기본개요 병합
+function mergeBuilding(title, basis){
+  return {
+    dongNm:       title.dongNm || "",                 // 동명칭 (단지일 때만)
+    atchGb:       title.mainAtchGbCdNm || "주건축물", // 주/부속 구분
+    bldNm:        title.bldNm || "-",
+    platPlc:      title.platPlc || "-",
+    newPlatPlc:   title.newPlatPlc || "-",
+    regstrKind:   basis.regstrKindCdNm || "-",   // 기본개요: 대장종류
+    mainPurps:    title.mainPurpsCdNm || "-",
+    strct:        title.strctCdNm || "-",
+    platArea:     title.platArea ?? null,
+    archArea:     title.archArea ?? null,
+    totArea:      title.totArea ?? null,
+    bcRat:        title.bcRat ?? null,
+    vlRat:        title.vlRat ?? null,
+    grndFlr:      title.grndFlrCnt ?? null,
+    ugrndFlr:     title.ugrndFlrCnt ?? null,
+    useAprDay:    title.useAprDay || "-",
+  };
+}
+
+/* ============================================================
+   2. 데이터 레이어 — Vercel 프록시 호출
+   ============================================================ */
+
+// juso 검색 API (프록시 /api/juso 경유 → CORS 없음)
+async function searchJuso(keyword){
+  const r = await fetch(`/api/juso?keyword=${encodeURIComponent(keyword)}`);
+  if(!r.ok) return [];
+  const data = await r.json();
+  return Array.isArray(data.juso) ? data.juso : [];
+}
+
+// 건축HUB 표제부 + 기본개요 (프록시 /api/building 경유)
+async function fetchBuilding(p){
+  const qs = new URLSearchParams({
+    sigunguCd:p.sigunguCd, bjdongCd:p.bjdongCd,
+    platGbCd:p.platGbCd, bun:p.bun, ji:p.ji
+  }).toString();
+  const r = await fetch(`/api/building?${qs}`);
+  if(!r.ok) return null;
+  const data = await r.json();
+  if(!data || data.error || !data.titles || !data.titles.length) return null;
+  return data; // { titles:[...], basis:{...} }
+}
+
+const delay = ms => new Promise(r=>setTimeout(r,ms));
+
+/* ============================================================
+   3. 메인 처리 — 일괄 루프
+   ============================================================ */
+let RESULTS = [];
+
+async function runLookup(){
+  const lines = document.getElementById("input").value
+    .split("\n").map(s=>s.trim()).filter(Boolean);
+  if(!lines.length){ alert("주소를 한 줄 이상 입력하세요."); return; }
+
+  RESULTS = [];
+  const runBtn = document.getElementById("runBtn");
+  runBtn.disabled = true;
+  document.getElementById("progWrap").classList.add("on");
+  document.getElementById("resultArea").style.display="none";
+  document.getElementById("stats").style.display="none";
+
+  for(let i=0;i<lines.length;i++){
+    updateProgress(i, lines.length, lines[i]);
+    RESULTS.push(await processOne(lines[i]));
+  }
+  updateProgress(lines.length, lines.length, "완료");
+
+  setTimeout(()=>{
+    document.getElementById("progWrap").classList.remove("on");
+    runBtn.disabled = false;
+    renderResults();
+  }, 350);
+}
+
+async function processOne(raw){
+  // 1) 주소 → juso 검색
+  const cands = await searchJuso(raw);
+  if(!cands.length) return {input:raw, status:"err", reason:"주소를 찾을 수 없음"};
+
+  // 2) 변환
+  const top = cands[0];
+  const params = jusoToBldParams(top);
+
+  // 3) 동구 필터
+  if(!isDonggu(params)) return {input:raw, status:"mute", reason:"동구 외 주소", params, jibun:top.jibunAddr};
+
+  // 4) 건축HUB 조회
+  const bld = await fetchBuilding(params);
+  if(!bld || !bld.titles || !bld.titles.length)
+    return {input:raw, status:"err", reason:"건축물대장 없음", params, jibun:top.jibunAddr};
+
+  // 동마다 병합 → buildings 배열 (펼치기·엑셀용 전체 보관)
+  const buildings = bld.titles.map(t => mergeBuilding(t, bld.basis));
+  // 대표 1행: 첫 주건축물 (없으면 첫 동)
+  const rep = buildings.find(b => b.atchGb === "주건축물") || buildings[0];
+
+  // 후보가 2건 이상이면 확인 필요로 표시
+  const status = cands.length > 1 ? "warn" : "ok";
+  return {
+    input:raw, status,
+    reason: status==="warn" ? `후보 ${cands.length}건 중 최상위 선택` : "",
+    params, data:rep, buildings
+  };
+}
+
+/* ============================================================
+   4. 렌더링 + 엑셀
+   ============================================================ */
+function updateProgress(done,total,label){
+  const pct = Math.round(done/total*100);
+  document.getElementById("progFill").style.width = pct+"%";
+  document.getElementById("progText").textContent =
+    `${done}/${total} 처리 중  ·  ${label}`;
+}
+
+function renderResults(){
+  const body = document.getElementById("resultBody");
+  body.innerHTML = "";
+  let ok=0,warn=0,err=0;
+
+  RESULTS.forEach((r,idx)=>{
+    const tr = document.createElement("tr");
+    tr.className = "r-"+r.status;
+    tr.style.animationDelay = (idx*0.03)+"s";
+    const p = r.params;
+
+    if(r.status==="ok" || r.status==="warn"){
+      if(r.status==="ok") ok++; else warn++;
+      const d = r.data;
+      const n = r.buildings.length;
+      const expandable = n > 1;
+      // 건물명 표시: 단지면 "101동 외 N개동"
+      const repName = expandable
+        ? `${esc(d.dongNm || d.bldNm)} 외 ${n-1}개동`
+        : esc(d.bldNm);
+      if(expandable){ tr.classList.add("expandable"); tr.dataset.idx = idx; }
+      tr.innerHTML = `
+        <td class="num">${idx+1}</td>
+        <td class="addr">${expandable?'<span class="caret">▸</span>':''}${esc(r.input)}</td>
+        <td class="code">${esc(d.platPlc)}</td>
+        <td class="code">${esc(d.newPlatPlc)}</td>
+        <td>${repName}${expandable?' <span class="cplx">단지</span>':''}</td>
+        <td>${esc(d.regstrKind)}</td>
+        <td>${esc(d.mainPurps)}</td>
+        <td>${esc(d.strct)}</td>
+        <td class="num">${fmt(d.platArea)}</td>
+        <td class="num">${fmt(d.archArea)}</td>
+        <td class="num">${fmt(d.totArea)}</td>
+        <td class="num">${d.bcRat!=null?d.bcRat+"%":"-"}</td>
+        <td class="num">${d.vlRat!=null?d.vlRat+"%":"-"}</td>
+        <td class="num">${d.grndFlr ?? "-"}</td>
+        <td class="num">${d.ugrndFlr ?? "-"}</td>
+        <td class="code">${esc(d.useAprDay)}</td>
+        <td>${r.status==="ok"
+            ? '<span class="badge ok">정상</span>'
+            : '<span class="badge warn">확인 필요</span>'}</td>`;
+      body.appendChild(tr);
+
+      // 펼치기용 하위 행 (동별) — 기본 숨김
+      if(expandable){
+        r.buildings.forEach(b=>{
+          const sub = document.createElement("tr");
+          sub.className = "sub-row r-"+r.status;
+          sub.dataset.parent = idx;
+          sub.style.display = "none";
+          sub.innerHTML = `
+            <td class="num"></td>
+            <td class="addr sub-dong">└ ${esc(b.dongNm||"-")} <span class="atch ${b.atchGb==='부속건축물'?'sub':''}">${esc(b.atchGb)}</span></td>
+            <td class="code">${esc(b.platPlc)}</td>
+            <td class="code">${esc(b.newPlatPlc)}</td>
+            <td>${esc(b.bldNm)}</td>
+            <td>${esc(b.regstrKind)}</td>
+            <td>${esc(b.mainPurps)}</td>
+            <td>${esc(b.strct)}</td>
+            <td class="num">${fmt(b.platArea)}</td>
+            <td class="num">${fmt(b.archArea)}</td>
+            <td class="num">${fmt(b.totArea)}</td>
+            <td class="num">${b.bcRat!=null?b.bcRat+"%":"-"}</td>
+            <td class="num">${b.vlRat!=null?b.vlRat+"%":"-"}</td>
+            <td class="num">${b.grndFlr ?? "-"}</td>
+            <td class="num">${b.ugrndFlr ?? "-"}</td>
+            <td class="code">${esc(b.useAprDay)}</td>
+            <td></td>`;
+          body.appendChild(sub);
+        });
+      }
+    } else {
+      err++;
+      tr.innerHTML = `
+        <td class="num">${idx+1}</td>
+        <td class="addr">${esc(r.input)}</td>
+        <td class="code" colspan="14">${esc(r.jibun||"")} ${esc(r.reason)}</td>
+        <td>${r.status==="mute"
+            ? '<span class="badge mute">동구 외</span>'
+            : '<span class="badge err">실패</span>'}</td>`;
+      body.appendChild(tr);
+    }
+  });
+
+  document.getElementById("s-total").textContent = RESULTS.length;
+  document.getElementById("s-ok").textContent = ok;
+  document.getElementById("s-warn").textContent = warn;
+  document.getElementById("s-err").textContent = err;
+  document.getElementById("stats").style.display="flex";
+  document.getElementById("resultArea").style.display="block";
+  document.getElementById("exportBtn").disabled = (ok+warn)===0;
+}
+
+function exportExcel(){
+  // 화면은 대표 1행이지만, 엑셀은 모든 동을 한 행씩 빠짐없이 내보냄
+  const rows = [];
+  RESULTS.forEach((r,i)=>{
+    const p=r.params||{};
+    if(r.buildings && r.buildings.length){
+      r.buildings.forEach((d,k)=>{
+        rows.push({
+          "순번":i+1,"동번호": r.buildings.length>1 ? k+1 : "",
+          "입력주소":r.input,"동명":d.dongNm||"","주부속":d.atchGb||"",
+          "지번주소":d.platPlc||"","도로명주소":d.newPlatPlc||"",
+          "건물명":d.bldNm||"","대장종류":d.regstrKind||"",
+          "주용도":d.mainPurps||"","주구조":d.strct||"",
+          "대지면적":d.platArea??"","건축면적":d.archArea??"","연면적":d.totArea??"",
+          "건폐율(%)":d.bcRat??"","용적률(%)":d.vlRat??"",
+          "지상층수":d.grndFlr??"","지하층수":d.ugrndFlr??"","사용승인일":d.useAprDay||"",
+          "시군구코드":p.sigunguCd||"","법정동코드":p.bjdongCd||"","번":p.bun||"","지":p.ji||"","산여부":p.platGbCd||"",
+          "상태":({ok:"정상",warn:"확인필요"})[r.status]||"","비고":r.reason||""
+        });
+      });
+    } else {
+      rows.push({
+        "순번":i+1,"동번호":"","입력주소":r.input,"동명":"","주부속":"",
+        "지번주소":r.jibun||"","도로명주소":"","건물명":"","대장종류":"",
+        "주용도":"","주구조":"","대지면적":"","건축면적":"","연면적":"",
+        "건폐율(%)":"","용적률(%)":"","지상층수":"","지하층수":"","사용승인일":"",
+        "시군구코드":p.sigunguCd||"","법정동코드":p.bjdongCd||"","번":p.bun||"","지":p.ji||"","산여부":p.platGbCd||"",
+        "상태":({err:"실패",mute:"동구외"})[r.status]||"","비고":r.reason||""
+      });
+    }
+  });
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "건축물대장");
+  const today = new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb, `건축물대장_일괄조회_${today}.xlsx`);
+}
+
+// 대표 행 클릭 → 하위 동 행 펼치기/접기
+document.getElementById("resultBody").addEventListener("click", e=>{
+  const row = e.target.closest("tr.expandable");
+  if(!row) return;
+  const idx = row.dataset.idx;
+  const open = row.classList.toggle("open");
+  document.querySelectorAll(`tr.sub-row[data-parent="${idx}"]`)
+    .forEach(s => s.style.display = open ? "table-row" : "none");
+});
+
+/* ---- helpers ---- */
+function fmt(n){ return n==null ? "-" : Number(n).toLocaleString("ko-KR"); }
+function esc(s){ return String(s??"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
+function clearAll(){
+  document.getElementById("input").value="";
+  document.getElementById("resultArea").style.display="none";
+  document.getElementById("stats").style.display="none";
+  RESULTS=[];
+}
+</script>
+</body>
+</html>
