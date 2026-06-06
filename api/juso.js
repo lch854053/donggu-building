@@ -12,7 +12,7 @@ export default async function handler(req, res) {
   if (!confmKey) return res.status(500).json({ juso: [], error: "JUSO_CONFM_KEY 환경변수 미설정" });
 
   const url =
-    `${JUSO_URL}?confmKey=${encodeURIComponent(confmKey)}` +
+    `${JUSO_URL}?confmKey=${confmKey}` +
     `&currentPage=1&countPerPage=5&resultType=json` +
     `&keyword=${encodeURIComponent(keyword)}`;
 
