@@ -1,6 +1,6 @@
 // /api/building?sigunguCd=29110&bjdongCd=10100&platGbCd=0&bun=0123&ji=0004
-// 국토교통부 건축HUB 표제부(getBrTitleInfo) + 기본개요(getBrBasisOulnInfo) 프록시
-// 응답: { titles: [표제부 동 배열], basis: {기본개요} }  /  실패 시 { titles: [] }
+// 국토교통부 건축HUB 표제부(getBrTitleInfo) 프록시
+// 응답: { titles: [표제부 동 배열] }  /  대장 없음 시 { titles: [] }  /  오류 시 { titles: [], error }
 
 const HUB = "http://apis.data.go.kr/1613000/BldRgstHubService";
 
@@ -62,15 +62,13 @@ export default async function handler(req, res) {
   };
 
   try {
-    const [titles, basisArr] = await Promise.all([
-      callHub("getBrTitleInfo", params, serviceKey),
-      callHub("getBrBasisOulnInfo", params, serviceKey),
-    ]);
+    // 표제부만 호출 (기본개요/대장종류는 미사용 → 호출 1회 절약)
+    const titles = await callHub("getBrTitleInfo", params, serviceKey);
 
     if (!titles.length) return res.status(200).json({ titles: [] });
 
     res.setHeader("Cache-Control", "s-maxage=86400, stale-while-revalidate");
-    return res.status(200).json({ titles, basis: basisArr[0] || {} });
+    return res.status(200).json({ titles });
   } catch (e) {
     return res.status(200).json({ titles: [], error: String(e?.message || e) });
   }
