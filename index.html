@@ -336,7 +336,7 @@ function mergeBuilding(title){
   return {
     dongNm:       title.dongNm || "",                 // 동명칭 (단지일 때만)
     atchGb:       title.mainAtchGbCdNm || "주건축물", // 주/부속 구분
-    bldNm:        title.bldNm || "-",
+    bldNm:        stripParens(title.bldNm) || "-",
     platPlc:      stripParens(title.platPlc) || "-",
     newPlatPlc:   stripParens(title.newPlatPlc) || "-",
     mainPurps:    title.mainPurpsCdNm || "-",
