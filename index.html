@@ -259,7 +259,6 @@
           <th>지번주소</th>
           <th>도로명주소</th>
           <th>건물명</th>
-          <th>대장종류</th>
           <th>주용도</th>
           <th>주구조</th>
           <th class="num">대지(㎡)</th>
@@ -279,7 +278,7 @@
 
   <div class="footnote">
     조회 범위: 광주광역시 동구(<code>29110</code>) · 입력은 지번·도로명 모두 가능 · 동구 외 주소는 자동 제외됩니다.
-    데이터 출처: 행정안전부 도로명주소 검색 API + 국토교통부 건축HUB(표제부·기본개요).
+    데이터 출처: 행정안전부 도로명주소 검색 API + 국토교통부 건축HUB(표제부).
   </div>
 </div>
 
@@ -315,15 +314,31 @@ function extractDong(raw){
 // 동명칭에서 숫자만 뽑아 비교 (대장상 "제108동","108","가동" 등 표기차 흡수)
 function dongDigits(s){ const m = String(s||"").match(/\d+/); return m ? m[0] : null; }
 
-// 표제부(동 1개) + 기본개요 병합
-function mergeBuilding(title, basis){
+// juso 검색용 주소 정제: 상세주소(층/호/상호) 제거하고 건물번호까지만 남김
+// 예) "무등로307번길 4, 1층 신부헤어샵" → "무등로307번길 4"
+//     "계림동 521-58번지, 2층"        → "계림동 521-58"
+function cleanForSearch(raw){
+  let s = raw.trim();
+  s = s.split(",")[0];                 // 쉼표 뒤(상세주소) 제거
+  s = s.replace(/번지/g, "");          // '번지' 제거
+  s = s.replace(/\s+/g, " ").trim();
+  return s;
+}
+
+// 표시용 주소 정제: 괄호 묶음 전부 제거 (인명·법정동 모두 제거)
+// 예) "계림동 521-58 (윤지애)" → "계림동 521-58",  "무등로384번길 15 (계림동)" → "무등로384번길 15"
+function stripParens(s){
+  return String(s||"").replace(/\s*\([^)]*\)\s*$/,"").replace(/\s*\([^)]*\)/g,"").trim();
+}
+
+// 표제부(동 1개) 정보 정리
+function mergeBuilding(title){
   return {
     dongNm:       title.dongNm || "",                 // 동명칭 (단지일 때만)
     atchGb:       title.mainAtchGbCdNm || "주건축물", // 주/부속 구분
     bldNm:        title.bldNm || "-",
-    platPlc:      title.platPlc || "-",
-    newPlatPlc:   title.newPlatPlc || "-",
-    regstrKind:   basis.regstrKindCdNm || "-",   // 기본개요: 대장종류
+    platPlc:      stripParens(title.platPlc) || "-",
+    newPlatPlc:   stripParens(title.newPlatPlc) || "-",
     mainPurps:    title.mainPurpsCdNm || "-",
     strct:        title.strctCdNm || "-",
     platArea:     title.platArea ?? null,
@@ -349,8 +364,8 @@ async function searchJuso(keyword){
   return Array.isArray(data.juso) ? data.juso : [];
 }
 
-// 건축HUB 표제부 + 기본개요 (프록시 /api/building 경유)
-// 반환: { titles:[...], basis:{...}, error:null }  — titles 빈배열 + error 없음 = 대장 없음
+// 건축HUB 표제부 (프록시 /api/building 경유)
+// 반환: { titles:[...], error:null }  — titles 빈배열 + error 없음 = 대장 없음
 async function fetchBuilding(p){
   const qs = new URLSearchParams({
     sigunguCd:p.sigunguCd, bjdongCd:p.bjdongCd,
@@ -358,15 +373,14 @@ async function fetchBuilding(p){
   }).toString();
   try{
     const r = await fetch(`/api/building?${qs}`);
-    if(!r.ok) return {titles:[], basis:{}, error:`서버 오류 ${r.status}`};
+    if(!r.ok) return {titles:[], error:`서버 오류 ${r.status}`};
     const data = await r.json();
     return {
       titles: Array.isArray(data.titles) ? data.titles : [],
-      basis:  data.basis || {},
       error:  data.error || null
     };
   }catch(e){
-    return {titles:[], basis:{}, error:String(e?.message||e)};
+    return {titles:[], error:String(e?.message||e)};
   }
 }
 
@@ -420,8 +434,12 @@ async function runLookup(){
 }
 
 async function processOne(raw){
+  // 0) 입력에서 동 번호 먼저 추출(원문 기준), 검색어는 상세주소 제거 후 사용
+  const wantDong = extractDong(raw);
+  const query = cleanForSearch(raw);
+
   // 1) 주소 → juso 검색
-  const cands = await searchJuso(raw);
+  const cands = await searchJuso(query);
   if(!cands.length) return {input:raw, status:"err", reason:"주소를 찾을 수 없음"};
 
   // 2) 변환
@@ -431,18 +449,17 @@ async function processOne(raw){
   // 3) 동구 필터
   if(!isDonggu(params)) return {input:raw, status:"mute", reason:"동구 외 주소", params, jibun:top.jibunAddr};
 
-  // 4) 건축HUB 조회
+  // 4) 건축HUB 조회 (표제부)
   const bld = await fetchBuilding(params);
   if(bld.error)
     return {input:raw, status:"err", reason:"조회 오류 ("+bld.error+")", params, jibun:top.jibunAddr};
   if(!bld.titles.length)
     return {input:raw, status:"none", reason:"건축물대장 없음 (나대지·미등록 등)", params, jibun:top.jibunAddr};
 
-  // 동마다 병합 → buildings 배열 (펼치기·엑셀용 전체 보관)
-  let buildings = bld.titles.map(t => mergeBuilding(t, bld.basis));
+  // 동마다 정리 → buildings 배열 (펼치기·엑셀용 전체 보관)
+  let buildings = bld.titles.map(t => mergeBuilding(t));
 
   // 입력에 '동' 번호가 있으면 해당 동만 필터 (숫자 기준)
-  const wantDong = extractDong(raw);
   let dongFiltered = false;
   if(wantDong){
     const hit = buildings.filter(b => dongDigits(b.dongNm) === wantDong);
@@ -499,7 +516,6 @@ function renderResults(){
         <td class="code">${esc(d.platPlc)}</td>
         <td class="code">${esc(d.newPlatPlc)}</td>
         <td>${repName}${expandable?' <span class="cplx">단지</span>':''}</td>
-        <td>${esc(d.regstrKind)}</td>
         <td>${esc(d.mainPurps)}</td>
         <td>${esc(d.strct)}</td>
         <td class="num">${fmt(d.platArea)}</td>
@@ -528,7 +544,6 @@ function renderResults(){
             <td class="code">${esc(b.platPlc)}</td>
             <td class="code">${esc(b.newPlatPlc)}</td>
             <td>${esc(b.bldNm)}</td>
-            <td>${esc(b.regstrKind)}</td>
             <td>${esc(b.mainPurps)}</td>
             <td>${esc(b.strct)}</td>
             <td class="num">${fmt(b.platArea)}</td>
@@ -554,7 +569,7 @@ function renderResults(){
       tr.innerHTML = `
         <td class="num">${idx+1}</td>
         <td class="addr">${esc(r.input)}</td>
-        <td class="code" colspan="14">${esc(r.jibun||"")} ${esc(r.reason)}</td>
+        <td class="code" colspan="13">${esc(r.jibun||"")} ${esc(r.reason)}</td>
         <td>${badge}</td>`;
       body.appendChild(tr);
     }
@@ -581,7 +596,7 @@ function exportExcel(){
           "순번":i+1,"동번호": r.buildings.length>1 ? k+1 : "",
           "입력주소":r.input,"동명":d.dongNm||"","주부속":d.atchGb||"",
           "지번주소":d.platPlc||"","도로명주소":d.newPlatPlc||"",
-          "건물명":d.bldNm||"","대장종류":d.regstrKind||"",
+          "건물명":d.bldNm||"",
           "주용도":d.mainPurps||"","주구조":d.strct||"",
           "대지면적":d.platArea??"","건축면적":d.archArea??"","연면적":d.totArea??"",
           "건폐율(%)":d.bcRat??"","용적률(%)":d.vlRat??"",
@@ -593,7 +608,7 @@ function exportExcel(){
     } else {
       rows.push({
         "순번":i+1,"동번호":"","입력주소":r.input,"동명":"","주부속":"",
-        "지번주소":r.jibun||"","도로명주소":"","건물명":"","대장종류":"",
+        "지번주소":r.jibun||"","도로명주소":"","건물명":"",
         "주용도":"","주구조":"","대지면적":"","건축면적":"","연면적":"",
         "건폐율(%)":"","용적률(%)":"","지상층수":"","지하층수":"","사용승인일":"",
         "시군구코드":p.sigunguCd||"","법정동코드":p.bjdongCd||"","번":p.bun||"","지":p.ji||"","산여부":p.platGbCd||"",
