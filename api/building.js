@@ -1,6 +1,7 @@
-// /api/building?sigunguCd=29110&bjdongCd=10100&platGbCd=0&bun=0123&ji=0004
+// /api/building?sigunguCd=29110&bjdongCd=10100&platGbCd=0&bun=0123&ji=0004   (단건: 번지 지정)
+// /api/building?sigunguCd=29110&bjdongCd=10100&numOfRows=1000&pageNo=1       (동단위: 번지 생략)
 // 국토교통부 건축HUB 표제부(getBrTitleInfo) 프록시
-// 응답: { titles: [표제부 동 배열] }  /  대장 없음 시 { titles: [] }  /  오류 시 { titles: [], error }
+// 응답: { titles: [...], totalCount }  /  오류 시 { titles: [], error }
 
 const HUB = "http://apis.data.go.kr/1613000/BldRgstHubService";
 
@@ -11,41 +12,38 @@ function toArray(x) {
 }
 
 async function callHub(endpoint, params, serviceKey) {
-  const qs = new URLSearchParams({
-    sigunguCd: params.sigunguCd,
-    bjdongCd: params.bjdongCd,
-    platGbCd: params.platGbCd,
-    bun: params.bun,
-    ji: params.ji,
-    numOfRows: "100",
-    pageNo: "1",
-    _type: "json",
-  }).toString();
+  // 값이 있는 파라미터만 전송 (bun/ji 생략 시 법정동 전체 조회)
+  const q = { sigunguCd: params.sigunguCd, bjdongCd: params.bjdongCd, _type: "json" };
+  if (params.platGbCd) q.platGbCd = params.platGbCd;
+  if (params.bun)      q.bun = params.bun;
+  if (params.ji)       q.ji = params.ji;
+  q.numOfRows = params.numOfRows || "100";
+  q.pageNo    = params.pageNo || "1";
 
+  const qs = new URLSearchParams(q).toString();
   // serviceKey 는 '디코딩(Decoding) 키'를 환경변수에 넣고 여기서 1회만 인코딩
   const url = `${HUB}/${endpoint}?serviceKey=${encodeURIComponent(serviceKey)}&${qs}`;
 
   const r = await fetch(url);
   const text = await r.text();
 
-  // 오류 시 XML(에러)로 오는 경우가 있어 방어적으로 파싱
   let data;
   try { data = JSON.parse(text); }
   catch { throw new Error(`${endpoint} 응답 파싱 실패: ${text.slice(0, 120)}`); }
 
   const header = data?.response?.header || {};
   const code = header.resultCode;
-  // 00: 정상, 03: 데이터 없음 → 빈 배열로 처리
   if (code && code !== "00" && code !== "03") {
     throw new Error(`${endpoint}: ${header.resultMsg || code}`);
   }
-  return toArray(data?.response?.body?.items?.item);
+  const body = data?.response?.body || {};
+  return { titles: toArray(body?.items?.item), totalCount: Number(body?.totalCount || 0) };
 }
 
 export default async function handler(req, res) {
-  const { sigunguCd, bjdongCd, platGbCd, bun, ji } = req.query;
-  if (!sigunguCd || !bjdongCd || !bun) {
-    return res.status(400).json({ titles: [], error: "필수 파라미터(sigunguCd/bjdongCd/bun) 누락" });
+  const { sigunguCd, bjdongCd, platGbCd, bun, ji, numOfRows, pageNo } = req.query;
+  if (!sigunguCd || !bjdongCd) {
+    return res.status(400).json({ titles: [], error: "필수 파라미터(sigunguCd/bjdongCd) 누락" });
   }
 
   const serviceKey = process.env.BLD_SERVICE_KEY;
@@ -56,19 +54,17 @@ export default async function handler(req, res) {
   const params = {
     sigunguCd,
     bjdongCd,
-    platGbCd: platGbCd || "0",
-    bun: String(bun).padStart(4, "0"),
-    ji: String(ji || "0").padStart(4, "0"),
+    platGbCd: platGbCd || "",
+    bun: bun ? String(bun).padStart(4, "0") : "",
+    ji:  bun ? String(ji || "0").padStart(4, "0") : "",  // 번지 지정 시에만 ji 적용
+    numOfRows: numOfRows || "100",
+    pageNo: pageNo || "1",
   };
 
   try {
-    // 표제부만 호출 (기본개요/대장종류는 미사용 → 호출 1회 절약)
-    const titles = await callHub("getBrTitleInfo", params, serviceKey);
-
-    if (!titles.length) return res.status(200).json({ titles: [] });
-
+    const { titles, totalCount } = await callHub("getBrTitleInfo", params, serviceKey);
     res.setHeader("Cache-Control", "s-maxage=86400, stale-while-revalidate");
-    return res.status(200).json({ titles });
+    return res.status(200).json({ titles, totalCount });
   } catch (e) {
     return res.status(200).json({ titles: [], error: String(e?.message || e) });
   }
