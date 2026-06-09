@@ -370,7 +370,7 @@
             <div class="dual" id="dual-flr" data-min="0" data-max="30" data-step="1" data-unit="층"></div>
           </div>
           <div class="field">
-            <label>연면적(㎡) <span class="warn-tag">일부 빈값</span> <span class="readout" id="ro-area">전체</span></label>
+            <label>연면적(㎡) <span class="warn-tag">일부 누락이 있을 수 있음</span> <span class="readout" id="ro-area">전체</span></label>
             <div class="dual" id="dual-area" data-min="0" data-max="3000" data-step="10" data-unit="㎡"></div>
           </div>
         </div>
@@ -410,6 +410,7 @@
             <th>지번주소</th>
             <th>도로명주소</th>
             <th>건물명</th>
+            <th>동</th>
             <th>주용도</th>
             <th>주구조</th>
             <th class="num">연면적(㎡)</th>
@@ -959,11 +960,15 @@ async function runConditionSearch(){
 
   page1.forEach(r=> all.push(...r.titles));
 
-  // 2) 1000건 초과 법정동의 잔여 페이지
+  // 2) 잔여 페이지 — 실제 페이지 크기를 감지해서 계산
+  //    (건축HUB는 numOfRows 요청과 무관하게 100건/페이지로 응답)
   const more = [];
   page1.forEach(r=>{
-    const pages = Math.ceil(r.totalCount/1000);
-    for(let pg=2; pg<=pages; pg++) more.push({bjd:r.bjd, pg});
+    const pageSize = Math.max(r.titles.length, 1);   // 실측 페이지 크기
+    if(r.totalCount > pageSize){
+      const pages = Math.ceil(r.totalCount / pageSize);
+      for(let pg=2; pg<=pages; pg++) more.push({bjd:r.bjd, pg});
+    }
   });
   if(more.length){
     cprog=0; cUpdate(0, more.length);
@@ -1020,6 +1025,7 @@ function renderConditionResults(scanned, dongLabel){
       <td class="code">${esc(d.platPlc)}</td>
       <td class="code">${esc(d.newPlatPlc)}</td>
       <td>${esc(d.bldNm)}</td>
+      <td>${esc(d.dongNm||"-")}</td>
       <td>${esc(d.mainPurps)}</td>
       <td>${esc(d.strct)}</td>
       <td class="num">${fmt(d.totArea)}</td>
@@ -1039,7 +1045,7 @@ function renderConditionResults(scanned, dongLabel){
 function exportConditionExcel(){
   const rows = CRESULTS.map((d,i)=>({
     "순번":i+1,"행정동":d.hdong||"","지번주소":d.platPlc||"","도로명주소":d.newPlatPlc||"",
-    "건물명":d.bldNm||"","주용도":d.mainPurps||"","주구조":d.strct||"",
+    "건물명":d.bldNm||"","동":d.dongNm||"","주용도":d.mainPurps||"","주구조":d.strct||"",
     "연면적":d.totArea??"","지상층수":d.grndFlr??"","지하층수":d.ugrndFlr??"","사용승인일":d.useAprDay||""
   }));
   const ws = XLSX.utils.json_to_sheet(rows);
