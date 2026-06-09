@@ -77,6 +77,8 @@
   /* Condition form */
   .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:16px}
   .field label{display:block;font-size:12px;font-weight:600;color:var(--ink-soft);margin-bottom:6px}
+  .lbl-row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .field-note{margin-top:5px}
   .field input,.field select{
     width:100%;font-family:var(--sans);font-size:13.5px;
     padding:9px 11px;border:1px solid var(--line-2);border-radius:5px;background:#fffefb;color:var(--ink);
@@ -366,12 +368,17 @@
             <div class="ms" id="ms-strct"></div>
           </div>
           <div class="field">
-            <label>지상층수 <span class="readout" id="ro-flr">전체</span></label>
+            <label class="lbl-row"><span>지상층수</span><span class="readout" id="ro-flr">전체</span></label>
             <div class="dual" id="dual-flr" data-min="0" data-max="30" data-step="1" data-unit="층"></div>
           </div>
           <div class="field">
-            <label>연면적(㎡) <span class="warn-tag">일부 누락이 있을 수 있음</span> <span class="readout" id="ro-area">전체</span></label>
+            <label class="lbl-row"><span>지하층수</span><span class="readout" id="ro-uflr">전체</span></label>
+            <div class="dual" id="dual-uflr" data-min="0" data-max="7" data-step="1" data-unit="층"></div>
+          </div>
+          <div class="field">
+            <label class="lbl-row"><span>연면적(㎡)</span><span class="readout" id="ro-area">전체</span></label>
             <div class="dual" id="dual-area" data-min="0" data-max="3000" data-step="10" data-unit="㎡"></div>
+            <div class="field-note"><span class="warn-tag">일부 누락이 있을 수 있음</span></div>
           </div>
         </div>
         <div class="controls">
@@ -425,8 +432,7 @@
   </div><!-- /tab-cond -->
 
   <div class="footnote">
-    조회 범위: 광주광역시 동구(<code>29110</code>) · 입력은 지번·도로명 모두 가능 · 동구 외 주소는 자동 제외됩니다.
-    데이터 출처: 행정안전부 도로명주소 검색 API + 국토교통부 건축HUB(표제부).
+    조회 범위: 광주광역시 동구 · 입력은 지번·도로명 모두 가능 · 동구 외 주소는 자동 제외. 데이터: 행정안전부 도로명주소 API + 국토교통부 건축물대장 API
   </div>
 </div>
 
@@ -879,6 +885,7 @@ function initFilters(){
   MS.purps = buildMultiselect("ms-purps", PURPS_OPTS);
   MS.strct = buildMultiselect("ms-strct", STRCT_OPTS);
   DUAL.flr  = buildDual("dual-flr","ro-flr");
+  DUAL.uflr = buildDual("dual-uflr","ro-uflr");
   DUAL.area = buildDual("dual-area","ro-area");
   document.addEventListener("click",()=>document.querySelectorAll(".ms-panel.open").forEach(p=>p.classList.remove("open")));
   FILTERS_READY = true;
@@ -938,8 +945,10 @@ async function runConditionSearch(){
   const selPurps = MS.purps.selected();   // [] = 전체
   const selStrct = MS.strct.selected();
   const [flrMin, flrMaxRaw] = DUAL.flr.values();
+  const [uflrMin, uflrMaxRaw] = DUAL.uflr.values();
   const [areaMin, areaMaxRaw] = DUAL.area.values();
   const flrMax  = DUAL.flr.atCap()  ? Infinity : flrMaxRaw;    // 상한이 끝이면 무제한
+  const uflrMax = DUAL.uflr.atCap() ? Infinity : uflrMaxRaw;
   const areaMax = DUAL.area.atCap() ? Infinity : areaMaxRaw;
 
   const cRunBtn = document.getElementById("cRunBtn");
@@ -990,6 +999,8 @@ async function runConditionSearch(){
     if(!matchCat(t.strctCdNm,     selStrct, STRCT_OPTS)) continue;   // 구조
     const g = Number(t.grndFlrCnt||0);
     if(g < flrMin || g > flrMax) continue;                   // 지상층수
+    const u = Number(t.ugrndFlrCnt||0);
+    if(u < uflrMin || u > uflrMax) continue;                 // 지하층수
     const area = Number(t.totArea||0);
     if(area < areaMin || area > areaMax) continue;           // 연면적
     const m = mergeBuilding(t);
@@ -1056,7 +1067,7 @@ function exportConditionExcel(){
 }
 
 function clearCond(){
-  if(FILTERS_READY){ MS.purps.reset(); MS.strct.reset(); DUAL.flr.reset(); DUAL.area.reset(); }
+  if(FILTERS_READY){ MS.purps.reset(); MS.strct.reset(); DUAL.flr.reset(); DUAL.uflr.reset(); DUAL.area.reset(); }
   document.getElementById("cResultArea").style.display="none";
   document.getElementById("cStats").style.display="none";
   CRESULTS=[];
