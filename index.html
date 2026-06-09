@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <style>
   :root{
     --ink:#15263b;
@@ -660,8 +660,8 @@ function renderResults(){
       const expandable = n > 1;
       // 대표 표시명: 건물명 우선(예: 그랜드센트럴). 단지면 "건물명 외 N개동"
       const repName = expandable
-        ? `${esc(d.bldNm && d.bldNm!=="-" ? d.bldNm : d.dongNm)} 외 ${n-1}개동`
-        : esc(d.bldNm);
+        ? `${esc((d.bldNm && d.bldNm!=="-") ? d.bldNm : (d.dongNm || ""))} 외 ${n-1}개동`
+        : esc(d.bldNm || "");
       if(expandable){ tr.classList.add("expandable"); tr.dataset.idx = idx; }
       tr.innerHTML = `
         <td class="num">${idx+1}</td>
@@ -788,7 +788,7 @@ document.getElementById("resultBody").addEventListener("click", e=>{
 
 /* ---- helpers ---- */
 function fmt(n){ return n==null ? "-" : Number(n).toLocaleString("ko-KR"); }
-function esc(s){ return String(s??"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
+function esc(s){ return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 function clearAll(){
   document.getElementById("input").value="";
   document.getElementById("resultArea").style.display="none";
@@ -834,7 +834,7 @@ function buildMultiselect(hostId, opts){
   host.innerHTML =
     `<button type="button" class="ms-btn">전체</button>
      <div class="ms-panel">${all.map(o=>
-       `<label class="ms-opt"><input type="checkbox" value="${o}">${o}</label>`).join("")}</div>`;
+       `<label class="ms-opt"><input type="checkbox" value="${esc(o)}">${esc(o)}</label>`).join("")}</div>`;
   const btn = host.querySelector(".ms-btn");
   const panel = host.querySelector(".ms-panel");
   btn.addEventListener("click",e=>{ e.stopPropagation(); document.querySelectorAll(".ms-panel.open").forEach(p=>{if(p!==panel)p.classList.remove("open");}); panel.classList.toggle("open"); });
@@ -971,10 +971,11 @@ async function runConditionSearch(){
   // 2) 잔여 페이지 — 실제 페이지 크기를 감지해서 계산
   //    (건축HUB는 numOfRows 요청과 무관하게 100건/페이지로 응답)
   const more = [];
+  const MAX_PAGES = 50;  // 법정동당 최대 페이지 (건당 ~100건 → 최대 5000건/동)
   page1.forEach(r=>{
     const pageSize = Math.max(r.titles.length, 1);   // 실측 페이지 크기
     if(r.totalCount > pageSize){
-      const pages = Math.ceil(r.totalCount / pageSize);
+      const pages = Math.min(Math.ceil(r.totalCount / pageSize), MAX_PAGES);
       for(let pg=2; pg<=pages; pg++) more.push({bjd:r.bjd, pg});
     }
   });
