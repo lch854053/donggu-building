@@ -64,6 +64,28 @@
   h1{font-size:30px;font-weight:700;letter-spacing:-.02em;line-height:1.15}
   h1 .light{font-weight:300;color:var(--ink-soft)}
 
+  /* Tabs */
+  .tabs{display:flex;gap:4px;margin-bottom:22px;border-bottom:1px solid var(--line)}
+  .tab{
+    font-family:var(--sans);font-size:14px;font-weight:600;cursor:pointer;
+    padding:11px 22px;border:none;background:none;color:var(--mute);
+    border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .15s;
+  }
+  .tab:hover{color:var(--ink-soft)}
+  .tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+
+  /* Condition form */
+  .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:16px}
+  .field label{display:block;font-size:12px;font-weight:600;color:var(--ink-soft);margin-bottom:6px}
+  .field input,.field select{
+    width:100%;font-family:var(--sans);font-size:13.5px;
+    padding:9px 11px;border:1px solid var(--line-2);border-radius:5px;background:#fffefb;color:var(--ink);
+  }
+  .field input:focus,.field select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(29,94,140,.12)}
+  .field .range{display:flex;align-items:center;gap:8px;color:var(--mute);font-size:13px}
+  .warn-tag{font-size:10px;font-weight:600;color:var(--warn);background:var(--warn-bg);padding:1px 6px;border-radius:4px;margin-left:4px}
+  .cond-hint{font-size:12.5px;color:var(--mute);font-family:var(--mono)}
+
   /* Cards */
   .card{
     background:var(--card);
@@ -206,6 +228,14 @@
     </div>
   </header>
 
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab active" id="tab-btn-bulk" onclick="switchTab('bulk')">일괄조회</button>
+    <button class="tab" id="tab-btn-cond" onclick="switchTab('cond')">조건검색</button>
+  </div>
+
+  <!-- ===== TAB 1: 일괄조회 ===== -->
+  <div id="tab-bulk">
   <!-- INPUT -->
   <div class="card">
     <div class="card-head">
@@ -275,6 +305,89 @@
       </table>
     </div>
   </div>
+  </div><!-- /tab-bulk -->
+
+  <!-- ===== TAB 2: 조건검색 ===== -->
+  <div id="tab-cond" style="display:none">
+    <div class="card">
+      <div class="card-head"><h2><span class="num-tag">1</span>검색 조건</h2></div>
+      <div class="card-body">
+        <div class="form-grid">
+          <div class="field">
+            <label>행정동</label>
+            <select id="c-hdong"><option value="">불러오는 중…</option></select>
+          </div>
+          <div class="field">
+            <label>용도 포함</label>
+            <input type="text" id="c-purps" placeholder="예) 근린생활, 단독주택">
+          </div>
+          <div class="field">
+            <label>구조 포함</label>
+            <input type="text" id="c-strct" placeholder="예) 철근콘크리트, 목구조">
+          </div>
+          <div class="field">
+            <label>지상층수</label>
+            <div class="range">
+              <input type="number" id="c-flr-min" min="0" placeholder="이상"> ~
+              <input type="number" id="c-flr-max" min="0" placeholder="이하">
+            </div>
+          </div>
+          <div class="field">
+            <label>연면적(㎡) <span class="warn-tag">일부 빈값</span></label>
+            <div class="range">
+              <input type="number" id="c-area-min" min="0" placeholder="이상"> ~
+              <input type="number" id="c-area-max" min="0" placeholder="이하">
+            </div>
+          </div>
+        </div>
+        <div class="controls">
+          <button class="run" id="cRunBtn" onclick="runConditionSearch()">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+            검색
+          </button>
+          <button class="ghost" onclick="clearCond()">초기화</button>
+          <span class="cond-hint" id="cHint"></span>
+        </div>
+        <div class="progress-wrap" id="cProgWrap">
+          <div class="progress-bar"><div class="progress-fill" id="cProgFill"></div></div>
+          <div class="progress-text" id="cProgText">대기 중…</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="stats" id="cStats" style="display:none">
+      <div class="stat total"><div class="k">조건 일치</div><div class="v" id="cs-match">0</div></div>
+      <div class="stat none"><div class="k">검색 대상 건물</div><div class="v" id="cs-scan">0</div></div>
+    </div>
+
+    <div id="cResultArea" style="display:none">
+      <div class="result-head">
+        <div class="legend"><span>행정동 <b id="cResDong"></b> · 조건에 맞는 건물</span></div>
+        <button class="export" id="cExportBtn" onclick="exportConditionExcel()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg>
+          엑셀 다운로드
+        </button>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead><tr>
+            <th class="num">#</th>
+            <th>행정동</th>
+            <th>지번주소</th>
+            <th>도로명주소</th>
+            <th>건물명</th>
+            <th>주용도</th>
+            <th>주구조</th>
+            <th class="num">연면적(㎡)</th>
+            <th class="num">지상층</th>
+            <th class="num">지하층</th>
+            <th>사용승인일</th>
+          </tr></thead>
+          <tbody id="cResultBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div><!-- /tab-cond -->
 
   <div class="footnote">
     조회 범위: 광주광역시 동구(<code>29110</code>) · 입력은 지번·도로명 모두 가능 · 동구 외 주소는 자동 제외됩니다.
@@ -641,6 +754,188 @@ function clearAll(){
   document.getElementById("resultArea").style.display="none";
   document.getElementById("stats").style.display="none";
   RESULTS=[];
+}
+
+/* ============================================================
+   조건검색 (행정동 기준)
+   ============================================================ */
+const SIGUNGU = "29110";
+let HJ = null;            // 행정동 매핑 { jibun2hdong, hdong2bjd }
+let ALL_BJD = [];         // 동구 전체 법정동코드(전체 검색용)
+let CRESULTS = [];        // 조건검색 결과 (표시용 building 객체 배열)
+
+function switchTab(which){
+  const bulk = which==="bulk";
+  document.getElementById("tab-bulk").style.display = bulk?"block":"none";
+  document.getElementById("tab-cond").style.display = bulk?"none":"block";
+  document.getElementById("tab-btn-bulk").classList.toggle("active", bulk);
+  document.getElementById("tab-btn-cond").classList.toggle("active", !bulk);
+  if(!bulk) loadHaengjeong();
+}
+
+// 행정동 매핑 1회 로드 + 드롭다운 구성
+async function loadHaengjeong(){
+  if(HJ) return;
+  const sel = document.getElementById("c-hdong");
+  try{
+    const r = await fetch("/haengjeong.json");
+    HJ = await r.json();
+  }catch(e){
+    sel.innerHTML = '<option value="">매핑 로드 실패</option>';
+    return;
+  }
+  // 전체 법정동코드 집합
+  const set = new Set();
+  Object.values(HJ.hdong2bjd).forEach(arr => arr.forEach(c => set.add(c)));
+  ALL_BJD = [...set];
+  // 드롭다운: 전체 + 13개 행정동 (이름 정렬, 숫자 자연스럽게)
+  const names = Object.keys(HJ.hdong2bjd).sort((a,b)=>a.localeCompare(b,"ko"));
+  sel.innerHTML = '<option value="__ALL__">전체 (동구 전역)</option>'
+    + names.map(n=>`<option value="${n}">${n}</option>`).join("");
+}
+
+// 동 단위 페이지 조회 (프록시)
+async function fetchDongPage(bjd, pageNo){
+  const qs = new URLSearchParams({sigunguCd:SIGUNGU, bjdongCd:bjd, numOfRows:"1000", pageNo:String(pageNo)}).toString();
+  const r = await fetch(`/api/building?${qs}`);
+  if(!r.ok) return {titles:[], totalCount:0};
+  const d = await r.json();
+  return {titles:Array.isArray(d.titles)?d.titles:[], totalCount:Number(d.totalCount||0)};
+}
+
+async function runConditionSearch(){
+  if(!HJ){ await loadHaengjeong(); }
+  const hdong = document.getElementById("c-hdong").value;
+  if(!hdong){ alert("행정동을 선택하세요."); return; }
+  const isAll = hdong==="__ALL__";
+
+  // 조회할 법정동 목록
+  const bjdList = isAll ? ALL_BJD : (HJ.hdong2bjd[hdong]||[]);
+  if(!bjdList.length){ alert("해당 행정동의 법정동 정보가 없습니다."); return; }
+
+  // 조건값
+  const fPurps = document.getElementById("c-purps").value.trim();
+  const fStrct = document.getElementById("c-strct").value.trim();
+  const flrMin = parseInt(document.getElementById("c-flr-min").value,10);
+  const flrMax = parseInt(document.getElementById("c-flr-max").value,10);
+  const areaMin = parseFloat(document.getElementById("c-area-min").value);
+  const areaMax = parseFloat(document.getElementById("c-area-max").value);
+
+  const cRunBtn = document.getElementById("cRunBtn");
+  cRunBtn.disabled = true;
+  document.getElementById("cProgWrap").classList.add("on");
+  document.getElementById("cResultArea").style.display="none";
+  document.getElementById("cStats").style.display="none";
+  if(isAll) document.getElementById("cHint").textContent = "전체 검색은 시간이 걸립니다…";
+
+  // 1) 각 법정동 1페이지 먼저 (totalCount 파악)
+  let cprog=0; const cstep=()=>cUpdate(++cprog, bjdList.length /*근사*/);
+  cUpdate(0, bjdList.length);
+  const all = [];                       // 수집된 raw title 들
+  const page1 = await runPool(bjdList, async (bjd)=>{
+    const {titles,totalCount} = await fetchDongPage(bjd,1);
+    return {bjd, titles, totalCount};
+  }, 5, ()=>cstep());
+
+  page1.forEach(r=> all.push(...r.titles));
+
+  // 2) 1000건 초과 법정동의 잔여 페이지
+  const more = [];
+  page1.forEach(r=>{
+    const pages = Math.ceil(r.totalCount/1000);
+    for(let pg=2; pg<=pages; pg++) more.push({bjd:r.bjd, pg});
+  });
+  if(more.length){
+    cprog=0; cUpdate(0, more.length);
+    const rest = await runPool(more, async (t)=>{
+      const {titles} = await fetchDongPage(t.bjd, t.pg);
+      return titles;
+    }, 5, (d,t)=>cUpdate(d,t));
+    rest.forEach(ts=> all.push(...ts));
+  }
+
+  // 3) 행정동 필터 + 조건 필터
+  const scanned = all.length;
+  const matched = [];
+  for(const t of all){
+    const key = `${t.bjdongCd}${(t.bun||"").padStart(4,"0")}${(t.ji||"").padStart(4,"0")}`;
+    const bHdong = HJ.jibun2hdong[key] || "";
+    if(!isAll && bHdong !== hdong) continue;           // 행정동 필터
+    if(fPurps && !(t.mainPurpsCdNm||"").includes(fPurps)) continue;
+    if(fStrct && !(t.strctCdNm||"").includes(fStrct)) continue;
+    const g = Number(t.grndFlrCnt||0);
+    if(!isNaN(flrMin) && g < flrMin) continue;
+    if(!isNaN(flrMax) && g > flrMax) continue;
+    const area = Number(t.totArea||0);
+    if(!isNaN(areaMin) && area < areaMin) continue;
+    if(!isNaN(areaMax) && area > areaMax) continue;
+    const m = mergeBuilding(t);
+    m.hdong = bHdong;
+    matched.push(m);
+  }
+
+  CRESULTS = matched;
+  setTimeout(()=>{
+    document.getElementById("cProgWrap").classList.remove("on");
+    document.getElementById("cHint").textContent = "";
+    cRunBtn.disabled = false;
+    renderConditionResults(scanned, isAll?"전체":hdong);
+  }, 300);
+}
+
+function cUpdate(done,total){
+  const pct = total ? Math.round(done/total*100) : 0;
+  document.getElementById("cProgFill").style.width = pct+"%";
+  document.getElementById("cProgText").textContent =
+    done>=total ? `조회 완료 · 필터링 중…` : `건물대장 조회 중 … ${done}/${total}`;
+}
+
+function renderConditionResults(scanned, dongLabel){
+  const body = document.getElementById("cResultBody");
+  body.innerHTML = "";
+  CRESULTS.forEach((d,idx)=>{
+    const tr = document.createElement("tr");
+    tr.style.animationDelay = (Math.min(idx,40)*0.01)+"s";
+    tr.innerHTML = `
+      <td class="num">${idx+1}</td>
+      <td>${esc(d.hdong)}</td>
+      <td class="code">${esc(d.platPlc)}</td>
+      <td class="code">${esc(d.newPlatPlc)}</td>
+      <td>${esc(d.bldNm)}</td>
+      <td>${esc(d.mainPurps)}</td>
+      <td>${esc(d.strct)}</td>
+      <td class="num">${fmt(d.totArea)}</td>
+      <td class="num">${d.grndFlr ?? "-"}</td>
+      <td class="num">${d.ugrndFlr ?? "-"}</td>
+      <td class="code">${esc(d.useAprDay)}</td>`;
+    body.appendChild(tr);
+  });
+  document.getElementById("cs-match").textContent = CRESULTS.length.toLocaleString("ko-KR");
+  document.getElementById("cs-scan").textContent = scanned.toLocaleString("ko-KR");
+  document.getElementById("cResDong").textContent = dongLabel;
+  document.getElementById("cStats").style.display="flex";
+  document.getElementById("cResultArea").style.display="block";
+  document.getElementById("cExportBtn").disabled = CRESULTS.length===0;
+}
+
+function exportConditionExcel(){
+  const rows = CRESULTS.map((d,i)=>({
+    "순번":i+1,"행정동":d.hdong||"","지번주소":d.platPlc||"","도로명주소":d.newPlatPlc||"",
+    "건물명":d.bldNm||"","주용도":d.mainPurps||"","주구조":d.strct||"",
+    "연면적":d.totArea??"","지상층수":d.grndFlr??"","지하층수":d.ugrndFlr??"","사용승인일":d.useAprDay||""
+  }));
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "조건검색");
+  const today = new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb, `건축물_조건검색_${today}.xlsx`);
+}
+
+function clearCond(){
+  ["c-purps","c-strct","c-flr-min","c-flr-max","c-area-min","c-area-max"].forEach(id=>document.getElementById(id).value="");
+  document.getElementById("cResultArea").style.display="none";
+  document.getElementById("cStats").style.display="none";
+  CRESULTS=[];
 }
 </script>
 </body>
