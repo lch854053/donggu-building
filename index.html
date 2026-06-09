@@ -85,6 +85,46 @@
   .field .range{display:flex;align-items:center;gap:8px;color:var(--mute);font-size:13px}
   .warn-tag{font-size:10px;font-weight:600;color:var(--warn);background:var(--warn-bg);padding:1px 6px;border-radius:4px;margin-left:4px}
   .cond-hint{font-size:12.5px;color:var(--mute);font-family:var(--mono)}
+  .sel-hint{font-size:10px;font-weight:400;color:var(--mute)}
+  .readout{font-size:11px;font-weight:600;color:var(--accent);font-family:var(--mono);margin-left:4px}
+
+  /* Multiselect */
+  .ms{position:relative}
+  .ms-btn{
+    width:100%;text-align:left;cursor:pointer;font-family:var(--sans);font-size:13.5px;
+    padding:9px 30px 9px 11px;border:1px solid var(--line-2);border-radius:5px;background:#fffefb;color:var(--ink);
+    position:relative;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .ms-btn::after{content:"▾";position:absolute;right:11px;color:var(--mute);font-size:11px}
+  .ms-btn:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(29,94,140,.12)}
+  .ms-btn.has{color:var(--ink);font-weight:500}
+  .ms-panel{
+    position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:30;
+    background:var(--card);border:1px solid var(--line-2);border-radius:6px;
+    box-shadow:0 10px 30px -10px rgba(21,38,59,.4);padding:6px;max-height:240px;overflow:auto;display:none;
+  }
+  .ms-panel.open{display:block}
+  .ms-opt{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:4px;cursor:pointer;font-size:13px}
+  .ms-opt:hover{background:var(--paper-2)}
+  .ms-opt input{width:15px;height:15px;accent-color:var(--accent);cursor:pointer}
+
+  /* Dual range slider */
+  .dual{position:relative;height:34px;padding-top:14px}
+  .dual .track{position:absolute;top:20px;left:0;right:0;height:4px;background:var(--paper-2);border-radius:2px}
+  .dual .fill{position:absolute;top:20px;height:4px;background:var(--accent);border-radius:2px}
+  .dual input[type=range]{
+    position:absolute;top:12px;left:0;width:100%;margin:0;background:none;pointer-events:none;
+    -webkit-appearance:none;appearance:none;height:20px;
+  }
+  .dual input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;appearance:none;pointer-events:auto;cursor:pointer;
+    width:18px;height:18px;border-radius:50%;background:#fff;border:2px solid var(--accent);
+    box-shadow:0 1px 4px rgba(0,0,0,.2);
+  }
+  .dual input[type=range]::-moz-range-thumb{
+    pointer-events:auto;cursor:pointer;width:18px;height:18px;border-radius:50%;
+    background:#fff;border:2px solid var(--accent);box-shadow:0 1px 4px rgba(0,0,0,.2);
+  }
 
   /* Cards */
   .card{
@@ -318,26 +358,20 @@
             <select id="c-hdong"><option value="">불러오는 중…</option></select>
           </div>
           <div class="field">
-            <label>용도 포함</label>
-            <input type="text" id="c-purps" placeholder="예) 근린생활, 단독주택">
+            <label>용도 <span class="sel-hint">(미선택 = 전체)</span></label>
+            <div class="ms" id="ms-purps"></div>
           </div>
           <div class="field">
-            <label>구조 포함</label>
-            <input type="text" id="c-strct" placeholder="예) 철근콘크리트, 목구조">
+            <label>구조 <span class="sel-hint">(미선택 = 전체)</span></label>
+            <div class="ms" id="ms-strct"></div>
           </div>
           <div class="field">
-            <label>지상층수</label>
-            <div class="range">
-              <input type="number" id="c-flr-min" min="0" placeholder="이상"> ~
-              <input type="number" id="c-flr-max" min="0" placeholder="이하">
-            </div>
+            <label>지상층수 <span class="readout" id="ro-flr">전체</span></label>
+            <div class="dual" id="dual-flr" data-min="0" data-max="30" data-step="1" data-unit="층"></div>
           </div>
           <div class="field">
-            <label>연면적(㎡) <span class="warn-tag">일부 빈값</span></label>
-            <div class="range">
-              <input type="number" id="c-area-min" min="0" placeholder="이상"> ~
-              <input type="number" id="c-area-max" min="0" placeholder="이하">
-            </div>
+            <label>연면적(㎡) <span class="warn-tag">일부 빈값</span> <span class="readout" id="ro-area">전체</span></label>
+            <div class="dual" id="dual-area" data-min="0" data-max="3000" data-step="10" data-unit="㎡"></div>
           </div>
         </div>
         <div class="controls">
@@ -764,6 +798,91 @@ let HJ = null;            // 행정동 매핑 { jibun2hdong, hdong2bjd }
 let ALL_BJD = [];         // 동구 전체 법정동코드(전체 검색용)
 let CRESULTS = [];        // 조건검색 결과 (표시용 building 객체 배열)
 
+/* ---- 용도/구조 분류 (흔한 것 노출 + 기타) ---- */
+const PURPS_OPTS = ["단독주택","공동주택","제1종근린생활시설","제2종근린생활시설","판매시설","업무시설","교육연구시설","의료시설","숙박시설","문화및집회시설","운동시설","공장","창고시설","자동차관련시설"];
+const STRCT_OPTS = ["철근콘크리트구조","철골구조","철골철근콘크리트구조","벽돌구조","블록구조","목구조","경량철골구조"];
+
+const MS = {};    // 다중선택 컴포넌트
+const DUAL = {};  // 슬라이더 컴포넌트
+let FILTERS_READY = false;
+
+// 공백 제거
+function norm(s){ return String(s||"").replace(/\s/g,""); }
+// 카테고리 매칭: sel 비었으면 전체통과. '기타'=알려진 어디에도 안 걸리는 값
+function matchCat(value, sel, opts){
+  if(!sel.length) return true;
+  const v = norm(value);
+  const known = opts.map(norm);
+  for(const s of sel){
+    if(s==="기타"){ if(!known.some(k=>v.includes(k))) return true; }
+    else if(v.includes(norm(s))) return true;
+  }
+  return false;
+}
+
+// 다중선택 드롭다운
+function buildMultiselect(hostId, opts){
+  const host = document.getElementById(hostId);
+  const all = [...opts, "기타"];
+  const sel = new Set();
+  host.innerHTML =
+    `<button type="button" class="ms-btn">전체</button>
+     <div class="ms-panel">${all.map(o=>
+       `<label class="ms-opt"><input type="checkbox" value="${o}">${o}</label>`).join("")}</div>`;
+  const btn = host.querySelector(".ms-btn");
+  const panel = host.querySelector(".ms-panel");
+  btn.addEventListener("click",e=>{ e.stopPropagation(); document.querySelectorAll(".ms-panel.open").forEach(p=>{if(p!==panel)p.classList.remove("open");}); panel.classList.toggle("open"); });
+  panel.addEventListener("click",e=>e.stopPropagation());
+  panel.querySelectorAll("input").forEach(chk=>{
+    chk.addEventListener("change",()=>{
+      chk.checked ? sel.add(chk.value) : sel.delete(chk.value);
+      const n = sel.size;
+      btn.textContent = n===0 ? "전체" : (n===1 ? [...sel][0] : `${n}개 선택`);
+      btn.classList.toggle("has", n>0);
+    });
+  });
+  return {
+    selected:()=>[...sel],
+    reset:()=>{ sel.clear(); panel.querySelectorAll("input").forEach(c=>c.checked=false); btn.textContent="전체"; btn.classList.remove("has"); }
+  };
+}
+
+// 듀얼 슬라이더
+function buildDual(hostId, readoutId){
+  const host = document.getElementById(hostId);
+  const min=+host.dataset.min, max=+host.dataset.max, step=+host.dataset.step, unit=host.dataset.unit;
+  const ro = document.getElementById(readoutId);
+  host.innerHTML =
+    `<div class="track"></div><div class="fill"></div>
+     <input type="range" class="lo" min="${min}" max="${max}" step="${step}" value="${min}">
+     <input type="range" class="hi" min="${min}" max="${max}" step="${step}" value="${max}">`;
+  const lo=host.querySelector(".lo"), hi=host.querySelector(".hi"), fill=host.querySelector(".fill");
+  const fmtv=v=>Number(v).toLocaleString("ko-KR");
+  function update(){
+    let a=+lo.value,b=+hi.value; if(a>b)[a,b]=[b,a];
+    const pa=(a-min)/(max-min)*100, pb=(b-min)/(max-min)*100;
+    fill.style.left=pa+"%"; fill.style.width=(pb-pa)+"%";
+    const hiTxt=(b>=max)?`${fmtv(max)}${unit}+`:`${fmtv(b)}${unit}`;
+    ro.textContent=(a<=min&&b>=max)?"전체":`${fmtv(a)}${unit} ~ ${hiTxt}`;
+  }
+  lo.addEventListener("input",update); hi.addEventListener("input",update); update();
+  return {
+    values:()=>{ let a=+lo.value,b=+hi.value; return a<=b?[a,b]:[b,a]; },
+    atCap:()=>Math.max(+lo.value,+hi.value)>=max,
+    reset:()=>{ lo.value=min; hi.value=max; update(); }
+  };
+}
+
+function initFilters(){
+  if(FILTERS_READY) return;
+  MS.purps = buildMultiselect("ms-purps", PURPS_OPTS);
+  MS.strct = buildMultiselect("ms-strct", STRCT_OPTS);
+  DUAL.flr  = buildDual("dual-flr","ro-flr");
+  DUAL.area = buildDual("dual-area","ro-area");
+  document.addEventListener("click",()=>document.querySelectorAll(".ms-panel.open").forEach(p=>p.classList.remove("open")));
+  FILTERS_READY = true;
+}
+
 function switchTab(which){
   const bulk = which==="bulk";
   document.getElementById("tab-bulk").style.display = bulk?"block":"none";
@@ -776,6 +895,7 @@ function switchTab(which){
 // 행정동 매핑 1회 로드 + 드롭다운 구성
 async function loadHaengjeong(){
   if(HJ) return;
+  initFilters();   // 용도/구조/슬라이더 1회 구성
   const sel = document.getElementById("c-hdong");
   try{
     const r = await fetch("/haengjeong.json");
@@ -813,13 +933,13 @@ async function runConditionSearch(){
   const bjdList = isAll ? ALL_BJD : (HJ.hdong2bjd[hdong]||[]);
   if(!bjdList.length){ alert("해당 행정동의 법정동 정보가 없습니다."); return; }
 
-  // 조건값
-  const fPurps = document.getElementById("c-purps").value.trim();
-  const fStrct = document.getElementById("c-strct").value.trim();
-  const flrMin = parseInt(document.getElementById("c-flr-min").value,10);
-  const flrMax = parseInt(document.getElementById("c-flr-max").value,10);
-  const areaMin = parseFloat(document.getElementById("c-area-min").value);
-  const areaMax = parseFloat(document.getElementById("c-area-max").value);
+  // 조건값 (다중선택 + 슬라이더)
+  const selPurps = MS.purps.selected();   // [] = 전체
+  const selStrct = MS.strct.selected();
+  const [flrMin, flrMaxRaw] = DUAL.flr.values();
+  const [areaMin, areaMaxRaw] = DUAL.area.values();
+  const flrMax  = DUAL.flr.atCap()  ? Infinity : flrMaxRaw;    // 상한이 끝이면 무제한
+  const areaMax = DUAL.area.atCap() ? Infinity : areaMaxRaw;
 
   const cRunBtn = document.getElementById("cRunBtn");
   cRunBtn.disabled = true;
@@ -860,15 +980,13 @@ async function runConditionSearch(){
   for(const t of all){
     const key = `${t.bjdongCd}${(t.bun||"").padStart(4,"0")}${(t.ji||"").padStart(4,"0")}`;
     const bHdong = HJ.jibun2hdong[key] || "";
-    if(!isAll && bHdong !== hdong) continue;           // 행정동 필터
-    if(fPurps && !(t.mainPurpsCdNm||"").includes(fPurps)) continue;
-    if(fStrct && !(t.strctCdNm||"").includes(fStrct)) continue;
+    if(!isAll && bHdong !== hdong) continue;                 // 행정동 필터
+    if(!matchCat(t.mainPurpsCdNm, selPurps, PURPS_OPTS)) continue;   // 용도
+    if(!matchCat(t.strctCdNm,     selStrct, STRCT_OPTS)) continue;   // 구조
     const g = Number(t.grndFlrCnt||0);
-    if(!isNaN(flrMin) && g < flrMin) continue;
-    if(!isNaN(flrMax) && g > flrMax) continue;
+    if(g < flrMin || g > flrMax) continue;                   // 지상층수
     const area = Number(t.totArea||0);
-    if(!isNaN(areaMin) && area < areaMin) continue;
-    if(!isNaN(areaMax) && area > areaMax) continue;
+    if(area < areaMin || area > areaMax) continue;           // 연면적
     const m = mergeBuilding(t);
     m.hdong = bHdong;
     matched.push(m);
@@ -932,7 +1050,7 @@ function exportConditionExcel(){
 }
 
 function clearCond(){
-  ["c-purps","c-strct","c-flr-min","c-flr-max","c-area-min","c-area-max"].forEach(id=>document.getElementById(id).value="");
+  if(FILTERS_READY){ MS.purps.reset(); MS.strct.reset(); DUAL.flr.reset(); DUAL.area.reset(); }
   document.getElementById("cResultArea").style.display="none";
   document.getElementById("cStats").style.display="none";
   CRESULTS=[];
