@@ -23,13 +23,17 @@ export default async function handler(req, res) {
 
     // juso 오류코드: 0 = 정상
     if (common.errorCode && common.errorCode !== "0") {
+      // 외부 API 오류 메시지는 그대로 노출해도 무방 (사용자에게 의미 있는 정보)
       return res.status(200).json({ juso: [], error: common.errorMessage || common.errorCode });
     }
 
     const juso = data?.results?.juso || [];
-    res.setHeader("Cache-Control", "s-maxage=86400, stale-while-revalidate"); // 동일 주소 24h 캐시
+    res.setHeader("Cache-Control", "s-maxage=86400, stale-while-revalidate");
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("X-Frame-Options", "DENY");
     return res.status(200).json({ juso });
   } catch (e) {
-    return res.status(502).json({ juso: [], error: String(e?.message || e) });
+    console.error("[juso] handler error:", e?.message || e);
+    return res.status(502).json({ juso: [], error: "서버 오류" });
   }
 }

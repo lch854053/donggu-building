@@ -64,8 +64,15 @@ export default async function handler(req, res) {
   try {
     const { titles, totalCount } = await callHub("getBrTitleInfo", params, serviceKey);
     res.setHeader("Cache-Control", "s-maxage=86400, stale-while-revalidate");
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("X-Frame-Options", "DENY");
     return res.status(200).json({ titles, totalCount });
   } catch (e) {
-    return res.status(200).json({ titles: [], error: String(e?.message || e) });
+    const msg = e?.message || "";
+    // 서비스 키·내부 URL 등이 포함될 수 있으므로 외부에는 일반 메시지만 노출
+    const safe = msg.includes("파싱 실패") ? "API 응답 파싱 오류" :
+                 msg.includes("resultMsg") || /^\w+:/.test(msg) ? "외부 API 오류" : "서버 오류";
+    console.error("[building] handler error:", msg);
+    return res.status(502).json({ titles: [], error: safe });
   }
 }
