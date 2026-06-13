@@ -51,12 +51,17 @@ export default async function handler(req, res) {
     return res.status(500).json({ titles: [], error: "BLD_SERVICE_KEY 환경변수 미설정" });
   }
 
+  const normalizedBun = bun ? String(bun).padStart(4, "0") : "";
+  const normalizedJi = normalizedBun
+    ? (ji ? String(ji).padStart(4, "0") : "0000")
+    : "";
+
   const params = {
     sigunguCd,
     bjdongCd,
     platGbCd: platGbCd || "",
-    bun: bun ? String(bun).padStart(4, "0") : "",
-    ji:  bun ? String(ji || "0").padStart(4, "0") : "",  // 번지 지정 시에만 ji 적용
+    bun: normalizedBun,
+    ji:  normalizedJi,
     numOfRows: numOfRows || "100",
     pageNo: pageNo || "1",
   };
