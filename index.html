@@ -88,6 +88,11 @@
   .warn-tag{font-size:10px;font-weight:600;color:var(--warn);background:var(--warn-bg);padding:1px 6px;border-radius:4px;margin-left:4px}
   .cond-hint{font-size:12.5px;color:var(--mute);font-family:var(--mono)}
   .sel-hint{font-size:10px;font-weight:400;color:var(--mute)}
+  .chk-row{display:flex;align-items:center;gap:7px;margin-top:9px;font-size:12px;font-weight:500;color:var(--ink-soft);cursor:pointer}
+  .chk-row input{width:15px;height:15px;accent-color:var(--accent);cursor:pointer}
+  .age{font-family:var(--mono);font-size:11px;color:var(--mute);margin-left:5px}
+  .age.old{color:var(--warn);font-weight:600}
+  .age.veryold{color:var(--err);font-weight:600}
   .readout{font-size:11px;font-weight:600;color:var(--accent);font-family:var(--mono);margin-left:4px}
 
   /* Multiselect */
@@ -378,6 +383,11 @@
           <div class="field">
             <label class="lbl-row"><span>연면적(㎡)</span><span class="readout" id="ro-area">전체</span></label>
             <div class="dual" id="dual-area" data-min="0" data-max="3000" data-step="10" data-unit="㎡"></div>
+          </div>
+          <div class="field">
+            <label class="lbl-row"><span>사용승인 연도</span><span class="readout" id="ro-year">전체</span></label>
+            <div class="dual" id="dual-year" data-min="1900" data-max="2026" data-step="1" data-unit="" data-group="0"></div>
+            <label class="chk-row"><input type="checkbox" id="c-yearunknown" checked><span>연도 미확인 포함</span></label>
           </div>
         </div>
         <div class="controls">
@@ -789,6 +799,31 @@ document.getElementById("resultBody").addEventListener("click", e=>{
 /* ---- helpers ---- */
 function fmt(n){ return n==null ? "-" : Number(n).toLocaleString("ko-KR"); }
 function esc(s){ return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+
+// 사용승인일에서 연도만 추출 ("20150911"→2015, "2015"→2015, 누락→null)
+function extractYear(useAprDay){
+  if(!useAprDay || useAprDay==="-") return null;
+  const s = String(useAprDay).replace(/\D/g,"");   // 숫자만
+  if(s.length>=4) return parseInt(s.substring(0,4),10);
+  return null;
+}
+// 표시용 날짜 포맷 ("20150911"→2015.09.11, "201509"→2015.09, "2015"→2015)
+function fmtUseApr(s){
+  const d = String(s||"").replace(/\D/g,"");
+  if(d.length>=8) return `${d.slice(0,4)}.${d.slice(4,6)}.${d.slice(6,8)}`;
+  if(d.length>=6) return `${d.slice(0,4)}.${d.slice(4,6)}`;
+  if(d.length>=4) return d.slice(0,4);
+  return esc(s||"-");
+}
+// 사용승인일 셀: 연도 있으면 날짜+경과연수, 없으면 '연도미확인' 배지
+function useAprCell(useAprDay){
+  const yr = extractYear(useAprDay);
+  if(yr===null) return '<span class="badge mute">연도미확인</span>';
+  const age = new Date().getFullYear() - yr;
+  const cls = age>=40 ? " veryold" : age>=30 ? " old" : "";
+  const ageTxt = age>=0 ? `<span class="age${cls}">${age}년</span>` : "";
+  return `<span class="code">${esc(fmtUseApr(useAprDay))}</span>${ageTxt}`;
+}
 function clearAll(){
   document.getElementById("input").value="";
   document.getElementById("resultArea").style.display="none";
@@ -857,13 +892,14 @@ function buildMultiselect(hostId, opts){
 function buildDual(hostId, readoutId){
   const host = document.getElementById(hostId);
   const min=+host.dataset.min, max=+host.dataset.max, step=+host.dataset.step, unit=host.dataset.unit;
+  const group = host.dataset.group !== "0";   // data-group="0" → 천단위 쉼표 없음(연도용)
   const ro = document.getElementById(readoutId);
   host.innerHTML =
     `<div class="track"></div><div class="fill"></div>
      <input type="range" class="lo" min="${min}" max="${max}" step="${step}" value="${min}">
      <input type="range" class="hi" min="${min}" max="${max}" step="${step}" value="${max}">`;
   const lo=host.querySelector(".lo"), hi=host.querySelector(".hi"), fill=host.querySelector(".fill");
-  const fmtv=v=>Number(v).toLocaleString("ko-KR");
+  const fmtv=v=>group?Number(v).toLocaleString("ko-KR"):String(v);
   function update(){
     let a=+lo.value,b=+hi.value; if(a>b)[a,b]=[b,a];
     const pa=(a-min)/(max-min)*100, pb=(b-min)/(max-min)*100;
@@ -875,6 +911,7 @@ function buildDual(hostId, readoutId){
   return {
     values:()=>{ let a=+lo.value,b=+hi.value; return a<=b?[a,b]:[b,a]; },
     atCap:()=>Math.max(+lo.value,+hi.value)>=max,
+    isFull:()=>{ const a=Math.min(+lo.value,+hi.value), b=Math.max(+lo.value,+hi.value); return a<=min && b>=max; },
     reset:()=>{ lo.value=min; hi.value=max; update(); }
   };
 }
@@ -886,6 +923,9 @@ function initFilters(){
   DUAL.flr  = buildDual("dual-flr","ro-flr");
   DUAL.uflr = buildDual("dual-uflr","ro-uflr");
   DUAL.area = buildDual("dual-area","ro-area");
+  const yh = document.getElementById("dual-year");
+  if(yh) yh.dataset.max = String(new Date().getFullYear());   // 상한 = 올해
+  DUAL.year = buildDual("dual-year","ro-year");
   document.addEventListener("click",()=>document.querySelectorAll(".ms-panel.open").forEach(p=>p.classList.remove("open")));
   FILTERS_READY = true;
 }
@@ -949,6 +989,10 @@ async function runConditionSearch(){
   const flrMax  = DUAL.flr.atCap()  ? Infinity : flrMaxRaw;    // 상한이 끝이면 무제한
   const uflrMax = DUAL.uflr.atCap() ? Infinity : uflrMaxRaw;
   const areaMax = DUAL.area.atCap() ? Infinity : areaMaxRaw;
+  // 사용승인 연도
+  const [yearMin, yearMax] = DUAL.year.values();
+  const yearActive = !DUAL.year.isFull();                      // 전체 범위면 연도 필터 미적용
+  const incUnknown = document.getElementById("c-yearunknown").checked;
 
   const cRunBtn = document.getElementById("cRunBtn");
   cRunBtn.disabled = true;
@@ -1003,6 +1047,13 @@ async function runConditionSearch(){
     if(u < uflrMin || u > uflrMax) continue;                 // 지하층수
     const area = Number(t.totArea||0);
     if(area < areaMin || area > areaMax) continue;           // 연면적
+    // 사용승인 연도 — 미확인은 체크박스로, 확인된 연도는 슬라이더 범위로
+    const yr = extractYear(t.useAprDay);
+    if(yr===null){
+      if(!incUnknown) continue;                              // 연도 미확인 제외
+    }else if(yearActive){
+      if(yr < yearMin || yr > yearMax) continue;             // 연도 범위
+    }
     const m = mergeBuilding(t);
     m.hdong = bHdong;
     matched.push(m);
@@ -1042,7 +1093,7 @@ function renderConditionResults(scanned, dongLabel){
       <td class="num">${fmt(d.totArea)}</td>
       <td class="num">${d.grndFlr ?? "-"}</td>
       <td class="num">${d.ugrndFlr ?? "-"}</td>
-      <td class="code">${esc(d.useAprDay)}</td>`;
+      <td>${useAprCell(d.useAprDay)}</td>`;
     body.appendChild(tr);
   });
   document.getElementById("cs-match").textContent = CRESULTS.length.toLocaleString("ko-KR");
@@ -1054,11 +1105,16 @@ function renderConditionResults(scanned, dongLabel){
 }
 
 function exportConditionExcel(){
-  const rows = CRESULTS.map((d,i)=>({
-    "순번":i+1,"행정동":d.hdong||"","지번주소":d.platPlc||"","도로명주소":d.newPlatPlc||"",
-    "건물명":d.bldNm||"","동":d.dongNm||"","주용도":d.mainPurps||"","주구조":d.strct||"",
-    "연면적":d.totArea??"","지상층수":d.grndFlr??"","지하층수":d.ugrndFlr??"","사용승인일":d.useAprDay||""
-  }));
+  const nowY = new Date().getFullYear();
+  const rows = CRESULTS.map((d,i)=>{
+    const yr = extractYear(d.useAprDay);
+    return {
+      "순번":i+1,"행정동":d.hdong||"","지번주소":d.platPlc||"","도로명주소":d.newPlatPlc||"",
+      "건물명":d.bldNm||"","동":d.dongNm||"","주용도":d.mainPurps||"","주구조":d.strct||"",
+      "연면적":d.totArea??"","지상층수":d.grndFlr??"","지하층수":d.ugrndFlr??"",
+      "사용승인일":d.useAprDay||"","경과연수":yr===null?"미확인":(nowY-yr)
+    };
+  });
   const ws = XLSX.utils.json_to_sheet(rows);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "조건검색");
@@ -1067,7 +1123,8 @@ function exportConditionExcel(){
 }
 
 function clearCond(){
-  if(FILTERS_READY){ MS.purps.reset(); MS.strct.reset(); DUAL.flr.reset(); DUAL.uflr.reset(); DUAL.area.reset(); }
+  if(FILTERS_READY){ MS.purps.reset(); MS.strct.reset(); DUAL.flr.reset(); DUAL.uflr.reset(); DUAL.area.reset(); DUAL.year.reset(); }
+  const cu = document.getElementById("c-yearunknown"); if(cu) cu.checked = true;
   document.getElementById("cResultArea").style.display="none";
   document.getElementById("cStats").style.display="none";
   CRESULTS=[];
