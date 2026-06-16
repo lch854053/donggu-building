@@ -5,6 +5,9 @@
 
 const HUB = "http://apis.data.go.kr/1613000/BldRgstHubService";
 
+// 대지구분코드 유효값 (0: 대지, 1: 산, 2: 블록)
+const VALID_PLATGB = new Set(["0", "1", "2"]);
+
 // 건축HUB item 은 0건이면 없음, 1건이면 객체, 여러건이면 배열 → 항상 배열로 정규화
 function toArray(x) {
   if (x === undefined || x === null || x === "") return [];
@@ -12,11 +15,11 @@ function toArray(x) {
 }
 
 async function callHub(endpoint, params, serviceKey) {
-  // 값이 있는 파라미터만 전송 (bun/ji 생략 시 법정동 전체 조회)
   const q = { sigunguCd: params.sigunguCd, bjdongCd: params.bjdongCd, _type: "json" };
-  if (params.platGbCd) q.platGbCd = params.platGbCd;
-  if (params.bun)      q.bun = params.bun;
-  if (params.ji)       q.ji = params.ji;
+  const targetPlatGb = String(params.platGbCd ?? "");
+  if (VALID_PLATGB.has(targetPlatGb)) q.platGbCd = targetPlatGb;
+  if (params.bun) q.bun = params.bun;
+  if (params.ji)  q.ji  = params.ji;
   q.numOfRows = params.numOfRows || "100";
   q.pageNo    = params.pageNo || "1";
 
