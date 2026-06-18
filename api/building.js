@@ -3,7 +3,7 @@
 // 국토교통부 건축HUB 표제부(getBrTitleInfo) 프록시
 // 응답: { titles: [...], totalCount }  /  오류 시 { titles: [], error }
 
-const HUB = "http://apis.data.go.kr/1613000/BldRgstHubService";
+const HUB = "https://apis.data.go.kr/1613000/BldRgstHubService";
 
 // 대지구분코드 유효값 (0: 대지, 1: 산, 2: 블록)
 const VALID_PLATGB = new Set(["0", "1", "2"]);
