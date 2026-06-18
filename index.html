@@ -836,6 +836,8 @@ function clearAll(){
    ============================================================ */
 const SIGUNGU = "29110";
 let HJ = null;            // 행정동 매핑 { jibun2hdong, hdong2bjd }
+let HDONG2JIBUN = null;   // 행정동 → [지번키] 역매핑 (jibun2hdong 역index)
+let BJD_PARCELS = null;   // 법정동코드 → 매핑된 지번 수 (동단위 비용 추정용)
 let ALL_BJD = [];         // 동구 전체 법정동코드(전체 검색용)
 let CRESULTS = [];        // 조건검색 결과 (표시용 building 객체 배열)
 
@@ -947,6 +949,14 @@ async function loadHaengjeong(){
   try{
     const r = await fetch("/haengjeong.json");
     HJ = await r.json();
+    // jibun2hdong 역매핑: 행정동 → [지번키] (단건 대상), 법정동 → 지번수 (동단위 비용 추정)
+    HDONG2JIBUN = {}; BJD_PARCELS = {};
+    for(const [k, hd] of Object.entries(HJ.jibun2hdong || {})){
+      if(!HDONG2JIBUN[hd]) HDONG2JIBUN[hd] = [];
+      HDONG2JIBUN[hd].push(k);
+      const bjd = k.slice(0,5);
+      BJD_PARCELS[bjd] = (BJD_PARCELS[bjd] || 0) + 1;
+    }
   }catch(e){
     sel.innerHTML = '<option value="">매핑 로드 실패</option>';
     return;
@@ -968,6 +978,15 @@ async function fetchDongPage(bjd, pageNo){
   if(!r.ok) return {titles:[], totalCount:0};
   const d = await r.json();
   return {titles:Array.isArray(d.titles)?d.titles:[], totalCount:Number(d.totalCount||0)};
+}
+
+// 번지 단건 조회 (프록시) — 한 필지의 표제부만
+async function fetchParcel(bjd, bun, ji){
+  const qs = new URLSearchParams({sigunguCd:SIGUNGU, bjdongCd:bjd, bun, ji}).toString();
+  const r = await fetch(`/api/building?${qs}`);
+  if(!r.ok) return [];
+  const d = await r.json();
+  return Array.isArray(d.titles) ? d.titles : [];
 }
 
 async function runConditionSearch(){
@@ -1001,38 +1020,59 @@ async function runConditionSearch(){
   document.getElementById("cStats").style.display="none";
   if(isAll) document.getElementById("cHint").textContent = "전체 검색은 시간이 걸립니다…";
 
-  // 1) 각 법정동 1페이지 먼저 (totalCount 파악)
-  let cprog=0; const cstep=()=>cUpdate(++cprog, bjdList.length /*근사*/);
-  cUpdate(0, bjdList.length);
-  const all = [];                       // 수집된 raw title 들
-  const page1 = await runPool(bjdList, async (bjd)=>{
-    const {titles,totalCount} = await fetchDongPage(bjd,1);
-    return {bjd, titles, totalCount};
-  }, 5, ()=>cstep());
+  // 1) 법정동별 수집 전략 결정
+  //    판단 기준: 보유 지번 수 P  vs  그 법정동 동단위 추정 페이지수
+  //    P가 더 적으면 단건이 싸므로 단건, 아니면 동 단위 (어느 동도 동단위보다 나빠지지 않음)
+  const EST_BLD_PER_PARCEL = 1.7;   // 지번당 건물 추정(동구 실측 ~1.6~1.9)
+  const estPages = (bjd) => Math.max(1, Math.ceil((BJD_PARCELS?.[bjd] || 0) * EST_BLD_PER_PARCEL / 100));
+  const ownedOf  = (bjd) => isAll ? [] :
+    (HDONG2JIBUN?.[hdong] || []).filter(k => k.slice(0,5) === bjd);
 
-  page1.forEach(r=> all.push(...r.titles));
-
-  // 2) 잔여 페이지 — 실제 페이지 크기를 감지해서 계산
-  //    (건축HUB는 numOfRows 요청과 무관하게 100건/페이지로 응답)
-  const more = [];
-  const MAX_PAGES = 50;  // 법정동당 최대 페이지 (건당 ~100건 → 최대 5000건/동)
-  page1.forEach(r=>{
-    const pageSize = Math.max(r.titles.length, 1);   // 실측 페이지 크기
-    if(r.totalCount > pageSize){
-      const pages = Math.min(Math.ceil(r.totalCount / pageSize), MAX_PAGES);
-      for(let pg=2; pg<=pages; pg++) more.push({bjd:r.bjd, pg});
+  const pageBjds = [];        // 동 단위로 받을 법정동
+  const parcelTasks = [];     // 단건으로 받을 {bjd,bun,ji}
+  for(const bjd of bjdList){
+    const owned = ownedOf(bjd);
+    if(!isAll && owned.length > 0 && owned.length < estPages(bjd)){
+      for(const k of owned) parcelTasks.push({bjd, bun:k.slice(5,9), ji:k.slice(9,13)});
+    }else{
+      pageBjds.push(bjd);     // isAll · 동의 대부분 차지 → 동 단위
     }
-  });
-  if(more.length){
-    cprog=0; cUpdate(0, more.length);
-    const rest = await runPool(more, async (t)=>{
-      const {titles} = await fetchDongPage(t.bjd, t.pg);
-      return titles;
-    }, 5, (d,t)=>cUpdate(d,t));
-    rest.forEach(ts=> all.push(...ts));
   }
 
-  // 3) 행정동 필터 + 조건 필터
+  const all = [];             // 수집된 raw title 들
+
+  // 2) 동 단위 법정동: 1페이지로 totalCount 파악 후 잔여 페이지 계산
+  //    (건축HUB는 numOfRows 와 무관하게 ~100건/페이지로 응답)
+  const MAX_PAGES = 50;       // 법정동당 최대 페이지 (~100건/페이지 → 최대 5000건)
+  const more = [];
+  if(pageBjds.length){
+    let p1done = 0; cUpdate(0, pageBjds.length);
+    const page1 = await runPool(pageBjds, async (bjd)=>{
+      const {titles,totalCount} = await fetchDongPage(bjd,1);
+      return {bjd, titles, totalCount};
+    }, 5, ()=>cUpdate(++p1done, pageBjds.length));
+    page1.forEach(r=>{
+      all.push(...r.titles);
+      const pageSize = Math.max(r.titles.length, 1);   // 실측 페이지 크기
+      if(r.totalCount > pageSize){
+        const pages = Math.min(Math.ceil(r.totalCount / pageSize), MAX_PAGES);
+        for(let pg=2; pg<=pages; pg++) more.push({type:"page", bjd:r.bjd, pg});
+      }
+    });
+  }
+
+  // 3) 잔여 페이지 + 번지 단건 조회를 한 큐로 동시 처리
+  const tasks = more.concat(parcelTasks.map(t=>({type:"parcel", ...t})));
+  if(tasks.length){
+    let tdone = 0; cUpdate(0, tasks.length);
+    const got = await runPool(tasks, async (t)=>{
+      if(t.type==="page"){ const {titles} = await fetchDongPage(t.bjd, t.pg); return titles; }
+      return await fetchParcel(t.bjd, t.bun, t.ji);
+    }, 5, ()=>cUpdate(++tdone, tasks.length));
+    got.forEach(ts=> all.push(...ts));
+  }
+
+  // 4) 행정동 필터 + 조건 필터
   const scanned = all.length;
   const matched = [];
   for(const t of all){
