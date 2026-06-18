@@ -8,6 +8,12 @@ const HUB = "https://apis.data.go.kr/1613000/BldRgstHubService";
 // 대지구분코드 유효값 (0: 대지, 1: 산, 2: 블록)
 const VALID_PLATGB = new Set(["0", "1", "2"]);
 
+const FETCH_TIMEOUT_MS = 8000;
+const MAX_ROWS = 1000;
+const numRe = /^\d+$/;
+
+const one = (v) => (Array.isArray(v) ? v[0] : v) ?? "";
+
 // 건축HUB item 은 0건이면 없음, 1건이면 객체, 여러건이면 배열 → 항상 배열로 정규화
 function toArray(x) {
   if (x === undefined || x === null || x === "") return [];
@@ -16,7 +22,7 @@ function toArray(x) {
 
 async function callHub(endpoint, params, serviceKey) {
   const q = { sigunguCd: params.sigunguCd, bjdongCd: params.bjdongCd, _type: "json" };
-  const targetPlatGb = String(params.platGbCd ?? "");
+  const targetPlatGb = String(params.platGbCd || "");
   if (VALID_PLATGB.has(targetPlatGb)) q.platGbCd = targetPlatGb;
   if (params.bun) q.bun = params.bun;
   if (params.ji)  q.ji  = params.ji;
@@ -27,26 +33,62 @@ async function callHub(endpoint, params, serviceKey) {
   // serviceKey 는 '디코딩(Decoding) 키'를 환경변수에 넣고 여기서 1회만 인코딩
   const url = `${HUB}/${endpoint}?serviceKey=${encodeURIComponent(serviceKey)}&${qs}`;
 
-  const r = await fetch(url);
-  const text = await r.text();
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
+
+  let text;
+  try {
+    const r = await fetch(url, { signal: ctrl.signal });
+    text = await r.text();
+  } finally {
+    clearTimeout(timer);
+  }
 
   let data;
   try { data = JSON.parse(text); }
   catch { throw new Error(`${endpoint} 응답 파싱 실패: ${text.slice(0, 120)}`); }
 
+  const alt = data?.OpenAPI_ServiceResponse?.cmmMsgHeader || data?.cmmMsgHeader;
+  if (alt) {
+    const detail = alt.errMsg || alt.returnAuthMsg || alt.returnReasonCode || "unknown";
+    throw new Error(`${endpoint} 상류 인증/한도 오류: ${detail}`);
+  }
+  
   const header = data?.response?.header || {};
   const code = header.resultCode;
-  if (code && code !== "00" && code !== "03") {
+  if (!code) {
+    throw new Error(`${endpoint}: 예상치 못한 응답 구조`);
+  }
+  if (code !== "00" && code !== "03") {
     throw new Error(`${endpoint}: ${header.resultMsg || code}`);
   }
+
   const body = data?.response?.body || {};
   return { titles: toArray(body?.items?.item), totalCount: Number(body?.totalCount || 0) };
 }
-
+  
 export default async function handler(req, res) {
-  const { sigunguCd, bjdongCd, platGbCd, bun, ji, numOfRows, pageNo } = req.query;
+  if (req.method !== "GET") {
+    return res.status(405).json({ titles: [], error: "GET 만 허용" });
+  }
+
+  const sigunguCd = one(req.query.sigunguCd).trim();
+  const bjdongCd  = one(req.query.bjdongCd).trim();
+  const platGbCd  = one(req.query.platGbCd).trim();
+  const bunRaw    = one(req.query.bun).trim();
+  const jiRaw     = one(req.query.ji).trim();
+  
   if (!sigunguCd || !bjdongCd) {
     return res.status(400).json({ titles: [], error: "필수 파라미터(sigunguCd/bjdongCd) 누락" });
+  }
+  if (!numRe.test(sigunguCd) || !numRe.test(bjdongCd)) {
+    return res.status(400).json({ titles: [], error: "sigunguCd/bjdongCd 형식 오류" });
+  }
+  if (bunRaw && !numRe.test(bunRaw)) {
+    return res.status(400).json({ titles: [], error: "bun 형식 오류" });
+  }
+  if (jiRaw && !numRe.test(jiRaw)) {
+    return res.status(400).json({ titles: [], error: "ji 형식 오류" });
   }
 
   const serviceKey = process.env.BLD_SERVICE_KEY;
@@ -54,19 +96,22 @@ export default async function handler(req, res) {
     return res.status(500).json({ titles: [], error: "BLD_SERVICE_KEY 환경변수 미설정" });
   }
 
-  const normalizedBun = bun ? String(bun).padStart(4, "0") : "";
+  const normalizedBun = bunRaw ? bunRaw.padStart(4, "0") : "";
   const normalizedJi = normalizedBun
-    ? (ji ? String(ji).padStart(4, "0") : "0000")
+    ? (jiRaw ? jiRaw.padStart(4, "0") : "0000")
     : "";
 
+  const rows = Math.min(Math.max(parseInt(one(req.query.numOfRows), 10) || 100, 1), MAX_ROWS);
+  const page = Math.max(parseInt(one(req.query.pageNo), 10) || 1, 1);
+  
   const params = {
     sigunguCd,
     bjdongCd,
     platGbCd: platGbCd || "",
     bun: normalizedBun,
     ji:  normalizedJi,
-    numOfRows: numOfRows || "100",
-    pageNo: pageNo || "1",
+    numOfRows: String(rows),
+    pageNo: String(page),
   };
 
   try {
@@ -76,11 +121,16 @@ export default async function handler(req, res) {
     res.setHeader("X-Frame-Options", "DENY");
     return res.status(200).json({ titles, totalCount });
   } catch (e) {
+    const isAbort = e?.name === "AbortError";    
     const msg = e?.message || "";
-    // 서비스 키·내부 URL 등이 포함될 수 있으므로 외부에는 일반 메시지만 노출
-    const safe = msg.includes("파싱 실패") ? "API 응답 파싱 오류" :
-                 msg.includes("resultMsg") || /^\w+:/.test(msg) ? "외부 API 오류" : "서버 오류";
-    console.error("[building] handler error:", msg);
+    let safe = "서버 오류";
+    if (isAbort) safe = "상류 응답 시간 초과";
+    else if (msg.includes("파싱 실패")) safe = "API 응답 파싱 오류";
+    else if (msg.includes("상류") || msg.includes(":")) safe = "외부 API 오류";
+
+    const masked = msg.replace(/serviceKey=[^&\s]+/gi, "serviceKey=***");
+    console.error("[building] handler error:", masked);
+    
     return res.status(502).json({ titles: [], error: safe });
   }
 }
