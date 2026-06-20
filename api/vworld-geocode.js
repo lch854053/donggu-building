@@ -62,6 +62,10 @@ export default async function handler(req, res) {
   try {
     let data = await geocode("road");
     let status = data?.response?.status;
+    // ===== 임시 디버그: VWorld 원본 응답 그대로 반환 =====
+    return res.status(200).json({ DEBUG: true, road_response: data });
+    // ====================================================
+
     // 도로명으로 못 찾으면 지번으로 재시도
     if (status !== "OK") {
       data = await geocode("parcel");
