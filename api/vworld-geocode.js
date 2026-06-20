@@ -34,16 +34,17 @@ export default async function handler(req, res) {
     const params = new URLSearchParams({
       service: "address",
       request: "getcoord",
-      version: "2.0",
       crs: "epsg:4326",
       address,
-      refine: "true",
-      simple: "false",
       format: "json",
       type: "road",
       key,
     });
-    const r = await fetch(`${VWORLD_URL}?${params}`);
+    const r = await fetch(`${VWORLD_URL}?${params}`, {
+      headers: {
+        "Referer": "https://donggu-building.vercel.app"
+      }
+    });
     const rawText = await r.text();
 
     return res.status(200).json({
