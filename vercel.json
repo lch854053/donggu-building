@@ -1,6 +1,5 @@
-// /api/vworld-geocode  (디버그: 리전 + 응답 확인)
+// /api/vworld-geocode  (디버그 v3)
 const ALLOWED_HOSTS = ["donggu-building.vercel.app", "localhost:3000"];
-const MAX_ADDR_LEN = 100;
 
 function isAllowedOrigin(req) {
   const ref = req.headers.origin || req.headers.referer || "";
@@ -13,21 +12,14 @@ function isAllowedOrigin(req) {
 }
 
 export default async function handler(req, res) {
-  if (req.method !== "GET") {
-    res.setHeader("Allow", "GET");
-    return res.status(405).json({ error: "GET만 허용" });
-  }
   if (!isAllowedOrigin(req)) {
     return res.status(403).json({ error: "허용되지 않은 출처" });
   }
 
   const address = (req.query.address || "").toString().trim();
-  if (!address) return res.status(400).json({ error: "address 누락" });
-
   const key = process.env.VWORLD_KEY;
   if (!key) return res.status(500).json({ error: "VWORLD_KEY 미설정" });
 
-  // Vercel이 함수 실행 리전을 환경변수로 노출함
   const region = process.env.VERCEL_REGION || "unknown";
 
   try {
@@ -45,16 +37,17 @@ export default async function handler(req, res) {
     const rawText = await r.text();
 
     return res.status(200).json({
-      DEBUG: true,
-      region,                       // 실제 실행 리전
+      VERSION: "v3",
+      region,
       httpStatus: r.status,
       rawText: rawText.slice(0, 400),
     });
   } catch (e) {
     return res.status(200).json({
-      DEBUG: true,
+      VERSION: "v3",
       region,
       caught: String(e?.message || e),
+      cause: String(e?.cause?.message || e?.cause || "none"),
     });
   }
 }
