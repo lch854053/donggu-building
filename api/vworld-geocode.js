@@ -1,5 +1,4 @@
-// /api/vworld-geocode?address=동계로 68  (디버그 버전)
-const VWORLD_URL = "https://api.vworld.kr/req/address";
+// /api/vworld-geocode?address=동계로 68  (디버그 버전: http + cause)
 const ALLOWED_HOSTS = ["donggu-building.vercel.app", "localhost:3000"];
 const MAX_ADDR_LEN = 100;
 
@@ -40,20 +39,23 @@ export default async function handler(req, res) {
       type: "road",
       key,
     });
-    const r = await fetch(`${VWORLD_URL}?${params}`, {
-      headers: {
-        "Referer": "https://donggu-building.vercel.app"
-      }
+
+    // http로 시도 (VWorld는 http가 더 안정적인 경우가 있음)
+    const r = await fetch(`http://api.vworld.kr/req/address?${params}`, {
+      headers: { "Referer": "https://donggu-building.vercel.app" },
     });
     const rawText = await r.text();
 
     return res.status(200).json({
       DEBUG: true,
       httpStatus: r.status,
-      keyLength: key.length,
       rawText: rawText.slice(0, 800),
     });
   } catch (e) {
-    return res.status(200).json({ DEBUG: true, caught: String(e?.message || e) });
+    return res.status(200).json({
+      DEBUG: true,
+      caught: String(e?.message || e),
+      cause: String(e?.cause?.message || e?.cause || "none"),
+    });
   }
 }
