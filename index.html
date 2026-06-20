@@ -451,19 +451,23 @@
    ============================================================ */
 
 // juso 검색 API 응답 1건 → 건축HUB 파라미터
-// (정부 문서상 lnbrSlno 가 '읍면동일련번호'로 잘못 표기돼 있으나
-//  실제 응답에서는 지번부번 값이 들어옴. OCR상 InbrMnnm=lnbrMnnm)
+  
 function jusoToBldParams(j){
-  const admCd = String(j.admCd || "").padEnd(10,"0");
+  // bdMgtSn(건물관리번호) 6~10번째 자리가 실제 법정동코드
+  // admCd는 행정동 기준이라 건축HUB 법정동과 다를 수 있음
+  const bjdongCd = j.bdMgtSn
+    ? String(j.bdMgtSn).substring(5, 10)
+    : String(j.admCd || "").padEnd(10,"0").substring(5, 10);
+
   return {
-    sigunguCd: admCd.substring(0,5),                 // 시군구코드 (동구=29110)
-    bjdongCd:  admCd.substring(5,10),                // 법정동코드
-    platGbCd:  j.mtYn === "1" ? "1" : "0",           // 0:대지 / 1:산
+    sigunguCd: "29110",
+    bjdongCd,
+    platGbCd:  j.mtYn === "1" ? "1" : "0",
     bun:       String(j.lnbrMnnm ?? 0).padStart(4,"0"),
     ji:        String(j.lnbrSlno ?? 0).padStart(4,"0"),
   };
 }
-
+  
 // 동구 전용 필터
 function isDonggu(p){ return p.sigunguCd === "29110"; }
 
