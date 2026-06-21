@@ -450,33 +450,44 @@
    1. 변환 로직 — Vercel에 그대로 이식되는 실제 코드
    ============================================================ */
 
-// juso 검색 API 응답 1건 → 건축HUB 파라미터
+// juso 응답 1건 → 건축HUB 조회 후보들(우선순위 순)
+// juso가 bdMgtSn과 lnbr에 서로 다른 지번을 주고, 케이스마다 맞는 쪽이 달라
+// 두 후보를 모두 만들어 순서대로 시도한다 (동구 29110 인 것만)
   
-function jusoToBldParams(j){
-  const sn = String(j.bdMgtSn || "");
-  // bdMgtSn 우선 사용. 단, 이 툴은 동구 전용이므로
-  // bdMgtSn의 시군구코드가 동구(29110)일 때만 신뢰 (juso가 타 구 건물번호를 섞어주는 오류 방지)
-  const snValid = /^\d{19,}$/.test(sn) && sn.substring(0, 5) === "29110";
+function jusoToBldCandidates(j){
+  const out = [];
+  const seen = new Set();
+  const push = (p) => {
+    if(p.sigunguCd !== "29110") return;          // 동구만
+    const k = `${p.bjdongCd}-${p.bun}-${p.ji}-${p.platGbCd}`;
+    if(seen.has(k)) return;                       // 중복 제거
+    seen.add(k);
+    out.push(p);
+  };
 
-  if(snValid){
-    return {
+  // 후보 A: bdMgtSn 기반 (법정동·부번이 정확한 경우가 많음)
+  const sn = String(j.bdMgtSn || "");
+  if(/^\d{19,}$/.test(sn)){
+    push({
       sigunguCd: sn.substring(0, 5),
       bjdongCd:  sn.substring(5, 10),
       platGbCd:  sn.substring(10, 11) === "2" ? "1" : "0",
       bun:       sn.substring(11, 15),
       ji:        sn.substring(15, 19),
-    };
+    });
   }
 
-  // bdMgtSn이 없거나·형식 이상·타 구 → admCd + lnbr 방식으로 폴백
+  // 후보 B: admCd + lnbr 기반 (bdMgtSn이 틀릴 때 맞는 경우)
   const admCd = String(j.admCd || "").padEnd(10, "0");
-  return {
+  push({
     sigunguCd: admCd.substring(0, 5),
     bjdongCd:  admCd.substring(5, 10),
     platGbCd:  j.mtYn === "1" ? "1" : "0",
     bun:       String(j.lnbrMnnm ?? 0).padStart(4, "0"),
     ji:        String(j.lnbrSlno ?? 0).padStart(4, "0"),
-  };
+  });
+
+  return out;
 }
   
 // 동구 전용 필터
@@ -664,14 +675,22 @@ async function processOne(raw){
 
   // 2) 변환
   const top = cands[0];
-  const params = jusoToBldParams(top);
+  const candidates = jusoToBldCandidates(top);
 
   // 3) 동구 필터
-  if(!isDonggu(params)) return {input:raw, status:"mute", reason:"동구 외 주소", params, jibun:top.jibunAddr};
+  if(!candidates.length)
+    return {input:raw, status:"mute", reason:"동구 외 주소", jibun:top.jibunAddr};
 
 // 4) 건축HUB 조회 (표제부)
-  let bld = await fetchBuilding(params);
-  let usedParams = params;
+  let bld = {titles:[], error:null};
+  let usedParams = candidates[0];
+  for(const cand of candidates){
+    const r = await fetchBuilding(cand);
+    usedParams = cand;
+    if(r.error){ bld = r; break; }              // API 오류는 즉시 중단
+    if(r.titles.length){ bld = r; break; }      // 건물 찾음
+    bld = r;                                     // 0건이면 다음 후보로
+  }
 
   // 4-b) juso 경로로 대장이 안 나오면 → VWorld 좌표·PNU 폴백 재시도
   //      (juso의 도로명-지번 매핑 오류, 신축·공공청사 누락 대응)
