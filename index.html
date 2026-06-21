@@ -453,18 +453,30 @@
 // juso 검색 API 응답 1건 → 건축HUB 파라미터
   
 function jusoToBldParams(j){
-  // bdMgtSn(건물관리번호) 6~10번째 자리가 실제 법정동코드
-  // admCd는 행정동 기준이라 건축HUB 법정동과 다를 수 있음
-  const bjdongCd = j.bdMgtSn
-    ? String(j.bdMgtSn).substring(5, 10)
-    : String(j.admCd || "").padEnd(10,"0").substring(5, 10);
+  // bdMgtSn(건물관리번호 25자리)이 lnbrMnnm/lnbrSlno보다 정확
+  // 구조: 시군구(5) 법정동(5) 산구분(1) 본번(4) 부번(4) + 나머지
+  // juso가 jibunAddr/lnbrSlno에 틀린 부번을 주는 경우가 있어 bdMgtSn 우선 사용
+  const sn = String(j.bdMgtSn || "");
+  const snValid = /^\d{19,}$/.test(sn);   // 최소 19자리 숫자여야 유효
 
+  if(snValid){
+    return {
+      sigunguCd: sn.substring(0, 5),
+      bjdongCd:  sn.substring(5, 10),
+      platGbCd:  sn.substring(10, 11) === "2" ? "1" : "0",  // 2=산
+      bun:       sn.substring(11, 15),
+      ji:        sn.substring(15, 19),
+    };
+  }
+
+  // bdMgtSn이 없거나 형식 이상 → 기존 방식 폴백
+  const admCd = String(j.admCd || "").padEnd(10, "0");
   return {
-    sigunguCd: "29110",
-    bjdongCd,
+    sigunguCd: admCd.substring(0, 5),
+    bjdongCd:  admCd.substring(5, 10),
     platGbCd:  j.mtYn === "1" ? "1" : "0",
-    bun:       String(j.lnbrMnnm ?? 0).padStart(4,"0"),
-    ji:        String(j.lnbrSlno ?? 0).padStart(4,"0"),
+    bun:       String(j.lnbrMnnm ?? 0).padStart(4, "0"),
+    ji:        String(j.lnbrSlno ?? 0).padStart(4, "0"),
   };
 }
   
