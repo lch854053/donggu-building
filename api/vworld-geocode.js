@@ -1,6 +1,9 @@
-// /api/vworld-geocode?address=동계로 68  (디버그 버전: http + cause)
+// /api/vworld-geocode?address=동계로 68
+// VWorld 지오코더 프록시 (주소 → 좌표)
+const VWORLD_URL = "https://api.vworld.kr/req/address";
 const ALLOWED_HOSTS = ["donggu-building.vercel.app", "localhost:3000"];
 const MAX_ADDR_LEN = 100;
+const FETCH_TIMEOUT_MS = 5000;
 
 function isAllowedOrigin(req) {
   const ref = req.headers.origin || req.headers.referer || "";
@@ -29,33 +32,52 @@ export default async function handler(req, res) {
   const key = process.env.VWORLD_KEY;
   if (!key) return res.status(500).json({ error: "VWORLD_KEY 미설정" });
 
-  try {
+  // type: road(도로명) 우선, 실패 시 parcel(지번) 재시도
+  async function geocode(type) {
     const params = new URLSearchParams({
       service: "address",
       request: "getcoord",
       crs: "epsg:4326",
       address,
       format: "json",
-      type: "road",
+      type,
       key,
     });
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
+    try {
+      const r = await fetch(`${VWORLD_URL}?${params}`, { signal: ctrl.signal });
+      if (!r.ok) return null;
+      return await r.json();
+    } catch {
+      return null;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
 
-    // http로 시도 (VWorld는 http가 더 안정적인 경우가 있음)
-    const r = await fetch(`http://api.vworld.kr/req/address?${params}`, {
-      headers: { "Referer": "https://donggu-building.vercel.app" },
-    });
-    const rawText = await r.text();
+  try {
+    let data = await geocode("road");
+    let status = data?.response?.status;
+    if (status !== "OK") {
+      data = await geocode("parcel");
+      status = data?.response?.status;
+    }
+    if (status !== "OK") {
+      return res.status(200).json({ found: false });
+    }
 
+    const point = data.response.result.point;  // {x: 경도, y: 위도}
+    res.setHeader("Cache-Control", "s-maxage=86400, stale-while-revalidate=3600");
+    res.setHeader("X-Content-Type-Options", "nosniff");
     return res.status(200).json({
-      DEBUG: true,
-      httpStatus: r.status,
-      rawText: rawText.slice(0, 800),
+      found: true,
+      x: point.x,
+      y: point.y,
     });
   } catch (e) {
-    return res.status(200).json({
-      DEBUG: true,
-      caught: String(e?.message || e),
-      cause: String(e?.cause?.message || e?.cause || "none"),
-    });
+    const aborted = e?.name === "AbortError";
+    console.error("[vworld-geocode]", aborted ? "timeout" : e?.message || e);
+    return res.status(aborted ? 504 : 502).json({ error: "서버 오류" });
   }
 }
