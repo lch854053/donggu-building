@@ -698,9 +698,9 @@ async function processOne(raw){
     const vParams = await paramsViaVworld(query);
     if(vParams && isDonggu(vParams)){
       // 폴백 파라미터가 juso와 다를 때만 재조회 (불필요한 호출 방지)
-      const differs = vParams.bjdongCd !== params.bjdongCd
-                   || vParams.bun !== params.bun
-                   || vParams.ji !== params.ji;
+      const differs = vParams.bjdongCd !== usedParams.bjdongCd
+                   || vParams.bun !== usedParams.bun
+                   || vParams.ji !== usedParams.ji;
       if(differs){
         const bld2 = await fetchBuilding(vParams);
         if(!bld2.error && bld2.titles.length){
