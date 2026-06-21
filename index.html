@@ -553,6 +553,41 @@ async function fetchBuilding(p){
 
 const delay = ms => new Promise(r=>setTimeout(r,ms));
 
+// 주소 → 좌표 (VWorld 지오코더 프록시)
+async function geocodeAddr(address){
+  try{
+    const r = await fetch(`/api/vworld-geocode?address=${encodeURIComponent(address)}`);
+    if(!r.ok) return null;
+    const d = await r.json();
+    return d.found ? {x:d.x, y:d.y} : null;
+  }catch{ return null; }
+}
+
+// 좌표 → 필지 파라미터 (VWorld 2D데이터 프록시)
+async function parcelFromCoord(x, y){
+  try{
+    const r = await fetch(`/api/vworld-parcel?x=${encodeURIComponent(x)}&y=${encodeURIComponent(y)}`);
+    if(!r.ok) return null;
+    const d = await r.json();
+    return d.found ? d : null;
+  }catch{ return null; }
+}
+
+// 주소 → (좌표 → PNU) → 건축HUB 파라미터  [juso 실패 시 폴백 경로]
+async function paramsViaVworld(address){
+  const pt = await geocodeAddr(address);
+  if(!pt) return null;
+  const parcel = await parcelFromCoord(pt.x, pt.y);
+  if(!parcel) return null;
+  return {
+    sigunguCd: parcel.sigunguCd,
+    bjdongCd:  parcel.bjdongCd,
+    platGbCd:  parcel.platGbCd,
+    bun:       parcel.bun,
+    ji:        parcel.ji,
+  };
+}
+  
 /* ============================================================
    3. 메인 처리 — 일괄 루프 (동시 처리)
    ============================================================ */
@@ -616,13 +651,33 @@ async function processOne(raw){
   // 3) 동구 필터
   if(!isDonggu(params)) return {input:raw, status:"mute", reason:"동구 외 주소", params, jibun:top.jibunAddr};
 
-  // 4) 건축HUB 조회 (표제부)
-  const bld = await fetchBuilding(params);
-  if(bld.error)
-    return {input:raw, status:"err", reason:"조회 오류 ("+bld.error+")", params, jibun:top.jibunAddr};
-  if(!bld.titles.length)
-    return {input:raw, status:"none", reason:"건축물대장 없음 (나대지·미등록 등)", params, jibun:top.jibunAddr};
+// 4) 건축HUB 조회 (표제부)
+  let bld = await fetchBuilding(params);
+  let usedParams = params;
 
+  // 4-b) juso 경로로 대장이 안 나오면 → VWorld 좌표·PNU 폴백 재시도
+  //      (juso의 도로명-지번 매핑 오류, 신축·공공청사 누락 대응)
+  if(!bld.error && !bld.titles.length){
+    const vParams = await paramsViaVworld(query);
+    if(vParams && isDonggu(vParams)){
+      // 폴백 파라미터가 juso와 다를 때만 재조회 (불필요한 호출 방지)
+      const differs = vParams.bjdongCd !== params.bjdongCd
+                   || vParams.bun !== params.bun
+                   || vParams.ji !== params.ji;
+      if(differs){
+        const bld2 = await fetchBuilding(vParams);
+        if(!bld2.error && bld2.titles.length){
+          bld = bld2;
+          usedParams = vParams;
+        }
+      }
+    }
+  }
+
+  if(bld.error)
+    return {input:raw, status:"err", reason:"조회 오류 ("+bld.error+")", params:usedParams, jibun:top.jibunAddr};
+  if(!bld.titles.length)
+    return {input:raw, status:"none", reason:"건축물대장 없음 (나대지·미등록 등)", params:usedParams, jibun:top.jibunAddr};
   // 동마다 정리 → buildings 배열 (펼치기·엑셀용 전체 보관)
   let buildings = bld.titles.map(t => mergeBuilding(t));
 
@@ -639,10 +694,10 @@ async function processOne(raw){
 
   // 후보가 2건 이상이면 확인 필요로 표시
   const status = cands.length > 1 ? "warn" : "ok";
-  return {
+return {
     input:raw, status,
     reason: status==="warn" ? `후보 ${cands.length}건 중 최상위 선택` : "",
-    params, data:rep, buildings, dongFiltered
+    params:usedParams, data:rep, buildings, dongFiltered
   };
 }
 
