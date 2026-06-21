@@ -489,9 +489,16 @@ function cleanForSearch(raw){
   s = s.split(",")[0];                 // 쉼표 뒤(상세주소) 제거
   s = s.replace(/번지/g, "");          // '번지' 제거
   s = s.replace(/\s+/g, " ").trim();
+  // 광역시/도·시군구가 없으면 '광주광역시 동구' 보강 (이 툴은 동구 전용)
+  // "중앙로 254" 같은 흔한 도로명이 타 지역으로 매칭되는 것 방지
+  const hasSido = /(특별자치|광역시|특별시|[가-힣]+도)\s/.test(s) || s.includes("광주");
+  const hasGugun = /(동구|서구|남구|북구|광산구)/.test(s);
+  if(!hasSido && !hasGugun){
+    s = "광주광역시 동구 " + s;
+  }
   return s;
 }
-
+  
 // 표시용 주소 정제: 괄호 묶음 전부 제거 (인명·법정동 모두 제거)
 // 예) "계림동 521-58 (윤지애)" → "계림동 521-58",  "무등로384번길 15 (계림동)" → "무등로384번길 15"
 function stripParens(s){
