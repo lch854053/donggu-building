@@ -260,6 +260,38 @@
 
   .footnote{margin-top:26px;font-size:12px;color:var(--mute);line-height:1.7;border-top:1px solid var(--line);padding-top:16px}
   .footnote code{font-family:var(--mono);background:var(--paper-2);padding:1px 6px;border-radius:3px;color:var(--ink-soft)}
+  /* ===== 단건 상세조회 ===== */
+  .d-search-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .d-search-row input{flex:1;min-width:240px;font-family:var(--sans);font-size:14px;padding:11px 13px;border:1px solid var(--line-2);border-radius:5px;background:#fffefb;color:var(--ink)}
+  .d-search-row input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(29,94,140,.12)}
+  .d-status{margin-top:14px;font-size:13px}
+  .d-spin{font-family:var(--mono);font-size:12.5px;color:var(--ink-soft)}
+  .d-card+.d-card{margin-top:14px}
+  .d-kind{font-family:var(--mono);font-size:11px;font-weight:500;color:var(--mute);letter-spacing:.02em}
+  .d-addr{font-size:15px;font-weight:600;color:var(--ink)}
+  .d-addr.sub{font-size:12.5px;font-weight:400;color:var(--mute);margin-top:2px}
+  .d-sec-title{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);font-weight:600;margin:20px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+  .d-kv{display:grid;grid-template-columns:120px 1fr;gap:8px 16px;font-size:13.5px}
+  .d-kv .k{color:var(--ink-soft);font-weight:500}
+  .d-kv .v{color:var(--ink);font-variant-numeric:tabular-nums}
+  @media(min-width:680px){.d-kv{grid-template-columns:120px 1fr 120px 1fr}}
+  .d-dongs{display:flex;flex-wrap:wrap;gap:8px}
+  .d-dong{font-family:var(--sans);font-size:13px;font-weight:500;padding:8px 15px;border:1px solid var(--line-2);border-radius:999px;background:#fffefb;color:var(--ink-soft);cursor:pointer}
+  .d-dong:hover{border-color:var(--accent);color:var(--accent)}
+  .d-dong.active{background:var(--accent);border-color:var(--accent);color:#fff}
+  .d-subtabs{display:flex;flex-wrap:wrap;gap:4px;margin-top:22px;border-bottom:1px solid var(--line)}
+  .d-subtab{font-family:var(--sans);font-size:13px;font-weight:600;cursor:pointer;padding:9px 15px;border:none;background:none;color:var(--mute);border-bottom:2px solid transparent;margin-bottom:-1px}
+  .d-subtab:hover{color:var(--ink-soft)}
+  .d-subtab.active{color:var(--accent);border-bottom-color:var(--accent)}
+  .d-panel{padding:16px 0 2px}
+  .d-panel-hint{font-size:12.5px;color:var(--mute);font-family:var(--mono)}
+  .d-panel-hint.err{color:var(--err)}
+  .d-empty{padding:22px;text-align:center;color:var(--mute);font-size:13px}
+  .d-mini-scroll{overflow-x:auto;border:1px solid var(--line);border-radius:6px}
+  table.d-mini{border-collapse:collapse;width:100%;font-size:12.5px}
+  table.d-mini thead th{background:var(--paper-2);color:var(--ink-soft);font-weight:600;padding:9px 12px;text-align:left;white-space:nowrap;font-size:11.5px}
+  table.d-mini tbody td{padding:8px 12px;border-top:1px solid var(--line);white-space:nowrap}
+  table.d-mini td.num,table.d-mini th.num{font-family:var(--mono);text-align:right;font-variant-numeric:tabular-nums}
 </style>
 </head>
 <body>
@@ -279,6 +311,7 @@
   <div class="tabs">
     <button class="tab active" id="tab-btn-bulk" onclick="switchTab('bulk')">일괄조회</button>
     <button class="tab" id="tab-btn-cond" onclick="switchTab('cond')">조건검색</button>
+    <button class="tab" id="tab-btn-detail" onclick="switchTab('detail')">단건 상세조회</button>
   </div>
 
   <!-- ===== TAB 1: 일괄조회 ===== -->
@@ -439,6 +472,24 @@
       </div>
     </div>
   </div><!-- /tab-cond -->
+
+  <!-- ===== 단건 상세조회 ===== -->
+  <div id="tab-detail" style="display:none">
+    <div class="card">
+      <div class="card-head"><h2><span class="num-tag">검</span>단건 상세조회</h2></div>
+      <div class="card-body">
+        <div class="d-search-row">
+          <input id="dInput" type="text" placeholder="예) 서남로 1   ·   계림동 521-58   ·   무등로384번길 15 108동">
+          <button class="run" id="dRunBtn" onclick="runDetail()">조회</button>
+          <button class="ghost" onclick="clearDetail()">초기화</button>
+        </div>
+        <div class="hint">지번·도로명 모두 가능. 아파트는 동(예: <b>108동</b>)을 함께 입력하면 해당 동이 먼저 선택됩니다.</div>
+        <div class="d-status" id="dStatus" style="display:none"></div>
+      </div>
+    </div>
+    <div id="dResult" style="display:none;margin-top:18px"></div>
+  </div><!-- /tab-detail -->
+
 
   <div class="footnote">
     - 조회 범위는 광주광역시 동구이며, 지번·도로명주소로 모두 검색 가능합니다<br>
@@ -1035,14 +1086,7 @@ function initFilters(){
   FILTERS_READY = true;
 }
 
-function switchTab(which){
-  const bulk = which==="bulk";
-  document.getElementById("tab-bulk").style.display = bulk?"block":"none";
-  document.getElementById("tab-cond").style.display = bulk?"none":"block";
-  document.getElementById("tab-btn-bulk").classList.toggle("active", bulk);
-  document.getElementById("tab-btn-cond").classList.toggle("active", !bulk);
-  if(!bulk) loadHaengjeong();
-}
+/* switchTab → 단건 상세조회 블록에서 3-way 로 재정의 */
 
 // 행정동 매핑 1회 로드 + 드롭다운 구성
 async function loadHaengjeong(){
@@ -1271,6 +1315,278 @@ function clearCond(){
   document.getElementById("cResultArea").style.display="none";
   document.getElementById("cStats").style.display="none";
   CRESULTS=[];
+}
+
+/* ============================================================
+   단건 상세조회  (일반건축물 카드 → 집합건물 동 드릴다운)
+   - 표제부(getBrTitleInfo)를 라우터로 사용해 단독/집합 분기
+   - 부가정보(층별/정화조/지역지구/부속지번/전유공용)는 탭 클릭 시 lazy 호출
+   ============================================================ */
+let D_CAND   = null;   // 확정된 필지키 {sigunguCd,bjdongCd,platGbCd,bun,ji}
+let D_TITLES = [];     // 표제부 rows (집합이면 동별 N건)
+let D_SELDONG = null;  // 선택된 동 dongNm (일반은 null)
+const D_CACHE = {};    // 부가정보 캐시 `${tab}:${dongNm||''}` → items
+let D_DONGS = [];      // 집합건물 동 목록(정렬)
+
+const D_OPS = {
+  flr:   { op:"getBrFlrOulnInfo",        name:"층별개요" },
+  wclf:  { op:"getBrWclfInfo",           name:"오수정화시설" },
+  jiji:  { op:"getBrJijiguInfo",         name:"지역지구" },
+  atch:  { op:"getBrAtchJibunInfo",      name:"부속지번" },
+  expos: { op:"getBrExposPubuseAreaInfo",name:"전유·공용" },
+};
+
+// 임의 오퍼레이션 호출 (프록시 /api/building?op=...)  반환 {items, error}
+async function fetchOp(op, p, extra){
+  const qs = new URLSearchParams({
+    op, sigunguCd:p.sigunguCd, bjdongCd:p.bjdongCd,
+    platGbCd:p.platGbCd||"", bun:p.bun, ji:p.ji,
+    numOfRows:"100", pageNo:"1", ...(extra||{})
+  }).toString();
+  try{
+    const r = await fetch(`/api/building?${qs}`);
+    if(!r.ok) return { items:[], error:`서버 오류 ${r.status}` };
+    const d = await r.json();
+    return { items: Array.isArray(d.titles) ? d.titles : [], error: d.error || null };
+  }catch(e){ return { items:[], error:String(e?.message||e) }; }
+}
+
+// 주소 → 필지키 후보 (juso 우선, 실패 시 VWorld 폴백) — 동구만
+async function resolveDetailCandidates(raw){
+  const cleaned = cleanForSearch(raw);
+  const jusoList = await searchJuso(cleaned);
+  const out = []; const seen = new Set();
+  const add = (p)=>{
+    if(!p || p.sigunguCd!=="29110") return;
+    const k = `${p.bjdongCd}-${p.bun}-${p.ji}-${p.platGbCd}`;
+    if(seen.has(k)) return; seen.add(k); out.push(p);
+  };
+  for(const j of jusoList) jusoToBldCandidates(j).forEach(add);
+  if(!out.length){ const p = await paramsViaVworld(cleaned); add(p); }
+  return out;
+}
+
+function dStatus(html){
+  const el = document.getElementById("dStatus");
+  el.innerHTML = html; el.style.display = html ? "block" : "none";
+}
+
+async function runDetail(){
+  const raw = document.getElementById("dInput").value.trim();
+  if(!raw){ dStatus('<span class="badge warn">주소를 입력하세요</span>'); return; }
+  const btn = document.getElementById("dRunBtn"); btn.disabled = true;
+  document.getElementById("dResult").style.display = "none";
+  D_CAND=null; D_TITLES=[]; D_SELDONG=null; D_DONGS=[];
+  Object.keys(D_CACHE).forEach(k=>delete D_CACHE[k]);
+  dStatus('<span class="d-spin">주소 해석 중…</span>');
+  try{
+    const wantDong = extractDong(raw);             // "108동" → "108"
+    const cands = await resolveDetailCandidates(raw);
+    if(!cands.length){ dStatus('<span class="badge none">동구 내 주소를 찾지 못했습니다</span>'); return; }
+    let picked=null, titles=[];
+    for(const c of cands){
+      const res = await fetchBuilding(c);
+      if(res.error){ dStatus(`<span class="badge err">${esc(res.error)}</span>`); return; }
+      if(res.titles.length){ picked=c; titles=res.titles; break; }
+    }
+    if(!picked){ dStatus('<span class="badge none">대장 없음 (나대지·미등록)</span>'); return; }
+    D_CAND=picked; D_TITLES=titles; dStatus("");
+    renderDetail(wantDong);
+  }catch(e){
+    dStatus(`<span class="badge err">${esc(String(e?.message||e))}</span>`);
+  }finally{ btn.disabled=false; }
+}
+
+// 표제부 rows → 일반/집합 라우팅
+function renderDetail(wantDong){
+  const area = document.getElementById("dResult");
+  area.style.display = "block";
+  const isJimhap = D_TITLES.some(t=>String(t.regstrGbCd)==="2") || D_TITLES.filter(t=>t.dongNm).length>1;
+  if(!isJimhap){
+    D_SELDONG=null;
+    const main = D_TITLES.find(t=>String(t.mainAtchGbCd)==="0") || D_TITLES[0];
+    const subs = D_TITLES.filter(t=>t!==main);
+    area.innerHTML = cardHTML(main, "일반건축물") + (subs.length ? subsHTML(subs) : "");
+    wireSubtabs(null);
+  }else{
+    D_DONGS = D_TITLES.slice().sort((a,b)=>(Number(dongDigits(a.dongNm))||0)-(Number(dongDigits(b.dongNm))||0));
+    const pre = wantDong ? D_DONGS.findIndex(t=>dongDigits(t.dongNm)===wantDong) : -1;
+    area.innerHTML = dongPickerHTML(D_DONGS) + `<div id="dDongCard"></div>`;
+    D_DONGS.forEach((t,i)=>{ const b=document.getElementById("dDong"+i); if(b) b.addEventListener("click",()=>selectDong(i)); });
+    selectDong(pre>=0 ? pre : 0);
+  }
+}
+
+function selectDong(i){
+  const t = D_DONGS[i]; if(!t) return;
+  D_SELDONG = t.dongNm || "";
+  document.querySelectorAll(".d-dong").forEach((b,j)=>b.classList.toggle("active", j===i));
+  document.getElementById("dDongCard").innerHTML = cardHTML(t, "집합건물 · 동");
+  wireSubtabs(D_SELDONG);
+}
+
+/* ---- 카드 렌더 ---- */
+function cardHTML(t, kind){
+  const b = mergeBuilding(t);
+  const m2 = v => v==null ? "-" : fmt(v)+" ㎡";
+  const pc = v => v==null ? "-" : fmt(v)+"%";
+  const addr = b.newPlatPlc!=="-" ? b.newPlatPlc : b.platPlc;
+  const seismic = String(t.rserthqkDsgnApplyYn)==="1"
+    ? '<span class="badge ok">적용</span>' + (t.rserthqkAblty && String(t.rserthqkAblty).trim() ? ` <span class="age">${esc(t.rserthqkAblty)}</span>` : "")
+    : '<span class="badge mute">미적용</span>';
+  const elv = Number(t.rideUseElvtCnt||0), eelv = Number(t.emgenUseElvtCnt||0);
+  const elvTxt = (elv>0 ? `<span class="badge ok">승용 ${elv}</span>` : '<span class="badge mute">없음</span>')
+    + (eelv>0 ? ` <span class="badge ok">비상 ${eelv}</span>` : "");
+  const isDong = kind.includes("동");
+  return `
+  <div class="card d-card">
+    <div class="card-head">
+      <h2><span class="num-tag">${isDong?"동":"상"}</span>${esc(b.bldNm)} <span class="d-kind">${esc(kind)}</span></h2>
+      <span class="badge none">${esc(t.regstrKindCdNm||"표제부")}</span>
+    </div>
+    <div class="card-body">
+      <div class="d-addr">${esc(addr)}</div>
+      <div class="d-addr sub">${esc(b.platPlc)}</div>
+
+      <div class="d-sec-title">규모 · 용도</div>
+      <div class="d-kv">
+        <div class="k">주용도</div><div class="v">${esc(b.mainPurps)}</div>
+        <div class="k">주구조</div><div class="v">${esc(b.strct)}</div>
+        <div class="k">대지면적</div><div class="v">${m2(b.platArea)}</div>
+        <div class="k">건축면적</div><div class="v">${m2(b.archArea)}</div>
+        <div class="k">연면적</div><div class="v">${m2(b.totArea)}</div>
+        <div class="k">건폐율 / 용적률</div><div class="v">${pc(b.bcRat)} / ${pc(b.vlRat)}</div>
+        <div class="k">층수</div><div class="v">지상 ${fmt(b.grndFlr)} · 지하 ${fmt(b.ugrndFlr)}</div>
+        <div class="k">사용승인일</div><div class="v">${useAprCell(b.useAprDay)}</div>
+      </div>
+
+      <div class="d-sec-title">안전</div>
+      <div class="d-kv">
+        <div class="k">내진설계</div><div class="v">${seismic}</div>
+        <div class="k">승강기</div><div class="v">${elvTxt}</div>
+      </div>
+
+      <div class="d-subtabs">
+        <button class="d-subtab" data-tab="flr">층별개요</button>
+        <button class="d-subtab" data-tab="wclf">오수정화시설</button>
+        <button class="d-subtab" data-tab="jiji">지역지구</button>
+        <button class="d-subtab" data-tab="atch">부속지번</button>
+        ${isDong ? '<button class="d-subtab" data-tab="expos">전유·공용</button>' : ""}
+      </div>
+      <div class="d-panel" id="dPanel"><div class="d-panel-hint">위 항목을 누르면 해당 정보를 불러옵니다</div></div>
+    </div>
+  </div>`;
+}
+
+function dongPickerHTML(dongs){
+  return `<div class="card d-card"><div class="card-head"><h2><span class="num-tag">동</span>동 선택 <span class="d-kind">집합건물 · ${dongs.length}개 동</span></h2></div>
+   <div class="card-body"><div class="d-dongs">${dongs.map((t,i)=>{
+     const nm = t.dongNm ? `${esc(t.dongNm)}동` : (esc(stripParens(t.bldNm))||"-");
+     return `<button class="d-dong" id="dDong${i}">${nm}</button>`;
+   }).join("")}</div></div></div>`;
+}
+
+function subsHTML(subs){
+  return `<div class="card d-card"><div class="card-head"><h2><span class="num-tag">부</span>부속건축물 <span class="d-kind">${subs.length}동</span></h2></div>
+   <div class="card-body">${miniTable([
+     {h:"명칭", f:r=>esc(stripParens(r.bldNm)||r.dongNm||"-")},
+     {h:"주구조", f:r=>esc(r.strctCdNm||"-")},
+     {h:"용도", f:r=>esc(r.mainPurpsCdNm||"-")},
+     {h:"연면적(㎡)", num:true, f:r=>fmt(r.totArea)},
+   ], subs)}</div></div>`;
+}
+
+/* ---- lazy 부가정보 ---- */
+function wireSubtabs(dongNm){
+  document.querySelectorAll(".d-subtab").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      document.querySelectorAll(".d-subtab").forEach(b=>b.classList.remove("active"));
+      btn.classList.add("active");
+      loadSubtab(btn.dataset.tab, dongNm);
+    });
+  });
+}
+
+async function loadSubtab(key, dongNm){
+  const panel = document.getElementById("dPanel");
+  const meta = D_OPS[key]; if(!meta) return;
+  const cacheKey = `${key}:${dongNm||""}`;
+  let items = D_CACHE[cacheKey];
+  if(!items){
+    panel.innerHTML = `<div class="d-panel-hint">${esc(meta.name)} 불러오는 중…</div>`;
+    const extra = (key==="expos" && dongNm) ? { dongNm } : {};
+    const res = await fetchOp(meta.op, D_CAND, extra);
+    if(res.error){ panel.innerHTML = `<div class="d-panel-hint err">${esc(res.error)}</div>`; return; }
+    items = res.items;
+    // 집합 단지의 층별개요는 동 구분 없이 전부 오므로 선택 동으로 클라이언트 필터
+    if(dongNm && key==="flr"){
+      items = items.filter(x=>!x.dongNm || dongDigits(x.dongNm)===dongDigits(dongNm));
+    }
+    D_CACHE[cacheKey] = items;
+  }
+  panel.innerHTML = renderSubtab(key, items);
+}
+
+function miniTable(cols, rows){
+  if(!rows.length) return `<div class="d-empty">해당 정보가 없습니다</div>`;
+  const head = cols.map(c=>`<th class="${c.num?'num':''}">${esc(c.h)}</th>`).join("");
+  const body = rows.map(r=>`<tr>${cols.map(c=>`<td class="${c.num?'num':''}">${c.f(r)}</td>`).join("")}</tr>`).join("");
+  return `<div class="d-mini-scroll"><table class="d-mini"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
+}
+
+function renderSubtab(key, items){
+  if(key==="flr") return miniTable([
+    {h:"층", f:r=>esc(`${r.flrGbCdNm||""} ${r.flrNoNm||""}`.trim()||"-")},
+    {h:"구조", f:r=>esc(r.strctCdNm||"-")},
+    {h:"용도", f:r=>esc(r.etcPurps||r.mainPurpsCdNm||"-")},
+    {h:"면적(㎡)", num:true, f:r=>fmt(r.area)},
+  ], items.slice().sort((a,b)=>(Number(a.flrNo||0))-(Number(b.flrNo||0))));
+  if(key==="wclf") return miniTable([
+    {h:"형식", f:r=>esc(r.modeCdNm||r.etcMode||"-")},
+    {h:"용량(인용)", num:true, f:r=>fmt(r.capaPsper)},
+    {h:"용량(루베)", num:true, f:r=>fmt(r.capaLube)},
+  ], items);
+  if(key==="jiji") return miniTable([
+    {h:"구분", f:r=>esc(r.jijiguGbCdNm||"-")},
+    {h:"명칭", f:r=>esc(r.jijiguCdNm||r.etcJijigu||"-")},
+    {h:"대표", f:r=>String(r.reprYn)==="1"?'<span class="badge ok">대표</span>':'<span class="badge mute">일반</span>'},
+  ], items);
+  if(key==="atch") return miniTable([
+    {h:"구분", f:r=>esc(r.atchRegstrGbCdNm||"-")},
+    {h:"부속지번", f:r=>esc(`${r.atchBun||""}-${r.atchJi||""}`)},
+    {h:"대지위치", f:r=>esc(stripParens(r.platPlc)||"-")},
+  ], items);
+  if(key==="expos") return miniTable([
+    {h:"동", f:r=>esc(r.dongNm||"-")},
+    {h:"호", f:r=>esc(r.hoNm||"-")},
+    {h:"층", f:r=>esc(r.flrNoNm||"-")},
+    {h:"구분", f:r=>esc(r.exposPubuseGbCdNm||"-")},
+    {h:"용도", f:r=>esc(r.mainPurpsCdNm||"-")},
+    {h:"면적(㎡)", num:true, f:r=>fmt(r.area)},
+  ], items.slice().sort((a,b)=>String(a.hoNm||"").localeCompare(String(b.hoNm||""),"ko",{numeric:true})));
+  return "";
+}
+
+function clearDetail(){
+  document.getElementById("dInput").value="";
+  document.getElementById("dResult").style.display="none";
+  dStatus("");
+  D_CAND=null; D_TITLES=[]; D_SELDONG=null; D_DONGS=[];
+}
+
+document.getElementById("dInput")?.addEventListener("keydown", e=>{
+  if(e.key==="Enter"){ e.preventDefault(); runDetail(); }
+});
+
+/* ---- 탭 전환 (3-way: bulk / cond / detail) — 기존 switchTab 대체 ---- */
+function switchTab(which){
+  const tabs = ["bulk","cond","detail"];
+  if(!tabs.includes(which)) which="bulk";
+  for(const t of tabs){
+    document.getElementById("tab-"+t).style.display = (t===which)?"block":"none";
+    document.getElementById("tab-btn-"+t).classList.toggle("active", t===which);
+  }
+  if(which==="cond") loadHaengjeong();
 }
 </script>
 </body>
