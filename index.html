@@ -286,6 +286,7 @@
   .d-panel{padding:16px 0 2px}
   .d-panel-hint{font-size:12.5px;color:var(--mute);font-family:var(--mono)}
   .d-panel-hint.err{color:var(--err)}
+  .d-note{font-size:11px;color:var(--mute);font-family:var(--mono)}
   .d-empty{padding:22px;text-align:center;color:var(--mute);font-size:13px}
   .d-mini-scroll{overflow-x:auto;border:1px solid var(--line);border-radius:6px}
   table.d-mini{border-collapse:collapse;width:100%;font-size:12.5px}
@@ -1397,31 +1398,39 @@ async function runDetail(){
   }finally{ btn.disabled=false; }
 }
 
-// 표제부 rows → 일반/집합 라우팅
+// 표제부 1건 → 표시용 명칭 (동명칭→건물명→주부속구분 순, 숫자 동만 '동' 부착)
+function bldLabel(t){
+  const dong = String(t.dongNm||"").trim();
+  if(dong) return /^\d+$/.test(dong) ? dong+"동" : dong;
+  const bld = stripParens(String(t.bldNm||"").trim());
+  if(bld) return bld;
+  return String(t.mainAtchGbCdNm||"").trim() || "-";
+}
+// 대장구분 표시 (집합/일반)
+function gbLabel(rows){ return rows.some(t=>String(t.regstrGbCd)==="2") ? "집합건물" : "일반건축물"; }
+
+// 표제부 rows → 단일 카드 / 다(多)동 선택
 function renderDetail(wantDong){
   const area = document.getElementById("dResult");
   area.style.display = "block";
-  const isJimhap = D_TITLES.some(t=>String(t.regstrGbCd)==="2") || D_TITLES.filter(t=>t.dongNm).length>1;
-  if(!isJimhap){
-    D_SELDONG=null;
-    const main = D_TITLES.find(t=>String(t.mainAtchGbCd)==="0") || D_TITLES[0];
-    const subs = D_TITLES.filter(t=>t!==main);
-    area.innerHTML = cardHTML(main, "일반건축물") + (subs.length ? subsHTML(subs) : "");
+  if(D_TITLES.length <= 1){
+    D_SELDONG = null;
+    area.innerHTML = cardHTML(D_TITLES[0], gbLabel(D_TITLES));
     wireSubtabs(null);
-  }else{
-    D_DONGS = D_TITLES.slice().sort((a,b)=>(Number(dongDigits(a.dongNm))||0)-(Number(dongDigits(b.dongNm))||0));
-    const pre = wantDong ? D_DONGS.findIndex(t=>dongDigits(t.dongNm)===wantDong) : -1;
-    area.innerHTML = dongPickerHTML(D_DONGS) + `<div id="dDongCard"></div>`;
-    D_DONGS.forEach((t,i)=>{ const b=document.getElementById("dDong"+i); if(b) b.addEventListener("click",()=>selectDong(i)); });
-    selectDong(pre>=0 ? pre : 0);
+    return;
   }
+  D_DONGS = D_TITLES.slice();                       // API 순서 보존(주건물·부속·제2동 …)
+  const pre = wantDong ? D_DONGS.findIndex(t=>dongDigits(t.dongNm)===wantDong) : -1;
+  area.innerHTML = dongPickerHTML(D_DONGS) + `<div id="dDongCard"></div>`;
+  D_DONGS.forEach((t,i)=>{ const b=document.getElementById("dDong"+i); if(b) b.addEventListener("click",()=>selectDong(i)); });
+  selectDong(pre>=0 ? pre : 0);
 }
 
 function selectDong(i){
   const t = D_DONGS[i]; if(!t) return;
-  D_SELDONG = t.dongNm || "";
+  D_SELDONG = String(t.dongNm||"").trim();
   document.querySelectorAll(".d-dong").forEach((b,j)=>b.classList.toggle("active", j===i));
-  document.getElementById("dDongCard").innerHTML = cardHTML(t, "집합건물 · 동");
+  document.getElementById("dDongCard").innerHTML = cardHTML(t, gbLabel(D_DONGS));
   wireSubtabs(D_SELDONG);
 }
 
@@ -1431,17 +1440,19 @@ function cardHTML(t, kind){
   const m2 = v => v==null ? "-" : fmt(v)+" ㎡";
   const pc = v => v==null ? "-" : fmt(v)+"%";
   const addr = b.newPlatPlc!=="-" ? b.newPlatPlc : b.platPlc;
+  const title = bldLabel(t);
   const seismic = String(t.rserthqkDsgnApplyYn)==="1"
-    ? '<span class="badge ok">적용</span>' + (t.rserthqkAblty && String(t.rserthqkAblty).trim() ? ` <span class="age">${esc(t.rserthqkAblty)}</span>` : "")
+    ? '<span class="badge ok">적용</span>' + (String(t.rserthqkAblty||"").trim() ? ` <span class="age">${esc(t.rserthqkAblty)}</span>` : "")
     : '<span class="badge mute">미적용</span>';
-  const elv = Number(t.rideUseElvtCnt||0), eelv = Number(t.emgenUseElvtCnt||0);
-  const elvTxt = (elv>0 ? `<span class="badge ok">승용 ${elv}</span>` : '<span class="badge mute">없음</span>')
-    + (eelv>0 ? ` <span class="badge ok">비상 ${eelv}</span>` : "");
-  const isDong = kind.includes("동");
+  const elv = Number(t.rideUseElvtCnt)||0, eelv = Number(t.emgenUseElvtCnt)||0;
+  const elvTxt = elv>0
+    ? `<span class="badge ok">승용 ${elv}</span>` + (eelv>0 ? ` <span class="badge ok">비상 ${eelv}</span>` : "")
+    : '<span class="badge mute">표제부 0</span> <span class="d-note">미입력 시 실제 있어도 0으로 표기될 수 있음</span>';
+  const isJip = kind==="집합건물";
   return `
   <div class="card d-card">
     <div class="card-head">
-      <h2><span class="num-tag">${isDong?"동":"상"}</span>${esc(b.bldNm)} <span class="d-kind">${esc(kind)}</span></h2>
+      <h2><span class="num-tag">건</span>${esc(title)} <span class="d-kind">${esc(kind)}</span></h2>
       <span class="badge none">${esc(t.regstrKindCdNm||"표제부")}</span>
     </div>
     <div class="card-body">
@@ -1471,7 +1482,7 @@ function cardHTML(t, kind){
         <button class="d-subtab" data-tab="wclf">오수정화시설</button>
         <button class="d-subtab" data-tab="jiji">지역지구</button>
         <button class="d-subtab" data-tab="atch">부속지번</button>
-        ${isDong ? '<button class="d-subtab" data-tab="expos">전유·공용</button>' : ""}
+        ${isJip ? '<button class="d-subtab" data-tab="expos">전유·공용</button>' : ""}
       </div>
       <div class="d-panel" id="dPanel"><div class="d-panel-hint">위 항목을 누르면 해당 정보를 불러옵니다</div></div>
     </div>
@@ -1479,11 +1490,10 @@ function cardHTML(t, kind){
 }
 
 function dongPickerHTML(dongs){
-  return `<div class="card d-card"><div class="card-head"><h2><span class="num-tag">동</span>동 선택 <span class="d-kind">집합건물 · ${dongs.length}개 동</span></h2></div>
-   <div class="card-body"><div class="d-dongs">${dongs.map((t,i)=>{
-     const nm = t.dongNm ? `${esc(t.dongNm)}동` : (esc(stripParens(t.bldNm))||"-");
-     return `<button class="d-dong" id="dDong${i}">${nm}</button>`;
-   }).join("")}</div></div></div>`;
+  return `<div class="card d-card"><div class="card-head"><h2><span class="num-tag">동</span>건물 선택 <span class="d-kind">${esc(gbLabel(dongs))} · ${dongs.length}개 동</span></h2></div>
+   <div class="card-body"><div class="d-dongs">${dongs.map((t,i)=>
+     `<button class="d-dong" id="dDong${i}">${esc(bldLabel(t))}</button>`
+   ).join("")}</div></div></div>`;
 }
 
 function subsHTML(subs){
