@@ -12,6 +12,15 @@ const FETCH_TIMEOUT_MS = 8000;
 const MAX_ROWS = 1000;
 const numRe = /^\d+$/;
 
+// 허용 오퍼레이션 (화이트리스트) — op 미지정 시 표제부
+const ALLOWED_OPS = new Set([
+  "getBrTitleInfo", "getBrRecapTitleInfo", "getBrBasisOulnInfo",
+  "getBrFlrOulnInfo", "getBrAtchJibunInfo", "getBrExposPubuseAreaInfo",
+  "getBrWclfInfo", "getBrHsprcInfo", "getBrExposInfo", "getBrJijiguInfo",
+]);
+// dongNm / hoNm: 숫자·한글·영문·하이픈만, 40자 제한
+const cleanField = (v) => String(v || "").replace(/[^0-9가-힣A-Za-z\-]/g, "").slice(0, 40);
+
 const one = (v) => (Array.isArray(v) ? v[0] : v) ?? "";
 
 // 건축HUB item 은 0건이면 없음, 1건이면 객체, 여러건이면 배열 → 항상 배열로 정규화
@@ -26,6 +35,8 @@ async function callHub(endpoint, params, serviceKey) {
   if (VALID_PLATGB.has(targetPlatGb)) q.platGbCd = targetPlatGb;
   if (params.bun) q.bun = params.bun;
   if (params.ji)  q.ji  = params.ji;
+  if (params.dongNm) q.dongNm = params.dongNm;
+  if (params.hoNm)   q.hoNm   = params.hoNm;
   q.numOfRows = params.numOfRows || "100";
   q.pageNo    = params.pageNo || "1";
 
@@ -104,18 +115,25 @@ export default async function handler(req, res) {
   const rows = Math.min(Math.max(parseInt(one(req.query.numOfRows), 10) || 100, 1), MAX_ROWS);
   const page = Math.max(parseInt(one(req.query.pageNo), 10) || 1, 1);
   
+  const opRaw = one(req.query.op).trim();
+  const op = ALLOWED_OPS.has(opRaw) ? opRaw : "getBrTitleInfo";
+  const dongNm = cleanField(one(req.query.dongNm));
+  const hoNm   = cleanField(one(req.query.hoNm));
+
   const params = {
     sigunguCd,
     bjdongCd,
     platGbCd: platGbCd || "",
     bun: normalizedBun,
     ji:  normalizedJi,
+    dongNm,
+    hoNm,
     numOfRows: String(rows),
     pageNo: String(page),
   };
 
   try {
-    const { titles, totalCount } = await callHub("getBrTitleInfo", params, serviceKey);
+    const { titles, totalCount } = await callHub(op, params, serviceKey);
     res.setHeader("Cache-Control", "s-maxage=86400, stale-while-revalidate");
     res.setHeader("X-Content-Type-Options", "nosniff");
     res.setHeader("X-Frame-Options", "DENY");
