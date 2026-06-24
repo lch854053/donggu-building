@@ -8,6 +8,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" crossorigin="anonymous" referrerpolicy="no-referrer">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <style>
   :root{
     --ink:#15263b;
@@ -293,6 +295,9 @@
   table.d-mini thead th{background:var(--paper-2);color:var(--ink-soft);font-weight:600;padding:9px 12px;text-align:left;white-space:nowrap;font-size:11.5px}
   table.d-mini tbody td{padding:8px 12px;border-top:1px solid var(--line);white-space:nowrap}
   table.d-mini td.num,table.d-mini th.num{font-family:var(--mono);text-align:right;font-variant-numeric:tabular-nums}
+  .d-map{height:360px;border-radius:8px;overflow:hidden;border:1px solid var(--line);background:#0b1a26}
+  .d-map-cap{font-family:var(--mono);font-size:11px;color:var(--mute);margin-top:6px}
+  .leaflet-container{font-family:var(--sans)}
 </style>
 </head>
 <body>
@@ -480,7 +485,7 @@
       <div class="card-head"><h2><span class="num-tag">검</span>단건 상세조회</h2></div>
       <div class="card-body">
         <div class="d-search-row">
-          <input id="dInput" type="text" placeholder="예) 궁동 6-2   ·   동계천로 172   ·   경양로 234 110동">
+          <input id="dInput" type="text" placeholder="예) 서남로 1   ·   계림동 521-58   ·   무등로384번길 15 108동">
           <button class="run" id="dRunBtn" onclick="runDetail()">조회</button>
           <button class="ghost" onclick="clearDetail()">초기화</button>
         </div>
@@ -499,7 +504,7 @@
       &ensp;· 주소 검색 : 행정안전부 도로명주소 API (실시간 갱신)<br>
       &ensp;· 건축물대장 : 국토교통부 건축물대장 API (매월 갱신, 세움터 기준)<br>
       &ensp;· 지번 및 좌표 보정 : 국토교통부 V-World API (실시간 갱신)<br>
-    - 마지막 업데이트 : 2026. 6. 24.<br>
+    - 마지막 업데이트 : 2026. 6. 21.<br>
     - 오류 제보 및 기능 추가 문의 : ch4834@korea.kr
   </div>
 </div>
@@ -1406,7 +1411,7 @@ async function runDetail(){
   document.getElementById("dResult").style.display = "none";
   D_CAND=null; D_TITLES=[]; D_SELDONG=null; D_DONGS=[];
   Object.keys(D_CACHE).forEach(k=>delete D_CACHE[k]);
-  dStatus('<span class="d-spin">주소 검색 중…</span>');
+  dStatus('<span class="d-spin">주소 해석 중…</span>');
   try{
     const wantDong = extractDong(raw);
     const query = cleanForSearch(raw);
@@ -1526,6 +1531,7 @@ function cardHTML(t, kind){
         <button class="d-subtab" data-tab="flr">층별개요</button>
         <button class="d-subtab" data-tab="wclf">오수정화시설</button>
         <button class="d-subtab" data-tab="jiji">지역지구</button>
+        <button class="d-subtab" data-tab="map">지도</button>
       </div>
       <div class="d-panel" id="dPanel"><div class="d-panel-hint">위 항목을 누르면 해당 정보를 불러옵니다</div></div>
     </div>
@@ -1544,6 +1550,7 @@ function wireSubtabs(dongNm){
 
 async function loadSubtab(key, dongNm){
   const panel = document.getElementById("dPanel");
+  if(key==="map"){ await renderMap(panel, dongNm); return; }   // 지도는 별도 처리
   const meta = D_OPS[key]; if(!meta) return;
   let raw = D_CACHE[key];
   if(!raw){
@@ -1553,7 +1560,7 @@ async function loadSubtab(key, dongNm){
     raw = res.items; D_CACHE[key] = raw;
   }
   let items = raw;
-  if(key==="flr" && dongNm) items = raw.filter(x=>dongMatch(x.dongNm, dongNm));   // 선택 동만
+  if(key==="flr" && dongNm) items = raw.filter(x=>dongMatch(x.dongNm, dongNm));
   panel.innerHTML = renderSubtab(key, items);
 }
 
@@ -1567,12 +1574,22 @@ function miniTable(cols, rows){
 function renderSubtab(key, items){
   if(key==="flr"){
     const ord = r => (String(r.flrGbCdNm||"").includes("지하") ? -Number(r.flrNo||0) : Number(r.flrNo||0));
-    return miniTable([
+    const lab = r => bldLabel(r);
+    const labels = [...new Set(items.map(lab))];
+    const multi = labels.length > 1;                 // 동이 여럿 섞여 있으면 동/건물 열 표시
+    const rows = items.slice().sort((a,b)=>{
+      if(multi){ const d = labels.indexOf(lab(a)) - labels.indexOf(lab(b)); if(d) return d; }
+      return ord(a)-ord(b);
+    });
+    const cols = [];
+    if(multi) cols.push({h:"동/건물", f:r=>esc(lab(r))});
+    cols.push(
       {h:"층", f:r=>esc(`${r.flrGbCdNm||""} ${r.flrNoNm||""}`.trim()||"-")},
       {h:"구조", f:r=>esc(r.strctCdNm||"-")},
       {h:"용도", f:r=>esc(r.etcPurps||r.mainPurpsCdNm||"-")},
-      {h:"면적(㎡)", num:true, f:r=>fmt(r.area)},
-    ], items.slice().sort((a,b)=>ord(a)-ord(b)));
+      {h:"면적(㎡)", num:true, f:r=>fmt(r.area)}
+    );
+    return miniTable(cols, rows);
   }
   if(key==="wclf"){
     const u = dedupeBy(items, r=>`${r.modeCdNm}|${r.capaPsper}|${r.capaLube}`);
@@ -1591,6 +1608,40 @@ function renderSubtab(key, items){
     ], u);
   }
   return "";
+}
+
+/* ---- 지도 (Leaflet + VWorld 항공타일 프록시 + 연속지적도 필지경계) ---- */
+let D_MAP = null;
+async function renderMap(panel, dongNm){
+  panel.innerHTML = `<div class="d-panel-hint">지도 불러오는 중…</div>`;
+  let t = D_TITLES[0];
+  if(dongNm && D_DONGS.length){
+    t = D_DONGS.find(d=>String(d.dongNm||"").trim()===dongNm) || t;
+  }
+  const b = mergeBuilding(t);
+  const addr = b.newPlatPlc!=="-" ? b.newPlatPlc : b.platPlc;
+  const pt = await geocodeAddr(addr);
+  if(!pt){ panel.innerHTML = '<div class="d-empty">좌표를 찾지 못해 지도를 표시할 수 없습니다</div>'; return; }
+  const parcel = await parcelFromCoord(pt.x, pt.y);
+
+  panel.innerHTML = `<div id="dMap" class="d-map"></div><div class="d-map-cap">항공영상·필지경계: VWorld 연속지적도 기준 (건물 외곽선 아님)</div>`;
+  if(D_MAP){ try{ D_MAP.remove(); }catch(e){} D_MAP=null; }
+  const blank = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
+  const map = L.map("dMap", { zoomControl:true, attributionControl:false });
+  D_MAP = map;
+  L.tileLayer('/api/vworld-tile?layer=Satellite&z={z}&y={y}&x={x}', { maxZoom:19, errorTileUrl:blank }).addTo(map);
+  L.tileLayer('/api/vworld-tile?layer=Hybrid&z={z}&y={y}&x={x}',    { maxZoom:19, errorTileUrl:blank }).addTo(map);
+
+  let fitted=false;
+  if(parcel && parcel.geometry){
+    try{
+      const gj = L.geoJSON(parcel.geometry, { style:{ color:"#ffcc00", weight:2.5, fillColor:"#ffcc00", fillOpacity:0.12 } }).addTo(map);
+      map.fitBounds(gj.getBounds(), { padding:[24,24], maxZoom:19 }); fitted=true;
+    }catch(e){}
+  }
+  if(!fitted) map.setView([Number(pt.y), Number(pt.x)], 18);
+  L.circleMarker([Number(pt.y), Number(pt.x)], { radius:6, color:"#1d5e8c", weight:2, fillColor:"#1d5e8c", fillOpacity:0.9 }).addTo(map);
+  setTimeout(()=>{ try{ map.invalidateSize(); }catch(e){} }, 120);
 }
 
 function clearDetail(){
