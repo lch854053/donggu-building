@@ -40,6 +40,7 @@ export default async function handler(req, res) {
     request: "GetFeature",
     data: "LP_PA_CBND_BUBUN",       // 연속지적도 필지(부분)
     geomFilter: `POINT(${x} ${y})`,
+    crs: "EPSG:4326",
     format: "json",
     size: "10",
     key,
@@ -87,6 +88,7 @@ export default async function handler(req, res) {
       ...parsed,
       addr: p.addr || "",
       jibun: p.jibun || "",
+      geometry: features[0].geometry || null,
     });
   } catch (e) {
     const aborted = e?.name === "AbortError";
