@@ -1364,21 +1364,6 @@ async function fetchOpAll(op, p){
   return { items: all };
 }
 
-// 주소 → 필지키 후보 (juso 우선, VWorld 폴백) — 동구만
-async function resolveDetailCandidates(raw){
-  const cleaned = cleanForSearch(raw);
-  const jusoList = await searchJuso(cleaned);
-  const out = []; const seen = new Set();
-  const add = (p)=>{
-    if(!p || p.sigunguCd!=="29110") return;
-    const k = `${p.bjdongCd}-${p.bun}-${p.ji}-${p.platGbCd}`;
-    if(seen.has(k)) return; seen.add(k); out.push(p);
-  };
-  for(const j of jusoList) jusoToBldCandidates(j).forEach(add);
-  if(!out.length){ const p = await paramsViaVworld(cleaned); add(p); }
-  return out;
-}
-
 function dStatus(html){
   const el = document.getElementById("dStatus");
   el.innerHTML = html; el.style.display = html ? "block" : "none";
@@ -1424,16 +1409,45 @@ async function runDetail(){
   dStatus('<span class="d-spin">주소 해석 중…</span>');
   try{
     const wantDong = extractDong(raw);
-    const cands = await resolveDetailCandidates(raw);
-    if(!cands.length){ dStatus('<span class="badge none">동구 내 주소를 찾지 못했습니다</span>'); return; }
-    let picked=null, titles=[];
-    for(const c of cands){
-      const res = await fetchBuilding(c);
-      if(res.error){ dStatus(`<span class="badge err">${esc(res.error)}</span>`); return; }
-      if(res.titles.length){ picked=c; titles=res.titles; break; }
+    const query = cleanForSearch(raw);
+
+    // 1) juso 검색 → 동구 후보(중복 제거). 0건이어도 VWorld 폴백으로 진행
+    const jusoList = await searchJuso(query);
+    const seen = new Set(); const candidates = [];
+    for(const j of jusoList){
+      for(const p of jusoToBldCandidates(j)){
+        const k = `${p.bjdongCd}-${p.bun}-${p.ji}-${p.platGbCd}`;
+        if(seen.has(k)) continue; seen.add(k); candidates.push(p);
+      }
     }
-    if(!picked){ dStatus('<span class="badge none">대장 없음 (나대지·미등록)</span>'); return; }
-    D_CAND=picked; D_TITLES=titles; dStatus("");
+
+    // 2) juso 후보로 표제부 시도
+    let titles=[], usedParams=candidates[0]||null, errMsg=null;
+    for(const c of candidates){
+      const r = await fetchBuilding(c);
+      usedParams = c;
+      if(r.error){ errMsg = r.error; break; }
+      if(r.titles.length){ titles = r.titles; break; }
+    }
+
+    // 3) juso로 대장이 안 나오면 → VWorld 좌표·PNU 폴백 (일괄조회 4-b와 동일)
+    //    juso 도로명-지번 매핑 오류, 신축·공공청사 누락 대응
+    if(!errMsg && !titles.length){
+      const v = await paramsViaVworld(query);
+      if(v && v.sigunguCd==="29110"){
+        const differs = !usedParams || v.bjdongCd!==usedParams.bjdongCd || v.bun!==usedParams.bun || v.ji!==usedParams.ji;
+        if(differs){
+          const r2 = await fetchBuilding(v);
+          if(!r2.error && r2.titles.length){ titles = r2.titles; usedParams = v; }
+        }
+      }
+    }
+
+    if(errMsg){ dStatus(`<span class="badge err">${esc(errMsg)}</span>`); return; }
+    if(!usedParams){ dStatus('<span class="badge none">동구 내 주소를 찾지 못했습니다</span>'); return; }
+    if(!titles.length){ dStatus('<span class="badge none">대장 없음 (나대지·미등록)</span>'); return; }
+
+    D_CAND = usedParams; D_TITLES = titles; dStatus("");
     renderDetail(wantDong);
   }catch(e){
     dStatus(`<span class="badge err">${esc(String(e?.message||e))}</span>`);
