@@ -480,7 +480,7 @@
       <div class="card-head"><h2><span class="num-tag">검</span>단건 상세조회</h2></div>
       <div class="card-body">
         <div class="d-search-row">
-          <input id="dInput" type="text" placeholder="예) 서남로 1   ·   계림동 521-58   ·   무등로384번길 15 108동">
+          <input id="dInput" type="text" placeholder="예) 궁동 6-2   ·   동계천로 172   ·   경양로 234 110동">
           <button class="run" id="dRunBtn" onclick="runDetail()">조회</button>
           <button class="ghost" onclick="clearDetail()">초기화</button>
         </div>
@@ -499,7 +499,7 @@
       &ensp;· 주소 검색 : 행정안전부 도로명주소 API (실시간 갱신)<br>
       &ensp;· 건축물대장 : 국토교통부 건축물대장 API (매월 갱신, 세움터 기준)<br>
       &ensp;· 지번 및 좌표 보정 : 국토교통부 V-World API (실시간 갱신)<br>
-    - 마지막 업데이트 : 2026. 6. 21.<br>
+    - 마지막 업데이트 : 2026. 6. 24.<br>
     - 오류 제보 및 기능 추가 문의 : ch4834@korea.kr
   </div>
 </div>
@@ -1406,7 +1406,7 @@ async function runDetail(){
   document.getElementById("dResult").style.display = "none";
   D_CAND=null; D_TITLES=[]; D_SELDONG=null; D_DONGS=[];
   Object.keys(D_CACHE).forEach(k=>delete D_CACHE[k]);
-  dStatus('<span class="d-spin">주소 해석 중…</span>');
+  dStatus('<span class="d-spin">주소 검색 중…</span>');
   try{
     const wantDong = extractDong(raw);
     const query = cleanForSearch(raw);
