@@ -667,6 +667,51 @@ async function parcelFromCoord(x, y){
   }catch{ return null; }
 }
 
+// 필지 파라미터 → PNU 19자리 (vworld-parcel.js 의 platGbCd 역변환과 일치)
+function toPNU(p){
+  const san = p.platGbCd === "1" ? "2" : "1";   // 1=산, 0/일반=대지
+  return `${p.sigunguCd}${p.bjdongCd}${san}` +
+         `${String(p.bun).padStart(4,"0")}${String(p.ji).padStart(4,"0")}`;
+}
+
+// 대표지번 + 부속지번(getBrAtchJibunInfo) → PNU 목록 (중복 제거)
+// 다필지 대지(합필 안 된 여러 필지 위 건물)의 모든 필지를 모으기 위함
+async function fetchAllParcelPNUs(p){
+  const set = new Set([ toPNU(p) ]);            // 대표지번
+  try{
+    const qs = new URLSearchParams({
+      op:"getBrAtchJibunInfo",
+      sigunguCd:p.sigunguCd, bjdongCd:p.bjdongCd,
+      platGbCd:p.platGbCd, bun:p.bun, ji:p.ji
+    }).toString();
+    const r = await fetch(`/api/building?${qs}`);
+    if(r.ok){
+      const d = await r.json();
+      for(const it of (d.titles || [])){
+        if(it.atchBjdongCd && it.atchBun != null){
+          set.add(toPNU({
+            sigunguCd: it.atchSigunguCd || p.sigunguCd,
+            bjdongCd:  it.atchBjdongCd,
+            platGbCd:  it.atchPlatGbCd || "0",
+            bun:       it.atchBun, ji: it.atchJi
+          }));
+        }
+      }
+    }
+  }catch{}
+  return [...set];
+}
+
+// PNU → 필지 geometry  (vworld-parcel.js 가 ?pnu= 조회를 지원해야 함)
+async function parcelGeomFromPNU(pnu){
+  try{
+    const r = await fetch(`/api/vworld-parcel?pnu=${encodeURIComponent(pnu)}`);
+    if(!r.ok) return null;
+    const d = await r.json();
+    return d.found ? d.geometry : null;
+  }catch{ return null; }
+}
+
 // 주소 → (좌표 → PNU) → 건축HUB 파라미터  [juso 실패 시 폴백 경로]
 async function paramsViaVworld(address){
   const pt = await geocodeAddr(address);
@@ -1623,8 +1668,6 @@ async function renderMap(panel, dongNm){
   const addr = b.newPlatPlc!=="-" ? b.newPlatPlc : b.platPlc;
   const pt = await geocodeAddr(addr);
   if(!pt){ panel.innerHTML = '<div class="d-empty">좌표를 찾지 못해 지도를 표시할 수 없습니다</div>'; return; }
-  const parcel = await parcelFromCoord(pt.x, pt.y);
-
   panel.innerHTML = `<div id="dMap" class="d-map"></div><div class="d-map-cap">항공영상·필지경계: VWorld 연속지적도 기준</div>`;
   if(D_MAP){ try{ D_MAP.remove(); }catch(e){} D_MAP=null; }
   const blank = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
@@ -1634,11 +1677,23 @@ async function renderMap(panel, dongNm){
   L.tileLayer('/api/vworld-tile?layer=Hybrid&z={z}&y={y}&x={x}',    { maxZoom:19, errorTileUrl:blank }).addTo(map);
 
   let fitted=false;
-  if(parcel && parcel.geometry){
-    try{
-      const gj = L.geoJSON(parcel.geometry, { style:{ color:"#ffcc00", weight:2.5, fillColor:"#ffcc00", fillOpacity:0.12 } }).addTo(map);
-      map.fitBounds(gj.getBounds(), { padding:[24,24], maxZoom:19 }); fitted=true;
-    }catch(e){}
+  // 대표지번 + 부속지번 전체 필지 그리기 (다필지 대지 대응)
+  let geoms = [];
+  if(D_CAND){
+    const pnus = await fetchAllParcelPNUs(D_CAND);
+    geoms = (await Promise.all(pnus.map(parcelGeomFromPNU))).filter(Boolean);
+  }
+  // 폴백: 부속지번/PNU 조회 실패 시 좌표 기반 단일 필지
+  if(!geoms.length){
+    const single = await parcelFromCoord(pt.x, pt.y);
+    if(single && single.geometry) geoms = [single.geometry];
+  }
+  if(geoms.length){
+    const group = L.featureGroup().addTo(map);
+    for(const g of geoms){
+      L.geoJSON(g, { style:{ color:"#ffcc00", weight:2.5, fillColor:"#ffcc00", fillOpacity:0.12 } }).addTo(group);
+    }
+    try{ map.fitBounds(group.getBounds(), { padding:[24,24], maxZoom:19 }); fitted=true; }catch(e){}
   }
   if(!fitted) map.setView([Number(pt.y), Number(pt.x)], 18);
   L.circleMarker([Number(pt.y), Number(pt.x)], { radius:6, color:"#1d5e8c", weight:2, fillColor:"#1d5e8c", fillOpacity:0.9 }).addTo(map);
