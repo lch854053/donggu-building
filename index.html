@@ -89,6 +89,16 @@
   .field .range{display:flex;align-items:center;gap:8px;color:var(--mute);font-size:13px}
   .warn-tag{font-size:10px;font-weight:600;color:var(--warn);background:var(--warn-bg);padding:1px 6px;border-radius:4px;margin-left:4px}
   .cond-hint{font-size:12.5px;color:var(--mute);font-family:var(--mono)}
+  .cpager{display:flex;align-items:center;justify-content:center;gap:8px;padding:16px 4px 2px;flex-wrap:wrap}
+  .cpager button{
+    min-width:34px;height:34px;padding:0 12px;border:1px solid var(--line-2);border-radius:6px;
+    background:var(--card);color:var(--ink-soft);font-size:13px;font-weight:600;
+    font-family:var(--mono);cursor:pointer;transition:border-color .15s,color .15s;
+  }
+  .cpager button:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
+  .cpager button:disabled{opacity:.38;cursor:default}
+  .cpager .cur{font-size:13px;color:var(--ink-soft);font-family:var(--mono);padding:0 6px}
+  .cpager .cur b{color:var(--accent)}
   .sel-hint{font-size:10px;font-weight:400;color:var(--mute)}
   .chk-row{display:flex;align-items:center;gap:7px;margin-top:9px;font-size:12px;font-weight:500;color:var(--ink-soft);cursor:pointer}
   .chk-row input{width:15px;height:15px;accent-color:var(--accent);cursor:pointer}
@@ -476,6 +486,7 @@
           <tbody id="cResultBody"></tbody>
         </table>
       </div>
+      <div id="cPager" class="cpager"></div>
     </div>
   </div><!-- /tab-cond -->
 
@@ -1314,14 +1325,45 @@ function cUpdate(done,total){
     done>=total ? `조회 완료 · 필터링 중…` : `건물대장 조회 중 … ${done}/${total}`;
 }
 
+/* 조건검색 결과 — 표시 전용 페이지네이션 (엑셀 내보내기는 항상 CRESULTS 전량)
+   CRESULTS 는 이미 메모리에 전부 들어와 있으므로, 느린 건 DOM 렌더링이다.
+   따라서 현재 페이지 구간만 잘라 그려서 대량 결과의 렌더 부하를 분산한다. */
+const C_PAGE_SIZE = 1000;   // 페이지당 표시 행 수 (표시 전용 · 노후 PC면 500으로)
+let   C_PAGE = 1;           // 현재 페이지 (1-base)
+
 function renderConditionResults(scanned, dongLabel){
+  C_PAGE = 1;
+  document.getElementById("cs-match").textContent = CRESULTS.length.toLocaleString("ko-KR");
+  document.getElementById("cs-scan").textContent  = scanned.toLocaleString("ko-KR");
+  document.getElementById("cResDong").textContent = dongLabel;
+  document.getElementById("cStats").style.display = "flex";
+  document.getElementById("cResultArea").style.display = "block";
+  document.getElementById("cExportBtn").disabled = CRESULTS.length === 0;
+  renderCondPage();
+}
+
+function gotoCondPage(p){
+  C_PAGE = p;
+  renderCondPage();
+  const sc = document.querySelector("#cResultArea .table-scroll");
+  if(sc) sc.scrollTop = 0;
+}
+
+function renderCondPage(){
+  const total  = CRESULTS.length;
+  const pages  = Math.max(1, Math.ceil(total / C_PAGE_SIZE));
+  C_PAGE = Math.min(Math.max(C_PAGE, 1), pages);
+  const offset = (C_PAGE - 1) * C_PAGE_SIZE;
+  const slice  = CRESULTS.slice(offset, offset + C_PAGE_SIZE);
+
   const body = document.getElementById("cResultBody");
   body.innerHTML = "";
-  CRESULTS.forEach((d,idx)=>{
+  const frag = document.createDocumentFragment();   // 단일 리플로우로 일괄 삽입
+  slice.forEach((d,i)=>{
     const tr = document.createElement("tr");
-    tr.style.animationDelay = (Math.min(idx,40)*0.01)+"s";
+    tr.style.animationDelay = (Math.min(i,40)*0.01)+"s";
     tr.innerHTML = `
-      <td class="num">${idx+1}</td>
+      <td class="num">${offset + i + 1}</td>
       <td>${esc(d.hdong)}</td>
       <td class="code">${esc(d.platPlc)}</td>
       <td class="code">${esc(d.newPlatPlc)}</td>
@@ -1333,14 +1375,23 @@ function renderConditionResults(scanned, dongLabel){
       <td class="num">${d.grndFlr ?? "-"}</td>
       <td class="num">${d.ugrndFlr ?? "-"}</td>
       <td>${useAprCell(d.useAprDay)}</td>`;
-    body.appendChild(tr);
+    frag.appendChild(tr);
   });
-  document.getElementById("cs-match").textContent = CRESULTS.length.toLocaleString("ko-KR");
-  document.getElementById("cs-scan").textContent = scanned.toLocaleString("ko-KR");
-  document.getElementById("cResDong").textContent = dongLabel;
-  document.getElementById("cStats").style.display="flex";
-  document.getElementById("cResultArea").style.display="block";
-  document.getElementById("cExportBtn").disabled = CRESULTS.length===0;
+  body.appendChild(frag);
+  renderCondPager(total, pages, offset, slice.length);
+}
+
+function renderCondPager(total, pages, offset, shown){
+  const el = document.getElementById("cPager");
+  if(!el) return;
+  if(pages <= 1){ el.innerHTML = ""; return; }   // 한 페이지면 페이저 숨김
+  const from = offset + 1, to = offset + shown;
+  el.innerHTML = `
+    <button ${C_PAGE<=1?"disabled":""} onclick="gotoCondPage(1)">«</button>
+    <button ${C_PAGE<=1?"disabled":""} onclick="gotoCondPage(${C_PAGE-1})">‹</button>
+    <span class="cur"><b>${C_PAGE}</b> / ${pages} 페이지 · ${from.toLocaleString("ko-KR")}–${to.toLocaleString("ko-KR")} / ${total.toLocaleString("ko-KR")}건</span>
+    <button ${C_PAGE>=pages?"disabled":""} onclick="gotoCondPage(${C_PAGE+1})">›</button>
+    <button ${C_PAGE>=pages?"disabled":""} onclick="gotoCondPage(${pages})">»</button>`;
 }
 
 function exportConditionExcel(){
@@ -1367,6 +1418,8 @@ function clearCond(){
   document.getElementById("cResultArea").style.display="none";
   document.getElementById("cStats").style.display="none";
   CRESULTS=[];
+  C_PAGE=1;
+  const pg=document.getElementById("cPager"); if(pg) pg.innerHTML="";
 }
 
 /* ============================================================
