@@ -1696,7 +1696,6 @@ async function renderMap(panel, dongNm){
     try{ map.fitBounds(group.getBounds(), { padding:[24,24], maxZoom:19 }); fitted=true; }catch(e){}
   }
   if(!fitted) map.setView([Number(pt.y), Number(pt.x)], 18);
-  L.circleMarker([Number(pt.y), Number(pt.x)], { radius:6, color:"#1d5e8c", weight:2, fillColor:"#1d5e8c", fillOpacity:0.9 }).addTo(map);
   setTimeout(()=>{ try{ map.invalidateSize(); }catch(e){} }, 120);
 }
 
