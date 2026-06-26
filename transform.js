@@ -75,6 +75,16 @@ function stripParens(s){
 }
 
 // 표제부(동 1개) 정보 정리
+// 표제부 → 총주차 대수. totPkngCnt 가 비었으면 옥내/옥외 × 자주식/기계식 합산(폴백).
+// 지자체가 합계칸은 비우고 항목별만 입력하는 경우가 흔해 합산이 필요함. 0이면 0 반환.
+function totalParking(t){
+  if(!t) return 0;
+  const tot = Number(t.totPkngCnt || 0);
+  if(tot > 0) return tot;
+  return ["indrAutoUtcnt","oudrAutoUtcnt","indrMechUtcnt","oudrMechUtcnt"]
+    .reduce((s,k)=> s + (Number(t[k]||0) || 0), 0);
+}
+
 function mergeBuilding(title){
   return {
     dongNm:       title.dongNm || "",                 // 동명칭 (단지일 때만)
@@ -92,6 +102,7 @@ function mergeBuilding(title){
     grndFlr:      title.grndFlrCnt ?? null,
     ugrndFlr:     title.ugrndFlrCnt ?? null,
     useAprDay:    title.useAprDay || "-",
+    totPkng:      totalParking(title),                // 총주차(합산 폴백 포함)
   };
 }
 
