@@ -1,7 +1,8 @@
 {
   "name": "gwangju-donggu-building-lookup",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
+  "type": "module",
   "description": "광주광역시 동구 건축물대장 일괄조회 (juso 변환 + 건축HUB)",
   "engines": {
     "node": ">=18"
