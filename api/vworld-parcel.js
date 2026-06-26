@@ -1,42 +1,24 @@
 // /api/vworld-parcel?x=126.92365&y=35.15785   (좌표 → 필지)
-// /api/vworld-parcel?pnu=4811010300100140000  (PNU → 필지)
-// VWorld 2D데이터 프록시 (좌표 또는 PNU → 연속지적도 필지)
+// /api/vworld-parcel?pnu=2911010300100140000   (PNU → 필지)
+// VWorld 2D데이터 프록시(좌표 또는 PNU → 연속지적도 필지)
+import { guard, fetchWithTimeout, setSecurity, requireEnv, failJson } from "./_lib/proxy.js";
+
 const VWORLD_URL = "https://api.vworld.kr/req/data";
-const ALLOWED_HOSTS = ["donggu-building.vercel.app", "localhost:3000"];
-const FETCH_TIMEOUT_MS = 5000;
 const DOMAIN = "https://donggu-building.vercel.app";
-
-function isAllowedOrigin(req) {
-  const ref = req.headers.origin || req.headers.referer || "";
-  if (!ref) return false;
-  try {
-    return ALLOWED_HOSTS.includes(new URL(ref).host);
-  } catch {
-    return false;
-  }
-}
-
 const numRe = /^-?\d+(\.\d+)?$/;
 const pnuRe = /^\d{19}$/;
 
 export default async function handler(req, res) {
-  if (req.method !== "GET") {
-    res.setHeader("Allow", "GET");
-    return res.status(405).json({ error: "GET만 허용" });
-  }
-  if (!isAllowedOrigin(req)) {
-    return res.status(403).json({ error: "허용되지 않은 출처" });
-  }
+  if (!guard(req, res)) return;
 
-  const x   = (req.query.x   || "").toString().trim();  // 경도
-  const y   = (req.query.y   || "").toString().trim();  // 위도
-  const pnu = (req.query.pnu || "").toString().trim();  // PNU 19자리 (선택)
+  const x   = (req.query.x   || "").toString().trim();
+  const y   = (req.query.y   || "").toString().trim();
+  const pnu = (req.query.pnu || "").toString().trim();
 
-  // 조회 방식 결정: pnu 우선, 없으면 좌표(POINT)
+  // pnu 우선, 없으면 좌표(POINT)
   let filter;
   if (pnu) {
-    if (!pnuRe.test(pnu))
-      return res.status(400).json({ error: "PNU 형식 오류" });
+    if (!pnuRe.test(pnu)) return res.status(400).json({ error: "PNU 형식 오류" });
     filter = { attrFilter: `pnu:=:${pnu}` };
   } else {
     if (!x || !y) return res.status(400).json({ error: "x/y 좌표 또는 pnu 누락" });
@@ -45,69 +27,48 @@ export default async function handler(req, res) {
     filter = { geomFilter: `POINT(${x} ${y})` };
   }
 
-  const key = process.env.VWORLD_KEY;
-  if (!key) return res.status(500).json({ error: "VWORLD_KEY 미설정" });
+  const key = requireEnv(res, "VWORLD_KEY");
+  if (!key) return;
 
   const params = new URLSearchParams({
-    service: "data",
-    request: "GetFeature",
-    data: "LP_PA_CBND_BUBUN",       // 연속지적도 필지(부분)
-    ...filter,                       // attrFilter(pnu) 또는 geomFilter(POINT)
-    crs: "EPSG:4326",
-    format: "json",
-    size: "10",
-    key,
-    domain: DOMAIN,
+    service: "data", request: "GetFeature",
+    data: "LP_PA_CBND_BUBUN",   // 연속지적도 필지(부분)
+    ...filter,
+    crs: "EPSG:4326", format: "json", size: "10", key, domain: DOMAIN,
   });
 
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
-
   try {
-    const r = await fetch(`${VWORLD_URL}?${params}`, { signal: ctrl.signal });
+    const r = await fetchWithTimeout(`${VWORLD_URL}?${params}`);
     if (!r.ok) return res.status(502).json({ error: "지적도 API 응답 오류" });
 
     const data = await r.json();
-    const status = data?.response?.status;
-    if (status !== "OK") {
-      return res.status(200).json({ found: false, raw: status || "no result" });
-    }
+    if (data?.response?.status !== "OK")
+      return res.status(200).json({ found: false, raw: data?.response?.status || "no result" });
 
     const features = data?.response?.result?.featureCollection?.features || [];
-    if (!features.length) {
-      return res.status(200).json({ found: false, raw: "필지 없음" });
-    }
+    if (!features.length) return res.status(200).json({ found: false, raw: "필지 없음" });
 
     const p = features[0].properties || {};
-    const pnu = String(p.pnu || "");
-    if (pnu.length !== 19) {
-      return res.status(200).json({ found: false, raw: "PNU 형식 이상", pnu });
-    }
+    const got = String(p.pnu || "");
+    if (got.length !== 19)
+      return res.status(200).json({ found: false, raw: "PNU 형식 이상", pnu: got });
 
-    // PNU 19자리 분해: 시군구(5) 법정동(5) 산구분(1) 본번(4) 부번(4)
-    const parsed = {
-      pnu,
-      sigunguCd: pnu.substring(0, 5),
-      bjdongCd:  pnu.substring(5, 10),
-      platGbCd:  pnu.substring(10, 11) === "2" ? "1" : "0",  // 2=산, 1=일반
-      bun:       pnu.substring(11, 15),
-      ji:        pnu.substring(15, 19),
-    };
-
+    // PNU 19자리: 시군구(5) 법정동(5) 산구분(1) 본번(4) 부번(4)
+    setSecurity(res);
     res.setHeader("Cache-Control", "s-maxage=86400, stale-while-revalidate=3600");
-    res.setHeader("X-Content-Type-Options", "nosniff");
     return res.status(200).json({
       found: true,
-      ...parsed,
-      addr: p.addr || "",
+      pnu: got,
+      sigunguCd: got.substring(0, 5),
+      bjdongCd:  got.substring(5, 10),
+      platGbCd:  got.substring(10, 11) === "2" ? "1" : "0",  // 2=산
+      bun:       got.substring(11, 15),
+      ji:        got.substring(15, 19),
+      addr:  p.addr  || "",
       jibun: p.jibun || "",
       geometry: features[0].geometry || null,
     });
   } catch (e) {
-    const aborted = e?.name === "AbortError";
-    console.error("[vworld-parcel]", aborted ? "timeout" : e?.message || e);
-    return res.status(aborted ? 504 : 502).json({ error: "서버 오류" });
-  } finally {
-    clearTimeout(timer);
+    return failJson(res, e, "vworld-parcel");
   }
 }
