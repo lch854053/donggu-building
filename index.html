@@ -10,305 +10,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" crossorigin="anonymous" referrerpolicy="no-referrer">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<style>
-  :root{
-    --ink:#15263b;
-    --ink-2:#2c4760;
-    --ink-soft:#3a5573;
-    --paper:#f4f1ea;
-    --paper-2:#ece7db;
-    --card:#fffdf8;
-    --line:#d9d2c4;
-    --line-2:#c3baa8;
-    --accent:#1d5e8c;
-    --accent-deep:#123f60;
-    --ok:#2f7d5b;
-    --ok-bg:#e7f3ec;
-    --warn:#a4720e;
-    --warn-bg:#f8efd6;
-    --err:#a4322f;
-    --err-bg:#f6e3e1;
-    --mute:#7b8794;
-    --mute-bg:#eceae4;
-    --none:#46668a;
-    --none-bg:#e7eef5;
-    --mono:"IBM Plex Mono",ui-monospace,monospace;
-    --sans:"IBM Plex Sans KR",system-ui,sans-serif;
-  }
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{
-    font-family:var(--sans);
-    background:var(--paper);
-    background-image:radial-gradient(var(--paper-2) 1px,transparent 1px);
-    background-size:22px 22px;
-    color:var(--ink);
-    line-height:1.55;
-    -webkit-font-smoothing:antialiased;
-    padding:0 0 80px;
-  }
-  .wrap{max-width:1180px;margin:0 auto;padding:0 24px}
-
-  /* Header */
-  header{
-    border-bottom:2px solid var(--ink);
-    padding:34px 0 22px;
-    margin-bottom:30px;
-    background:linear-gradient(180deg,rgba(255,253,248,.6),transparent);
-  }
-  .head-row{display:flex;align-items:center;gap:18px}
-  .gu-logo{height:54px;width:auto;flex:none;display:block}
-  .gu-divider{width:1px;align-self:stretch;background:var(--line);margin:2px 0}
-  .eyebrow{
-    font-family:var(--mono);
-    font-size:11px;letter-spacing:.22em;text-transform:uppercase;
-    color:var(--accent);font-weight:600;margin-bottom:8px;
-  }
-  h1{font-size:30px;font-weight:700;letter-spacing:-.02em;line-height:1.15}
-  h1 .light{font-weight:300;color:var(--ink-soft)}
-
-  /* Tabs */
-  .tabs{display:flex;gap:4px;margin-bottom:22px;border-bottom:1px solid var(--line)}
-  .tab{
-    font-family:var(--sans);font-size:14px;font-weight:600;cursor:pointer;
-    padding:11px 22px;border:none;background:none;color:var(--mute);
-    border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .15s;
-  }
-  .tab:hover{color:var(--ink-soft)}
-  .tab.active{color:var(--accent);border-bottom-color:var(--accent)}
-
-  /* Condition form */
-  .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:16px}
-  .field label{display:block;font-size:12px;font-weight:600;color:var(--ink-soft);margin-bottom:6px}
-  .lbl-row{display:flex;justify-content:space-between;align-items:center;gap:8px}
-  .field-note{margin-top:5px}
-  .field input,.field select{
-    width:100%;font-family:var(--sans);font-size:13.5px;
-    padding:9px 11px;border:1px solid var(--line-2);border-radius:5px;background:#fffefb;color:var(--ink);
-  }
-  .field input:focus,.field select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(29,94,140,.12)}
-  .field .range{display:flex;align-items:center;gap:8px;color:var(--mute);font-size:13px}
-  .warn-tag{font-size:10px;font-weight:600;color:var(--warn);background:var(--warn-bg);padding:1px 6px;border-radius:4px;margin-left:4px}
-  .cond-hint{font-size:12.5px;color:var(--mute);font-family:var(--mono)}
-  .cpager{display:flex;align-items:center;justify-content:center;gap:8px;padding:16px 4px 2px;flex-wrap:wrap}
-  .cpager button{
-    min-width:34px;height:34px;padding:0 12px;border:1px solid var(--line-2);border-radius:6px;
-    background:var(--card);color:var(--ink-soft);font-size:13px;font-weight:600;
-    font-family:var(--mono);cursor:pointer;transition:border-color .15s,color .15s;
-  }
-  .cpager button:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
-  .cpager button:disabled{opacity:.38;cursor:default}
-  .cpager .cur{font-size:13px;color:var(--ink-soft);font-family:var(--mono);padding:0 6px}
-  .cpager .cur b{color:var(--accent)}
-  .sel-hint{font-size:10px;font-weight:400;color:var(--mute)}
-  .chk-row{display:flex;align-items:center;gap:7px;margin-top:9px;font-size:12px;font-weight:500;color:var(--ink-soft);cursor:pointer}
-  .chk-row input{width:15px;height:15px;accent-color:var(--accent);cursor:pointer}
-  .age{font-family:var(--mono);font-size:11px;color:var(--mute);margin-left:5px}
-  .age.old{color:var(--warn);font-weight:600}
-  .age.veryold{color:var(--err);font-weight:600}
-  .readout{font-size:11px;font-weight:600;color:var(--accent);font-family:var(--mono);margin-left:4px}
-
-  /* Multiselect */
-  .ms{position:relative}
-  .ms-btn{
-    width:100%;text-align:left;cursor:pointer;font-family:var(--sans);font-size:13.5px;
-    padding:9px 30px 9px 11px;border:1px solid var(--line-2);border-radius:5px;background:#fffefb;color:var(--ink);
-    position:relative;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-  }
-  .ms-btn::after{content:"▾";position:absolute;right:11px;color:var(--mute);font-size:11px}
-  .ms-btn:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(29,94,140,.12)}
-  .ms-btn.has{color:var(--ink);font-weight:500}
-  .ms-panel{
-    position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:30;
-    background:var(--card);border:1px solid var(--line-2);border-radius:6px;
-    box-shadow:0 10px 30px -10px rgba(21,38,59,.4);padding:6px;max-height:240px;overflow:auto;display:none;
-  }
-  .ms-panel.open{display:block}
-  .ms-opt{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:4px;cursor:pointer;font-size:13px}
-  .ms-opt:hover{background:var(--paper-2)}
-  .ms-opt input{width:15px;height:15px;accent-color:var(--accent);cursor:pointer}
-
-  /* Dual range slider */
-  .dual{position:relative;height:34px;padding-top:14px}
-  .dual .track{position:absolute;top:20px;left:0;right:0;height:4px;background:var(--paper-2);border-radius:2px}
-  .dual .fill{position:absolute;top:20px;height:4px;background:var(--accent);border-radius:2px}
-  .dual input[type=range]{
-    position:absolute;top:12px;left:0;width:100%;margin:0;background:none;pointer-events:none;
-    -webkit-appearance:none;appearance:none;height:20px;
-  }
-  .dual input[type=range]::-webkit-slider-thumb{
-    -webkit-appearance:none;appearance:none;pointer-events:auto;cursor:pointer;
-    width:18px;height:18px;border-radius:50%;background:#fff;border:2px solid var(--accent);
-    box-shadow:0 1px 4px rgba(0,0,0,.2);
-  }
-  .dual input[type=range]::-moz-range-thumb{
-    pointer-events:auto;cursor:pointer;width:18px;height:18px;border-radius:50%;
-    background:#fff;border:2px solid var(--accent);box-shadow:0 1px 4px rgba(0,0,0,.2);
-  }
-
-  /* Cards */
-  .card{
-    background:var(--card);
-    border:1px solid var(--line);
-    border-radius:6px;
-    box-shadow:0 1px 0 rgba(0,0,0,.02),0 8px 24px -18px rgba(21,38,59,.35);
-  }
-  .card-head{
-    display:flex;align-items:center;justify-content:space-between;
-    padding:16px 20px;border-bottom:1px solid var(--line);
-  }
-  .card-head h2{font-size:14px;font-weight:600;letter-spacing:.01em;display:flex;align-items:center;gap:9px}
-  .num-tag{
-    font-family:var(--mono);font-size:11px;font-weight:600;
-    width:20px;height:20px;display:grid;place-items:center;
-    background:var(--ink);color:var(--paper);border-radius:4px;
-  }
-  .card-body{padding:20px}
-
-  textarea{
-    width:100%;min-height:150px;resize:vertical;
-    font-family:var(--mono);font-size:13.5px;line-height:1.7;
-    padding:14px 16px;border:1px solid var(--line-2);border-radius:5px;
-    background:#fffefb;color:var(--ink);
-  }
-  textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(29,94,140,.12)}
-  .hint{margin-top:10px;font-size:12.5px;color:var(--mute);font-family:var(--mono)}
-  .hint b{color:var(--ink-soft);font-weight:500}
-
-  .controls{display:flex;align-items:center;gap:12px;margin-top:18px;flex-wrap:wrap}
-  button.run{
-    font-family:var(--sans);font-size:14px;font-weight:600;
-    padding:11px 26px;border:none;border-radius:5px;cursor:pointer;
-    background:var(--accent);color:#fff;letter-spacing:.01em;
-    display:inline-flex;align-items:center;gap:9px;
-    transition:background .15s,transform .05s;
-  }
-  button.run:hover{background:var(--accent-deep)}
-  button.run:active{transform:translateY(1px)}
-  button.run:disabled{background:var(--line-2);cursor:not-allowed}
-  button.ghost{
-    font-family:var(--sans);font-size:13px;font-weight:500;
-    padding:10px 16px;border:1px solid var(--line-2);border-radius:5px;
-    background:transparent;color:var(--ink-soft);cursor:pointer;
-  }
-  button.ghost:hover{background:var(--paper-2)}
-
-  /* Progress */
-  .progress-wrap{margin-top:18px;display:none}
-  .progress-wrap.on{display:block}
-  .progress-bar{height:6px;background:var(--paper-2);border-radius:3px;overflow:hidden}
-  .progress-fill{height:100%;width:0;background:linear-gradient(90deg,var(--accent),#2f86bf);transition:width .25s ease}
-  .progress-text{margin-top:8px;font-family:var(--mono);font-size:12px;color:var(--ink-soft)}
-
-  /* Stats */
-  .stats{display:flex;gap:10px;margin:26px 0 14px;flex-wrap:wrap}
-  .stat{
-    flex:1;min-width:120px;background:var(--card);border:1px solid var(--line);
-    border-radius:6px;padding:14px 16px;
-  }
-  .stat .k{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute)}
-  .stat .v{font-size:26px;font-weight:700;margin-top:4px;font-variant-numeric:tabular-nums}
-  .stat.ok .v{color:var(--ok)} .stat.warn .v{color:var(--warn)}
-  .stat.err .v{color:var(--err)} .stat.total .v{color:var(--ink)}
-  .stat.none .v{color:var(--none)}
-
-  /* Legend + actions */
-  .result-head{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:12px}
-  .legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--ink-soft)}
-  .legend span{display:inline-flex;align-items:center;gap:6px}
-  .chip{width:11px;height:11px;border-radius:3px;display:inline-block}
-  .chip.ok{background:var(--ok)} .chip.warn{background:var(--warn)}
-  .chip.err{background:var(--err)} .chip.mute{background:var(--mute)}
-  .chip.none{background:var(--none)}
-  button.export{
-    font-family:var(--sans);font-size:13px;font-weight:600;
-    padding:9px 18px;border:1px solid var(--ok);border-radius:5px;cursor:pointer;
-    background:var(--ok-bg);color:var(--ok);display:inline-flex;align-items:center;gap:8px;
-  }
-  button.export:hover{background:#dcecdf}
-  button.export:disabled{opacity:.4;cursor:not-allowed}
-
-  /* Table */
-  .table-scroll{overflow-x:auto;border:1px solid var(--line);border-radius:6px;background:var(--card)}
-  table{border-collapse:collapse;width:100%;min-width:1080px;font-size:12.5px}
-  thead th{
-    background:var(--ink);color:var(--paper);font-weight:500;
-    padding:11px 12px;text-align:left;white-space:nowrap;
-    font-size:11.5px;letter-spacing:.02em;position:sticky;top:0;
-  }
-  tbody td{padding:10px 12px;border-bottom:1px solid var(--line);white-space:nowrap;vertical-align:middle}
-  tbody tr:last-child td{border-bottom:none}
-  tbody tr{animation:rowin .35s ease backwards}
-  @keyframes rowin{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
-  td.num,th.num{font-family:var(--mono);text-align:right;font-variant-numeric:tabular-nums}
-  td.code{font-family:var(--mono);font-size:11.5px;color:var(--ink-soft)}
-  td.addr{font-weight:500;min-width:160px;white-space:normal}
-  tr.r-ok{} 
-  tr.r-warn{background:var(--warn-bg)}
-  tr.r-err{background:var(--err-bg)}
-  tr.r-none{background:var(--none-bg)}
-  tr.r-mute{background:var(--mute-bg);color:var(--mute)}
-  /* 펼치기 */
-  tr.expandable{cursor:pointer}
-  tr.expandable:hover{background:#eef4f8}
-  .caret{display:inline-block;margin-right:7px;color:var(--accent);font-size:11px;transition:transform .18s;transform:rotate(0deg)}
-  tr.expandable.open .caret{transform:rotate(90deg)}
-  .cplx{font-size:10px;font-weight:600;color:var(--accent);background:#e4eef5;border:1px solid #c5dcea;padding:1px 6px;border-radius:4px;margin-left:6px;vertical-align:middle}
-  tr.sub-row td{background:#faf8f2;font-size:12px;border-bottom:1px solid var(--line)}
-  tr.sub-row.r-warn td{background:#fbf6e8}
-  .sub-dong{color:var(--ink-soft);font-weight:500}
-  .atch{font-size:10px;font-weight:600;color:var(--ok);background:var(--ok-bg);padding:1px 6px;border-radius:4px;margin-left:6px}
-  .atch.sub{color:var(--mute);background:#e6e4de}
-  .badge{
-    display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;
-    padding:3px 9px;border-radius:999px;font-family:var(--sans);
-  }
-  .badge.ok{background:var(--ok-bg);color:var(--ok)}
-  .badge.warn{background:#f8efd6;color:var(--warn)}
-  .badge.err{background:var(--err-bg);color:var(--err)}
-  .badge.none{background:var(--none-bg);color:var(--none)}
-  .badge.mute{background:#e2e0da;color:var(--mute)}
-  .empty{padding:54px 20px;text-align:center;color:var(--mute);font-size:14px}
-  .empty .big{font-size:15px;color:var(--ink-soft);margin-bottom:6px;font-weight:500}
-
-  .footnote{margin-top:26px;font-size:12px;color:var(--mute);line-height:1.7;border-top:1px solid var(--line);padding-top:16px}
-  .footnote code{font-family:var(--mono);background:var(--paper-2);padding:1px 6px;border-radius:3px;color:var(--ink-soft)}
-  /* ===== 단건 상세조회 ===== */
-  .d-search-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-  .d-search-row input{flex:1;min-width:240px;font-family:var(--sans);font-size:14px;padding:11px 13px;border:1px solid var(--line-2);border-radius:5px;background:#fffefb;color:var(--ink)}
-  .d-search-row input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(29,94,140,.12)}
-  .d-status{margin-top:14px;font-size:13px}
-  .d-spin{font-family:var(--mono);font-size:12.5px;color:var(--ink-soft)}
-  .d-card+.d-card{margin-top:14px}
-  .d-kind{font-family:var(--mono);font-size:11px;font-weight:500;color:var(--mute);letter-spacing:.02em}
-  .d-addr{font-size:15px;font-weight:600;color:var(--ink)}
-  .d-addr.sub{font-size:12.5px;font-weight:400;color:var(--mute);margin-top:2px}
-  .d-sec-title{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);font-weight:600;margin:20px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--line)}
-  .d-kv{display:grid;grid-template-columns:120px 1fr;gap:8px 16px;font-size:13.5px}
-  .d-kv .k{color:var(--ink-soft);font-weight:500}
-  .d-kv .v{color:var(--ink);font-variant-numeric:tabular-nums}
-  @media(min-width:680px){.d-kv{grid-template-columns:120px 1fr 120px 1fr}}
-  .d-dongs{display:flex;flex-wrap:wrap;gap:8px}
-  .d-dong{font-family:var(--sans);font-size:13px;font-weight:500;padding:8px 15px;border:1px solid var(--line-2);border-radius:999px;background:#fffefb;color:var(--ink-soft);cursor:pointer}
-  .d-dong:hover{border-color:var(--accent);color:var(--accent)}
-  .d-dong.active{background:var(--accent);border-color:var(--accent);color:#fff}
-  .d-subtabs{display:flex;flex-wrap:wrap;gap:4px;margin-top:22px;border-bottom:1px solid var(--line)}
-  .d-subtab{font-family:var(--sans);font-size:13px;font-weight:600;cursor:pointer;padding:9px 15px;border:none;background:none;color:var(--mute);border-bottom:2px solid transparent;margin-bottom:-1px}
-  .d-subtab:hover{color:var(--ink-soft)}
-  .d-subtab.active{color:var(--accent);border-bottom-color:var(--accent)}
-  .d-panel{padding:16px 0 2px}
-  .d-panel-hint{font-size:12.5px;color:var(--mute);font-family:var(--mono)}
-  .d-panel-hint.err{color:var(--err)}
-  .d-note{font-size:11px;color:var(--mute);font-family:var(--mono)}
-  .d-empty{padding:22px;text-align:center;color:var(--mute);font-size:13px}
-  .d-mini-scroll{overflow-x:auto;border:1px solid var(--line);border-radius:6px}
-  table.d-mini{border-collapse:collapse;width:100%;font-size:12.5px}
-  table.d-mini thead th{background:var(--paper-2);color:var(--ink-soft);font-weight:600;padding:9px 12px;text-align:left;white-space:nowrap;font-size:11.5px}
-  table.d-mini tbody td{padding:8px 12px;border-top:1px solid var(--line);white-space:nowrap}
-  table.d-mini td.num,table.d-mini th.num{font-family:var(--mono);text-align:right;font-variant-numeric:tabular-nums}
-  .d-map{height:360px;border-radius:8px;overflow:hidden;border:1px solid var(--line);background:#0b1a26}
-  .d-map-cap{font-family:var(--mono);font-size:11px;color:var(--mute);margin-top:6px}
-  .leaflet-container{font-family:var(--sans)}
-</style>
+<link rel="stylesheet" href="styles.css">
 </head>
 <body>
 <div class="wrap">
@@ -507,7 +209,6 @@
     <div id="dResult" style="display:none;margin-top:18px"></div>
   </div><!-- /tab-detail -->
 
-
   <div class="footnote">
     - 조회 범위는 광주광역시 동구이며, 지번·도로명주소로 모두 검색 가능합니다<br>
     - 행안부(주소)·국토부(건축물대장) 간 지번 불일치로 일부 건물이 조회되지 않을 수 있으며, 건축물대장이 등재되지 않은 경우는 실제 건물이 있어도 조회되지 않을 수 있습니다<br>
@@ -521,6 +222,7 @@
   </div>
 </div>
 
+<script src="transform.js"></script>
 <script>
 /* ============================================================
    1. 변환 로직 — Vercel에 그대로 이식되는 실제 코드
@@ -530,99 +232,11 @@
 // juso가 bdMgtSn과 lnbr에 서로 다른 지번을 주고, 케이스마다 맞는 쪽이 달라
 // 두 후보를 모두 만들어 순서대로 시도한다 (동구 29110 인 것만)
   
-function jusoToBldCandidates(j){
-  const out = [];
-  const seen = new Set();
-  const push = (p) => {
-    if(p.sigunguCd !== "29110") return;          // 동구만
-    const k = `${p.bjdongCd}-${p.bun}-${p.ji}-${p.platGbCd}`;
-    if(seen.has(k)) return;                       // 중복 제거
-    seen.add(k);
-    out.push(p);
-  };
-
-  // 후보 A: bdMgtSn 기반 (법정동·부번이 정확한 경우가 많음)
-  const sn = String(j.bdMgtSn || "");
-  if(/^\d{19,}$/.test(sn)){
-    push({
-      sigunguCd: sn.substring(0, 5),
-      bjdongCd:  sn.substring(5, 10),
-      platGbCd:  sn.substring(10, 11) === "2" ? "1" : "0",
-      bun:       sn.substring(11, 15),
-      ji:        sn.substring(15, 19),
-    });
-  }
-
-  // 후보 B: admCd + lnbr 기반 (bdMgtSn이 틀릴 때 맞는 경우)
-  const admCd = String(j.admCd || "").padEnd(10, "0");
-  push({
-    sigunguCd: admCd.substring(0, 5),
-    bjdongCd:  admCd.substring(5, 10),
-    platGbCd:  j.mtYn === "1" ? "1" : "0",
-    bun:       String(j.lnbrMnnm ?? 0).padStart(4, "0"),
-    ji:        String(j.lnbrSlno ?? 0).padStart(4, "0"),
-  });
-
-  return out;
-}
   
 // 동구 전용 필터
 function isDonggu(p){ return p.sigunguCd === "29110"; }
 
-// 입력 주소에서 '동' 번호 추출 (예: "108동", "제108동", "108-1동" → "108")
-// 숫자 기준. 못 찾으면 null
-function extractDong(raw){
-  // 도로명/지번 본번과 혼동 방지: '동' 글자가 붙은 숫자만
-  const m = raw.match(/(\d+)\s*동(?![가-힣])/);
-  return m ? m[1] : null;
-}
-// 동명칭에서 숫자만 뽑아 비교 (대장상 "제108동","108","가동" 등 표기차 흡수)
-function dongDigits(s){ const m = String(s||"").match(/\d+/); return m ? m[0] : null; }
-
-// juso 검색용 주소 정제: 상세주소(층/호/상호) 제거하고 건물번호까지만 남김
-// 예) "무등로307번길 4, 1층 신부헤어샵" → "무등로307번길 4"
-//     "계림동 521-58번지, 2층"        → "계림동 521-58"
-function cleanForSearch(raw){
-  let s = raw.trim();
-  s = s.split(",")[0];                 // 쉼표 뒤(상세주소) 제거
-  s = s.replace(/번지/g, "");          // '번지' 제거
-  s = s.replace(/\s+/g, " ").trim();
-  // 광역시/도·시군구가 없으면 '광주광역시 동구' 보강 (이 툴은 동구 전용)
-  // "중앙로 254" 같은 흔한 도로명이 타 지역으로 매칭되는 것 방지
-  const hasSido = /(특별자치|광역시|특별시|[가-힣]+도)\s/.test(s) || s.includes("광주");
-  const hasGugun = /(동구|서구|남구|북구|광산구)/.test(s);
-  if(!hasSido && !hasGugun){
-    s = "광주광역시 동구 " + s;
-  }
-  return s;
-}
   
-// 표시용 주소 정제: 괄호 묶음 전부 제거 (인명·법정동 모두 제거)
-// 예) "계림동 521-58 (윤지애)" → "계림동 521-58",  "무등로384번길 15 (계림동)" → "무등로384번길 15"
-function stripParens(s){
-  return String(s||"").replace(/\s*\([^)]*\)\s*$/,"").replace(/\s*\([^)]*\)/g,"").trim();
-}
-
-// 표제부(동 1개) 정보 정리
-function mergeBuilding(title){
-  return {
-    dongNm:       title.dongNm || "",                 // 동명칭 (단지일 때만)
-    atchGb:       title.mainAtchGbCdNm || "주건축물", // 주/부속 구분
-    bldNm:        stripParens(title.bldNm) || "-",
-    platPlc:      stripParens(title.platPlc) || "-",
-    newPlatPlc:   stripParens(title.newPlatPlc) || "-",
-    mainPurps:    title.mainPurpsCdNm || "-",
-    strct:        title.strctCdNm || "-",
-    platArea:     title.platArea ?? null,
-    archArea:     title.archArea ?? null,
-    totArea:      title.totArea ?? null,
-    bcRat:        title.bcRat ?? null,
-    vlRat:        title.vlRat ?? null,
-    grndFlr:      title.grndFlrCnt ?? null,
-    ugrndFlr:     title.ugrndFlrCnt ?? null,
-    useAprDay:    title.useAprDay || "-",
-  };
-}
 
 /* ============================================================
    2. 데이터 레이어 — Vercel 프록시 호출
@@ -676,13 +290,6 @@ async function parcelFromCoord(x, y){
     const d = await r.json();
     return d.found ? d : null;
   }catch{ return null; }
-}
-
-// 필지 파라미터 → PNU 19자리 (vworld-parcel.js 의 platGbCd 역변환과 일치)
-function toPNU(p){
-  const san = p.platGbCd === "1" ? "2" : "1";   // 1=산, 0/일반=대지
-  return `${p.sigunguCd}${p.bjdongCd}${san}` +
-         `${String(p.bun).padStart(4,"0")}${String(p.ji).padStart(4,"0")}`;
 }
 
 // 대표지번 + 부속지번(getBrAtchJibunInfo) → PNU 목록 (중복 제거)
@@ -1014,24 +621,7 @@ document.getElementById("resultBody").addEventListener("click", e=>{
 });
 
 /* ---- helpers ---- */
-function fmt(n){ return n==null ? "-" : Number(n).toLocaleString("ko-KR"); }
-function esc(s){ return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 
-// 사용승인일에서 연도만 추출 ("20150911"→2015, "2015"→2015, 누락→null)
-function extractYear(useAprDay){
-  if(!useAprDay || useAprDay==="-") return null;
-  const s = String(useAprDay).replace(/\D/g,"");   // 숫자만
-  if(s.length>=4) return parseInt(s.substring(0,4),10);
-  return null;
-}
-// 표시용 날짜 포맷 ("20150911"→2015.09.11, "201509"→2015.09, "2015"→2015)
-function fmtUseApr(s){
-  const d = String(s||"").replace(/\D/g,"");
-  if(d.length>=8) return `${d.slice(0,4)}.${d.slice(4,6)}.${d.slice(6,8)}`;
-  if(d.length>=6) return `${d.slice(0,4)}.${d.slice(4,6)}`;
-  if(d.length>=4) return d.slice(0,4);
-  return esc(s||"-");
-}
 // 사용승인일 셀: 연도 있으면 날짜+경과연수, 없으면 '연도미확인' 배지
 function useAprCell(useAprDay){
   const yr = extractYear(useAprDay);
@@ -1065,20 +655,6 @@ const STRCT_OPTS = ["철근콘크리트구조","철골구조","철골철근콘�
 const MS = {};    // 다중선택 컴포넌트
 const DUAL = {};  // 슬라이더 컴포넌트
 let FILTERS_READY = false;
-
-// 공백 제거
-function norm(s){ return String(s||"").replace(/\s/g,""); }
-// 카테고리 매칭: sel 비었으면 전체통과. '기타'=알려진 어디에도 안 걸리는 값
-function matchCat(value, sel, opts){
-  if(!sel.length) return true;
-  const v = norm(value);
-  const known = opts.map(norm);
-  for(const s of sel){
-    if(s==="기타"){ if(!known.some(k=>v.includes(k))) return true; }
-    else if(v.includes(norm(s))) return true;
-  }
-  return false;
-}
 
 // 다중선택 드롭다운
 function buildMultiselect(hostId, opts){
@@ -1472,36 +1048,6 @@ function dStatus(html){
   const el = document.getElementById("dStatus");
   el.innerHTML = html; el.style.display = html ? "block" : "none";
 }
-
-// 동 시작 숫자(없으면 Infinity) — 숫자 동 정렬용
-function leadNum(t){
-  const s = String(t.dongNm||"").trim() || stripParens(String(t.bldNm||"").trim());
-  const m = s.match(/^(\d+)/);
-  return m ? parseInt(m[1],10) : Infinity;
-}
-// 동명칭 매칭 (표제부 동 ↔ 층별 동)
-function dongMatch(a, b){
-  a=String(a||"").trim(); b=String(b||"").trim();
-  if(!a||!b) return false;
-  if(a===b) return true;
-  const da=dongDigits(a), db=dongDigits(b);
-  return !!(da && db && da===db);
-}
-function dedupeBy(items, keyFn){
-  const seen=new Set(); const out=[];
-  for(const r of items){ const k=keyFn(r); if(seen.has(k)) continue; seen.add(k); out.push(r); }
-  return out;
-}
-
-// 표제부 1건 → 표시용 명칭 (동명칭→건물명→주부속구분, 숫자 동만 '동' 부착)
-function bldLabel(t){
-  const dong = String(t.dongNm||"").trim();
-  if(dong) return /^\d+$/.test(dong) ? dong+"동" : dong;
-  const bld = stripParens(String(t.bldNm||"").trim());
-  if(bld) return bld;
-  return String(t.mainAtchGbCdNm||"").trim() || "-";
-}
-function gbLabel(rows){ return rows.some(t=>String(t.regstrGbCd)==="2") ? "집합건물" : "일반건축물"; }
 
 async function runDetail(){
   const raw = document.getElementById("dInput").value.trim();
