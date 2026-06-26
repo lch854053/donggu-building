@@ -96,6 +96,7 @@
           <th class="num">용적률</th>
           <th class="num">지상층</th>
           <th class="num">지하층</th>
+          <th class="num">총주차</th>
           <th>사용승인일</th>
           <th>상태</th>
         </tr></thead>
@@ -183,6 +184,7 @@
             <th class="num">연면적(㎡)</th>
             <th class="num">지상층</th>
             <th class="num">지하층</th>
+            <th class="num">총주차</th>
             <th>사용승인일</th>
           </tr></thead>
           <tbody id="cResultBody"></tbody>
@@ -503,6 +505,7 @@ function renderResults(){
         <td class="num">${d.vlRat!=null?d.vlRat+"%":"-"}</td>
         <td class="num">${d.grndFlr ?? "-"}</td>
         <td class="num">${d.ugrndFlr ?? "-"}</td>
+        <td class="num">${d.totPkng>0?fmt(d.totPkng):"-"}</td>
         <td class="code">${esc(d.useAprDay)}</td>
         <td>${r.status==="ok"
             ? '<span class="badge ok">정상</span>'
@@ -531,6 +534,7 @@ function renderResults(){
             <td class="num">${b.vlRat!=null?b.vlRat+"%":"-"}</td>
             <td class="num">${b.grndFlr ?? "-"}</td>
             <td class="num">${b.ugrndFlr ?? "-"}</td>
+            <td class="num">${b.totPkng>0?fmt(b.totPkng):"-"}</td>
             <td class="code">${esc(b.useAprDay)}</td>
             <td></td>`;
           body.appendChild(sub);
@@ -547,7 +551,7 @@ function renderResults(){
       tr.innerHTML = `
         <td class="num">${idx+1}</td>
         <td class="addr">${esc(r.input)}</td>
-        <td class="code" colspan="13">${esc(r.jibun||"")} ${esc(r.reason)}</td>
+        <td class="code" colspan="14">${esc(r.jibun||"")} ${esc(r.reason)}</td>
         <td>${badge}</td>`;
       body.appendChild(tr);
     }
@@ -578,7 +582,7 @@ function exportExcel(){
           "주용도":d.mainPurps||"","주구조":d.strct||"",
           "대지면적":d.platArea??"","건축면적":d.archArea??"","연면적":d.totArea??"",
           "건폐율(%)":d.bcRat??"","용적률(%)":d.vlRat??"",
-          "지상층수":d.grndFlr??"","지하층수":d.ugrndFlr??"","사용승인일":d.useAprDay||"",
+          "지상층수":d.grndFlr??"","지하층수":d.ugrndFlr??"","총주차":d.totPkng||0,"사용승인일":d.useAprDay||"",
           "시군구코드":p.sigunguCd||"","법정동코드":p.bjdongCd||"","번":p.bun||"","지":p.ji||"","산여부":p.platGbCd||"",
           "상태":({ok:"정상",warn:"확인필요"})[r.status]||"","비고":r.reason||""
         });
@@ -588,7 +592,7 @@ function exportExcel(){
         "순번":i+1,"동번호":"","입력주소":r.input,"동명":"","주부속":"",
         "지번주소":r.jibun||"","도로명주소":"","건물명":"",
         "주용도":"","주구조":"","대지면적":"","건축면적":"","연면적":"",
-        "건폐율(%)":"","용적률(%)":"","지상층수":"","지하층수":"","사용승인일":"",
+        "건폐율(%)":"","용적률(%)":"","지상층수":"","지하층수":"","총주차":"","사용승인일":"",
         "시군구코드":p.sigunguCd||"","법정동코드":p.bjdongCd||"","번":p.bun||"","지":p.ji||"","산여부":p.platGbCd||"",
         "상태":({err:"실패",none:"대장없음",mute:"동구외"})[r.status]||"","비고":r.reason||""
       });
@@ -942,6 +946,7 @@ function renderCondPage(){
       <td class="num">${fmt(d.totArea)}</td>
       <td class="num">${d.grndFlr ?? "-"}</td>
       <td class="num">${d.ugrndFlr ?? "-"}</td>
+      <td class="num">${d.totPkng>0?fmt(d.totPkng):"-"}</td>
       <td>${useAprCell(d.useAprDay)}</td>`;
     frag.appendChild(tr);
   });
@@ -969,7 +974,7 @@ function exportConditionExcel(){
     return {
       "순번":i+1,"행정동":d.hdong||"","지번주소":d.platPlc||"","도로명주소":d.newPlatPlc||"",
       "건물명":d.bldNm||"","동":d.dongNm||"","주용도":d.mainPurps||"","주구조":d.strct||"",
-      "연면적":d.totArea??"","지상층수":d.grndFlr??"","지하층수":d.ugrndFlr??"",
+      "연면적":d.totArea??"","지상층수":d.grndFlr??"","지하층수":d.ugrndFlr??"","총주차":d.totPkng||0,
       "사용승인일":d.useAprDay||"","경과연수":yr===null?"미확인":(nowY-yr)
     };
   });
@@ -1262,7 +1267,7 @@ function renderParking(dongNm){
   const cols = [];
   if(multi) cols.push({h:"동/건물", f:r=>esc(lab(r))});
   cols.push(
-    {h:"총주차", num:true, f:r=>cnt(r.totPkngCnt)},
+    {h:"총주차", num:true, f:r=>{ const n=totalParking(r); return n>0?fmt(n):"-"; }},
     {h:"옥내자주식", num:true, f:r=>cnt(r.indrAutoUtcnt)},
     {h:"옥외자주식", num:true, f:r=>cnt(r.oudrAutoUtcnt)},
     {h:"옥내기계식", num:true, f:r=>cnt(r.indrMechUtcnt)},
