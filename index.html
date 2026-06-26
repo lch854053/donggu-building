@@ -64,7 +64,7 @@
     <div class="stat err"><div class="k">실패·제외</div><div class="v" id="s-err">0</div></div>
   </div>
 
-  <!-- RESULTS -->
+  <!-- B_RESULTS -->
   <div id="resultArea" style="display:none">
     <div class="result-head">
       <div class="legend">
@@ -338,7 +338,8 @@ async function paramsViaVworld(address){
 /* ============================================================
    3. 메인 처리 — 일괄 루프 (동시 처리)
    ============================================================ */
-let RESULTS = [];
+/* ── 일괄조회(Bulk) 상태 ── */
+let   B_RESULTS  = [];   // 일괄조회 결과 행
 const CONCURRENCY = 5;   // 동시 조회 개수 (너무 높이면 API 차단 위험)
 
 // 순서를 유지하면서 동시에 N건씩 처리하는 풀
@@ -363,7 +364,7 @@ async function runLookup(){
     .split("\n").map(s=>s.trim()).filter(Boolean);
   if(!lines.length){ alert("주소를 한 줄 이상 입력하세요."); return; }
 
-  RESULTS = [];
+  B_RESULTS = [];
   const runBtn = document.getElementById("runBtn");
   runBtn.disabled = true;
   document.getElementById("progWrap").classList.add("on");
@@ -371,7 +372,7 @@ async function runLookup(){
   document.getElementById("stats").style.display="none";
   updateProgress(0, lines.length);
 
-  RESULTS = await runPool(lines, processOne, CONCURRENCY, (done,total)=>{
+  B_RESULTS = await runPool(lines, processOne, CONCURRENCY, (done,total)=>{
     updateProgress(done, total);
   });
 
@@ -471,7 +472,7 @@ function renderResults(){
   body.innerHTML = "";
   let ok=0,warn=0,none=0,err=0;
 
-  RESULTS.forEach((r,idx)=>{
+  B_RESULTS.forEach((r,idx)=>{
     const tr = document.createElement("tr");
     tr.className = "r-"+r.status;
     tr.style.animationDelay = (idx*0.03)+"s";
@@ -552,7 +553,7 @@ function renderResults(){
     }
   });
 
-  document.getElementById("s-total").textContent = RESULTS.length;
+  document.getElementById("s-total").textContent = B_RESULTS.length;
   document.getElementById("s-ok").textContent = ok;
   document.getElementById("s-warn").textContent = warn;
   document.getElementById("s-none").textContent = none;
@@ -565,7 +566,7 @@ function renderResults(){
 function exportExcel(){
   // 화면은 대표 1행이지만, 엑셀은 모든 동을 한 행씩 빠짐없이 내보냄
   const rows = [];
-  RESULTS.forEach((r,i)=>{
+  B_RESULTS.forEach((r,i)=>{
     const p=r.params||{};
     if(r.buildings && r.buildings.length){
       r.buildings.forEach((d,k)=>{
@@ -625,13 +626,15 @@ function clearAll(){
   document.getElementById("input").value="";
   document.getElementById("resultArea").style.display="none";
   document.getElementById("stats").style.display="none";
-  RESULTS=[];
+  B_RESULTS=[];
 }
 
 /* ============================================================
    조건검색 (행정동 기준)
    ============================================================ */
-const SIGUNGU = "29110";
+const SIGUNGU = "29110";  // 공유: 동구 시군구코드 (전 탭 building 호출에 사용)
+
+/* ── 조건검색(Cond) 상태 ── */
 let HJ = null;            // 행정동 매핑 { jibun2hdong, hdong2bjd }
 let HDONG2JIBUN = null;   // 행정동 → [지번키] 역매핑 (jibun2hdong 역index)
 let BJD_PARCELS = null;   // 법정동코드 → 매핑된 지번 수 (동단위 비용 추정용)
@@ -645,6 +648,8 @@ const STRCT_OPTS = ["철근콘크리트구조","철골구조","철골철근콘�
 const MS = {};    // 다중선택 컴포넌트
 const DUAL = {};  // 슬라이더 컴포넌트
 let FILTERS_READY = false;
+const C_PAGE_SIZE = 1000; // 페이지당 표시 행 수 (표시 전용 · 노후 PC면 500으로)
+let   C_PAGE = 1;         // 현재 페이지 (1-base)
 
 // 다중선택 드롭다운
 function buildMultiselect(hostId, opts){
@@ -891,9 +896,8 @@ function cUpdate(done,total){
 
 /* 조건검색 결과 — 표시 전용 페이지네이션 (엑셀 내보내기는 항상 CRESULTS 전량)
    CRESULTS 는 이미 메모리에 전부 들어와 있으므로, 느린 건 DOM 렌더링이다.
-   따라서 현재 페이지 구간만 잘라 그려서 대량 결과의 렌더 부하를 분산한다. */
-const C_PAGE_SIZE = 1000;   // 페이지당 표시 행 수 (표시 전용 · 노후 PC면 500으로)
-let   C_PAGE = 1;           // 현재 페이지 (1-base)
+   따라서 현재 페이지 구간만 잘라 그려서 대량 결과의 렌더 부하를 분산한다.
+   (페이징 상태 C_PAGE / C_PAGE_SIZE 는 조건검색 상태 블록에 선언) */
 
 function renderConditionResults(scanned, dongLabel){
   C_PAGE = 1;
@@ -992,11 +996,13 @@ function clearCond(){
    - 부가정보(층별/정화조/지역지구)는 탭 클릭 시 lazy 호출
    - 필지 단위 오퍼레이션은 전체 페이징 후 캐시 → 동 전환은 즉시
    ============================================================ */
+/* ── 단건 상세(Detail) 상태 ── */
 let D_CAND   = null;   // 확정 필지키
 let D_TITLES = [];     // 표제부 rows
 let D_SELDONG = null;  // 선택 동 dongNm
 const D_CACHE = {};    // 필지 단위 부가정보 캐시 key → raw items
 let D_DONGS = [];
+let D_MAP   = null;    // Leaflet 지도 인스턴스
 
 const D_OPS = {
   flr:  { op:"getBrFlrOulnInfo", name:"층별개요" },
@@ -1240,7 +1246,6 @@ function renderSubtab(key, items){
 }
 
 /* ---- 지도 (Leaflet + VWorld 항공타일 프록시 + 연속지적도 필지경계) ---- */
-let D_MAP = null;
 async function renderMap(panel, dongNm){
   panel.innerHTML = `<div class="d-panel-hint">지도 불러오는 중…</div>`;
   let t = D_TITLES[0];
