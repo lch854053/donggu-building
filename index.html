@@ -1164,6 +1164,7 @@ function cardHTML(t, kind){
 
       <div class="d-subtabs">
         <button class="d-subtab" data-tab="flr">층별개요</button>
+        <button class="d-subtab" data-tab="park">주차</button>
         <button class="d-subtab" data-tab="wclf">오수정화시설</button>
         <button class="d-subtab" data-tab="jiji">지역지구</button>
         <button class="d-subtab" data-tab="hist">이력</button>
@@ -1188,6 +1189,7 @@ async function loadSubtab(key, dongNm){
   const panel = document.getElementById("dPanel");
   if(key==="map"){ await renderMap(panel, dongNm); return; }   // 지도는 별도 처리
   if(key==="hist"){ await loadHistory(panel); return; }        // 이력은 건축인허가(ArchPms) API
+  if(key==="park"){ panel.innerHTML = renderParking(dongNm); return; }  // 주차: 표제부(D_TITLES) 재사용, 추가 호출 없음
   const meta = D_OPS[key]; if(!meta) return;
   let raw = D_CACHE[key];
   if(!raw){
@@ -1245,6 +1247,28 @@ function renderSubtab(key, items){
     ], u);
   }
   return "";
+}
+
+// 주차 — 표제부(D_TITLES)에 이미 주차 필드가 있어 추가 API 호출 없음.
+// 동이 여럿이면 선택 동으로 필터(층별개요와 동일 방식).
+function renderParking(dongNm){
+  let rows = D_TITLES;
+  if(dongNm) rows = rows.filter(x=>dongMatch(x.dongNm, dongNm));
+  if(!rows.length) return `<div class="d-empty">주차 정보가 없습니다</div>`;
+  const lab = r => bldLabel(r);
+  const labels = [...new Set(rows.map(lab))];
+  const multi = labels.length > 1;                 // 동이 여럿이면 동/건물 열 표시
+  const cnt = v => { const n = Number(v||0); return n>0 ? fmt(n) : "-"; };
+  const cols = [];
+  if(multi) cols.push({h:"동/건물", f:r=>esc(lab(r))});
+  cols.push(
+    {h:"총주차", num:true, f:r=>cnt(r.totPkngCnt)},
+    {h:"옥내자주식", num:true, f:r=>cnt(r.indrAutoUtcnt)},
+    {h:"옥외자주식", num:true, f:r=>cnt(r.oudrAutoUtcnt)},
+    {h:"옥내기계식", num:true, f:r=>cnt(r.indrMechUtcnt)},
+    {h:"옥외기계식", num:true, f:r=>cnt(r.oudrMechUtcnt)},
+  );
+  return miniTable(cols, rows);
 }
 
 /* ---- 이력 (건축인허가 기본개요 = 건축허가→착공→사용승인 생애주기) ---- */
