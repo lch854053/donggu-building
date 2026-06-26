@@ -1166,6 +1166,7 @@ function cardHTML(t, kind){
         <button class="d-subtab" data-tab="flr">층별개요</button>
         <button class="d-subtab" data-tab="wclf">오수정화시설</button>
         <button class="d-subtab" data-tab="jiji">지역지구</button>
+        <button class="d-subtab" data-tab="hist">이력</button>
         <button class="d-subtab" data-tab="map">지도</button>
       </div>
       <div class="d-panel" id="dPanel"><div class="d-panel-hint">위 항목을 누르면 해당 정보를 불러옵니다</div></div>
@@ -1186,6 +1187,7 @@ function wireSubtabs(dongNm){
 async function loadSubtab(key, dongNm){
   const panel = document.getElementById("dPanel");
   if(key==="map"){ await renderMap(panel, dongNm); return; }   // 지도는 별도 처리
+  if(key==="hist"){ await loadHistory(panel); return; }        // 이력은 건축인허가(ArchPms) API
   const meta = D_OPS[key]; if(!meta) return;
   let raw = D_CACHE[key];
   if(!raw){
@@ -1243,6 +1245,44 @@ function renderSubtab(key, items){
     ], u);
   }
   return "";
+}
+
+/* ---- 이력 (건축인허가 기본개요 = 건축허가→착공→사용승인 생애주기) ---- */
+// 별도 프록시 /api/archpms 사용. 필지 단위로 D_CACHE["hist"]에 캐시(검색마다 초기화).
+async function loadHistory(panel){
+  let raw = D_CACHE["hist"];
+  if(!raw){
+    panel.innerHTML = `<div class="d-panel-hint">이력 불러오는 중…</div>`;
+    const { ok, status, data, error } = await api("archpms", {
+      op:"getApBasisOulnInfo",
+      sigunguCd:D_CAND.sigunguCd, bjdongCd:D_CAND.bjdongCd,
+      platGbCd:D_CAND.platGbCd||"", bun:D_CAND.bun, ji:D_CAND.ji
+    });
+    if(!ok){ panel.innerHTML = `<div class="d-panel-hint err">${esc(status?`서버 오류 ${status}`:(error||"오류"))}</div>`; return; }
+    if(data.error){ panel.innerHTML = `<div class="d-panel-hint err">${esc(data.error)}</div>`; return; }
+    raw = Array.isArray(data.items) ? data.items : [];
+    D_CACHE["hist"] = raw;
+  }
+  panel.innerHTML = renderHistory(raw);
+}
+
+// YYYYMMDD → YYYY.MM.DD. 빈값·전부0이면 "-"
+function histDate(s){
+  const d = String(s||"").replace(/\D/g,"");
+  if(!d || /^0+$/.test(d)) return "-";
+  return fmtUseApr(s);
+}
+
+function renderHistory(items){
+  if(!items.length) return `<div class="d-empty">건축인허가 이력이 없습니다</div>`;
+  // 허가일 오름차순(과거→현재). 한 대지에 신축·증축 등 여러 인허가건이 올 수 있음
+  const rows = items.slice().sort((a,b)=>String(a.archPmsDay||"").localeCompare(String(b.archPmsDay||"")));
+  return miniTable([
+    {h:"구분", f:r=>esc(r.archGbCdNm||r.bldNm||"-")},
+    {h:"건축허가일", f:r=>histDate(r.archPmsDay)},
+    {h:"착공일", f:r=>histDate(r.realStcnsDay)},
+    {h:"사용승인일", f:r=>histDate(r.useAprDay)},
+  ], rows);
 }
 
 /* ---- 지도 (Leaflet + VWorld 항공타일 프록시 + 연속지적도 필지경계) ---- */
