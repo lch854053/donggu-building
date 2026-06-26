@@ -242,92 +242,82 @@ function isDonggu(p){ return p.sigunguCd === "29110"; }
    2. 데이터 레이어 — Vercel 프록시 호출
    ============================================================ */
 
+// 모든 /api 프록시 호출 공통 래퍼.
+//   성공        : { ok:true,  status, data }
+//   비2xx 응답  : { ok:false, status, data:null }
+//   네트워크 예외: { ok:false, status:0, data:null, error }
+async function api(path, params){
+  const qs = params ? "?" + new URLSearchParams(params).toString() : "";
+  try{
+    const r = await fetch(`/api/${path}${qs}`);
+    if(!r.ok) return { ok:false, status:r.status, data:null };
+    return { ok:true, status:r.status, data: await r.json() };
+  }catch(e){
+    return { ok:false, status:0, data:null, error:String(e?.message||e) };
+  }
+}
+
 // juso 검색 API (프록시 /api/juso 경유 → CORS 없음)
 async function searchJuso(keyword){
-  const r = await fetch(`/api/juso?keyword=${encodeURIComponent(keyword)}`);
-  if(!r.ok) return [];
-  const data = await r.json();
+  const { ok, data } = await api("juso", { keyword });
+  if(!ok) return [];
   return Array.isArray(data.juso) ? data.juso : [];
 }
 
 // 건축HUB 표제부 (프록시 /api/building 경유)
 // 반환: { titles:[...], error:null }  — titles 빈배열 + error 없음 = 대장 없음
 async function fetchBuilding(p){
-  const qs = new URLSearchParams({
+  const { ok, status, data, error } = await api("building", {
     sigunguCd:p.sigunguCd, bjdongCd:p.bjdongCd,
     platGbCd:p.platGbCd, bun:p.bun, ji:p.ji
-  }).toString();
-  try{
-    const r = await fetch(`/api/building?${qs}`);
-    if(!r.ok) return {titles:[], error:`서버 오류 ${r.status}`};
-    const data = await r.json();
-    return {
-      titles: Array.isArray(data.titles) ? data.titles : [],
-      error:  data.error || null
-    };
-  }catch(e){
-    return {titles:[], error:String(e?.message||e)};
-  }
+  });
+  if(!ok) return { titles:[], error: status ? `서버 오류 ${status}` : error };
+  return {
+    titles: Array.isArray(data.titles) ? data.titles : [],
+    error:  data.error || null
+  };
 }
-
-const delay = ms => new Promise(r=>setTimeout(r,ms));
 
 // 주소 → 좌표 (VWorld 지오코더 프록시)
 async function geocodeAddr(address){
-  try{
-    const r = await fetch(`/api/vworld-geocode?address=${encodeURIComponent(address)}`);
-    if(!r.ok) return null;
-    const d = await r.json();
-    return d.found ? {x:d.x, y:d.y} : null;
-  }catch{ return null; }
+  const { ok, data } = await api("vworld-geocode", { address });
+  return ok && data.found ? {x:data.x, y:data.y} : null;
 }
 
 // 좌표 → 필지 파라미터 (VWorld 2D데이터 프록시)
 async function parcelFromCoord(x, y){
-  try{
-    const r = await fetch(`/api/vworld-parcel?x=${encodeURIComponent(x)}&y=${encodeURIComponent(y)}`);
-    if(!r.ok) return null;
-    const d = await r.json();
-    return d.found ? d : null;
-  }catch{ return null; }
+  const { ok, data } = await api("vworld-parcel", { x, y });
+  return ok && data.found ? data : null;
 }
 
 // 대표지번 + 부속지번(getBrAtchJibunInfo) → PNU 목록 (중복 제거)
 // 다필지 대지(합필 안 된 여러 필지 위 건물)의 모든 필지를 모으기 위함
 async function fetchAllParcelPNUs(p){
   const set = new Set([ toPNU(p) ]);            // 대표지번
-  try{
-    const qs = new URLSearchParams({
-      op:"getBrAtchJibunInfo",
-      sigunguCd:p.sigunguCd, bjdongCd:p.bjdongCd,
-      platGbCd:p.platGbCd, bun:p.bun, ji:p.ji
-    }).toString();
-    const r = await fetch(`/api/building?${qs}`);
-    if(r.ok){
-      const d = await r.json();
-      for(const it of (d.titles || [])){
-        if(it.atchBjdongCd && it.atchBun != null){
-          set.add(toPNU({
-            sigunguCd: it.atchSigunguCd || p.sigunguCd,
-            bjdongCd:  it.atchBjdongCd,
-            platGbCd:  it.atchPlatGbCd || "0",
-            bun:       it.atchBun, ji: it.atchJi
-          }));
-        }
+  const { ok, data } = await api("building", {
+    op:"getBrAtchJibunInfo",
+    sigunguCd:p.sigunguCd, bjdongCd:p.bjdongCd,
+    platGbCd:p.platGbCd, bun:p.bun, ji:p.ji
+  });
+  if(ok){
+    for(const it of (data.titles || [])){
+      if(it.atchBjdongCd && it.atchBun != null){
+        set.add(toPNU({
+          sigunguCd: it.atchSigunguCd || p.sigunguCd,
+          bjdongCd:  it.atchBjdongCd,
+          platGbCd:  it.atchPlatGbCd || "0",
+          bun:       it.atchBun, ji: it.atchJi
+        }));
       }
     }
-  }catch{}
+  }
   return [...set];
 }
 
 // PNU → 필지 geometry  (vworld-parcel.js 가 ?pnu= 조회를 지원해야 함)
 async function parcelGeomFromPNU(pnu){
-  try{
-    const r = await fetch(`/api/vworld-parcel?pnu=${encodeURIComponent(pnu)}`);
-    if(!r.ok) return null;
-    const d = await r.json();
-    return d.found ? d.geometry : null;
-  }catch{ return null; }
+  const { ok, data } = await api("vworld-parcel", { pnu });
+  return ok && data.found ? data.geometry : null;
 }
 
 // 주소 → (좌표 → PNU) → 건축HUB 파라미터  [juso 실패 시 폴백 경로]
@@ -759,20 +749,18 @@ async function loadHaengjeong(){
 
 // 동 단위 페이지 조회 (프록시)
 async function fetchDongPage(bjd, pageNo){
-  const qs = new URLSearchParams({sigunguCd:SIGUNGU, bjdongCd:bjd, numOfRows:"1000", pageNo:String(pageNo)}).toString();
-  const r = await fetch(`/api/building?${qs}`);
-  if(!r.ok) return {titles:[], totalCount:0};
-  const d = await r.json();
-  return {titles:Array.isArray(d.titles)?d.titles:[], totalCount:Number(d.totalCount||0)};
+  const { ok, data } = await api("building", {
+    sigunguCd:SIGUNGU, bjdongCd:bjd, numOfRows:"1000", pageNo:String(pageNo)
+  });
+  if(!ok) return {titles:[], totalCount:0};
+  return {titles:Array.isArray(data.titles)?data.titles:[], totalCount:Number(data.totalCount||0)};
 }
 
 // 번지 단건 조회 (프록시) — 한 필지의 표제부만
 async function fetchParcel(bjd, bun, ji){
-  const qs = new URLSearchParams({sigunguCd:SIGUNGU, bjdongCd:bjd, bun, ji}).toString();
-  const r = await fetch(`/api/building?${qs}`);
-  if(!r.ok) return [];
-  const d = await r.json();
-  return Array.isArray(d.titles) ? d.titles : [];
+  const { ok, data } = await api("building", { sigunguCd:SIGUNGU, bjdongCd:bjd, bun, ji });
+  if(!ok) return [];
+  return Array.isArray(data.titles) ? data.titles : [];
 }
 
 async function runConditionSearch(){
@@ -1018,17 +1006,13 @@ const D_OPS = {
 
 // 1페이지 호출 (반환 {items,totalCount,error})
 async function fetchOp(op, p, extra){
-  const qs = new URLSearchParams({
+  const { ok, status, data, error } = await api("building", {
     op, sigunguCd:p.sigunguCd, bjdongCd:p.bjdongCd,
     platGbCd:p.platGbCd||"", bun:p.bun, ji:p.ji,
     numOfRows:"100", pageNo:"1", ...(extra||{})
-  }).toString();
-  try{
-    const r = await fetch(`/api/building?${qs}`);
-    if(!r.ok) return { items:[], totalCount:0, error:`서버 오류 ${r.status}` };
-    const d = await r.json();
-    return { items: Array.isArray(d.titles)?d.titles:[], totalCount:Number(d.totalCount||0), error:d.error||null };
-  }catch(e){ return { items:[], totalCount:0, error:String(e?.message||e) }; }
+  });
+  if(!ok) return { items:[], totalCount:0, error: status ? `서버 오류 ${status}` : error };
+  return { items: Array.isArray(data.titles)?data.titles:[], totalCount:Number(data.totalCount||0), error:data.error||null };
 }
 
 // 전체 페이지 수집 (대단지는 전 동이 섞여 오므로 모두 받아 캐시)
