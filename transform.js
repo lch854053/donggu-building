@@ -14,27 +14,40 @@ function jusoToBldCandidates(j){
     out.push(p);
   };
 
-  // 후보 A: bdMgtSn 기반 (법정동·부번이 정확한 경우가 많음)
+  // admCd = 주소 자체(jibunAddr)의 법정동 — 법정동 판단의 기준
+  const admCd = String(j.admCd || "").padEnd(10, "0");
+  const admBjdong = admCd.substring(5, 10);
+
+  // 후보 A: bdMgtSn 기반 (본번·부번이 정확한 경우가 많음)
+  let candA = null;
   const sn = String(j.bdMgtSn || "");
   if(/^\d{19,}$/.test(sn)){
-    push({
+    candA = {
       sigunguCd: sn.substring(0, 5),
       bjdongCd:  sn.substring(5, 10),
       platGbCd:  sn.substring(10, 11) === "2" ? "1" : "0",
       bun:       sn.substring(11, 15),
       ji:        sn.substring(15, 19),
-    });
+    };
   }
 
-  // 후보 B: admCd + lnbr 기반 (bdMgtSn이 틀릴 때 맞는 경우)
-  const admCd = String(j.admCd || "").padEnd(10, "0");
-  push({
+  // 후보 B: admCd + lnbr 기반 (주소의 법정동·지번)
+  const candB = {
     sigunguCd: admCd.substring(0, 5),
-    bjdongCd:  admCd.substring(5, 10),
+    bjdongCd:  admBjdong,
     platGbCd:  j.mtYn === "1" ? "1" : "0",
     bun:       String(j.lnbrMnnm ?? 0).padStart(4, "0"),
     ji:        String(j.lnbrSlno ?? 0).padStart(4, "0"),
-  });
+  };
+
+  // bdMgtSn의 법정동이 주소(admCd)의 법정동과 다르면 그 건물관리번호는 신뢰 불가 →
+  // bdMgtSn 후보(A)를 버리고 주소 기준 후보(B)만 사용한다.
+  if(candA && candA.bjdongCd === admBjdong){
+    push(candA);
+    push(candB);
+  } else {
+    push(candB);
+  }
 
   return out;
 }
