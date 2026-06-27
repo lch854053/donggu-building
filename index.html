@@ -316,6 +316,31 @@ async function fetchAllParcelPNUs(p){
   return [...set];
 }
 
+// [임시·디버그] 다필지 검증: 대장(부속지번) vs 인허가(대지위치) 필지수 비교
+// 사용법: 단건 상세조회를 먼저 실행한 뒤, 브라우저 콘솔에서 compareParcels() 호출
+async function compareParcels(){
+  if(typeof D_CAND === "undefined" || !D_CAND){ console.warn("먼저 단건 상세조회를 실행하세요(D_CAND 없음)"); return; }
+  const led = new Set(await fetchAllParcelPNUs(D_CAND));   // 대표+부속지번(대장)
+  const per = new Set();                                   // 관련지번(인허가, PNU dedup)
+  const { ok, data } = await api("archpms", {
+    op:"getApPlatPlcInfo",
+    sigunguCd:D_CAND.sigunguCd, bjdongCd:D_CAND.bjdongCd,
+    platGbCd:D_CAND.platGbCd||"", bun:D_CAND.bun, ji:D_CAND.ji
+  });
+  if(ok) for(const it of (data.items || [])){
+    if(it.sigunguCd && it.bun != null)
+      per.add(toPNU({ sigunguCd:it.sigunguCd, bjdongCd:it.bjdongCd, platGbCd:it.platGbCd||"0", bun:it.bun, ji:it.ji }));
+  }
+  const onlyPermit = [...per].filter(x=>!led.has(x));
+  console.log("[다필지 비교]", {
+    대장필지수: led.size,
+    인허가필지수: per.size,
+    인허가만_대장누락: onlyPermit,
+    판정: per.size===0 ? "인허가 없음(비교불가)" : (onlyPermit.length ? "대장 누락 의심(#6 정당)" : "일치(보강 불필요)")
+  });
+  return { 대장:[...led], 인허가:[...per], 인허가만:onlyPermit };
+}
+
 // PNU → 필지 geometry  (vworld-parcel.js 가 ?pnu= 조회를 지원해야 함)
 async function parcelGeomFromPNU(pnu){
   const { ok, data } = await api("vworld-parcel", { pnu });
