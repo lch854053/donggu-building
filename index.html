@@ -484,6 +484,9 @@ function renderResults(){
       if(r.status==="ok") ok++; else warn++;
       const d = r.data;
       const n = r.buildings.length;
+      // 총주차는 대표행만이 아니라 이 주소의 모든 표제부 행을 합산
+      // (주차가 주건축물이 아닌 다른 동/행에 기록된 경우 대응 — 조건검색과 일치)
+      const pkAll = r.buildings.reduce((s,b)=>s+(b.totPkng||0),0);
       const expandable = n > 1;
       // 대표 표시명: 건물명 우선(예: 그랜드센트럴). 단지면 "건물명 외 N개동"
       const repName = expandable
@@ -505,7 +508,7 @@ function renderResults(){
         <td class="num">${d.vlRat!=null?d.vlRat+"%":"-"}</td>
         <td class="num">${d.grndFlr ?? "-"}</td>
         <td class="num">${d.ugrndFlr ?? "-"}</td>
-        <td class="num">${d.totPkng>0?fmt(d.totPkng):"-"}</td>
+        <td class="num">${pkAll>0?fmt(pkAll):"-"}</td>
         <td class="code">${esc(d.useAprDay)}</td>
         <td>${r.status==="ok"
             ? '<span class="badge ok">정상</span>'
