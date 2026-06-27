@@ -1311,9 +1311,34 @@ function histDate(s){
   return fmtUseApr(s);
 }
 
+// 표제부(D_TITLES) 기반 '최초 건축' 폴백 행 — 건축인허가(ArchPms) 이력이 0건일 때만 사용.
+// 날짜 기준(B′): 주건축물 우선, 사용승인일이 공란이면 단지 내 동들 중 가장 이른 유효일 사용.
+function registerHistoryRow(){
+  const titles = Array.isArray(D_TITLES) ? D_TITLES : [];
+  if(!titles.length) return null;
+  const valid = s => { const d=String(s||"").replace(/\D/g,""); return (d && !/^0+$/.test(d)) ? d : null; };
+  const base = titles.find(t=>String(t.mainAtchGbCdNm||"").trim()==="주건축물") || titles[0];
+  let useApr = valid(base.useAprDay);
+  if(!useApr){
+    const earliest = titles.map(t=>valid(t.useAprDay)).filter(Boolean).sort()[0];
+    if(earliest) useApr = earliest;
+  }
+  if(!useApr && !valid(base.pmsDay) && !valid(base.stcnsDay)) return null;
+  return { archPmsDay:base.pmsDay, realStcnsDay:base.stcnsDay, useAprDay:useApr||"" };
+}
+
 function renderHistory(items){
-  if(!items.length) return `<div class="d-empty">건축인허가 이력이 없습니다</div>`;
-  // 허가일 오름차순(과거→현재). 한 대지에 신축·증축 등 여러 인허가건이 올 수 있음
+  if(!items.length){
+    const fb = registerHistoryRow();
+    if(!fb) return `<div class="d-empty">건축인허가 이력이 없습니다</div>`;
+    return `<div class="d-map-cap">건축인허가 이력이 없어 건축물대장 기준 최초 건축 정보를 표시합니다.</div>`
+      + miniTable([
+        {h:"구분", f:()=>`최초 건축 <span class="atch sub">건축물대장 기준</span>`},
+        {h:"건축허가일", f:r=>histDate(r.archPmsDay)},
+        {h:"착공일", f:r=>histDate(r.realStcnsDay)},
+        {h:"사용승인일", f:r=>histDate(r.useAprDay)},
+      ], [fb]);
+  }
   const rows = items.slice().sort((a,b)=>String(a.archPmsDay||"").localeCompare(String(b.archPmsDay||"")));
   return miniTable([
     {h:"구분", f:r=>esc(r.archGbCdNm||r.bldNm||"-")},
@@ -1322,7 +1347,7 @@ function renderHistory(items){
     {h:"사용승인일", f:r=>histDate(r.useAprDay)},
   ], rows);
 }
-
+  
 /* ---- 지도 (Leaflet + VWorld 항공타일 프록시 + 연속지적도 필지경계) ---- */
 async function renderMap(panel, dongNm){
   panel.innerHTML = `<div class="d-panel-hint">지도 불러오는 중…</div>`;
