@@ -1276,11 +1276,11 @@ function renderParking(dongNm){
   const cols = [];
   if(multi) cols.push({h:"동/건물", f:r=>esc(lab(r))});
   cols.push(
-    {h:"총주차", num:true, f:r=>{ const n=totalParking(r); return n>0?fmt(n):"-"; }},
-    {h:"옥내자주식", num:true, f:r=>cnt(r.indrAutoUtcnt)},
-    {h:"옥외자주식", num:true, f:r=>cnt(r.oudrAutoUtcnt)},
-    {h:"옥내기계식", num:true, f:r=>cnt(r.indrMechUtcnt)},
-    {h:"옥외기계식", num:true, f:r=>cnt(r.oudrMechUtcnt)},
+    {h:"총 주차", num:true, f:r=>{ const n=totalParking(r); return n>0?fmt(n):"-"; }},
+    {h:"옥내 자주식", num:true, f:r=>cnt(r.indrAutoUtcnt)},
+    {h:"옥외 자주식", num:true, f:r=>cnt(r.oudrAutoUtcnt)},
+    {h:"옥내 기계식", num:true, f:r=>cnt(r.indrMechUtcnt)},
+    {h:"옥외 기계식", num:true, f:r=>cnt(r.oudrMechUtcnt)},
   );
   return miniTable(cols, rows);
 }
