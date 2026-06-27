@@ -26,10 +26,13 @@ export default async function handler(req, res) {
       return r.ok ? await r.json() : null;
     } catch { return null; }
   }
+  
+  // 도로명주소("로"/"길" 포함)를 지번 지오코더에 넘기면 동 이름으로 오인해 엉뚱한 좌표 반환
+  const isRoadAddr = /[로길]\s*\d/.test(address);
 
   try {
     let data = await geocode("road");
-    if (data?.response?.status !== "OK") data = await geocode("parcel");
+    if (data?.response?.status !== "OK" && !isRoadAddr) data = await geocode("parcel");
     if (data?.response?.status !== "OK") return res.status(200).json({ found: false });
 
     const point = data.response.result.point;  // {x:경도, y:위도}
