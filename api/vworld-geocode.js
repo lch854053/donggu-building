@@ -28,7 +28,7 @@ export default async function handler(req, res) {
   }
   
   // 도로명주소("로"/"길" 포함)를 지번 지오코더에 넘기면 동 이름으로 오인해 엉뚱한 좌표 반환
-  const isRoadAddr = /[로길]\s*\d/.test(address);
+  const isRoadAddr = /(로|길)\s+\d/.test(address);
 
   try {
     let data = await geocode("road");
