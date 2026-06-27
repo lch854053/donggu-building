@@ -14,7 +14,7 @@ const numRe = /^\d+$/;
 const one = (v) => (Array.isArray(v) ? v[0] : v) ?? "";
 
 // 검증된 오퍼레이션만 허용(화이트리스트). 새 탭 추가 시 확인 후 여기에 추가.
-const ALLOWED_OPS = new Set(["getApBasisOulnInfo"]);
+const ALLOWED_OPS = new Set(["getApBasisOulnInfo", "getApPlatPlcInfo"]);
 
 export default async function handler(req, res) {
   if (!guard(req, res)) return;
