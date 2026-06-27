@@ -1325,8 +1325,10 @@ async function renderMap(panel, dongNm){
     t = D_DONGS.find(d=>String(d.dongNm||"").trim()===dongNm) || t;
   }
   const b = mergeBuilding(t);
-  const addr = b.newPlatPlc!=="-" ? b.newPlatPlc : b.platPlc;
-  const pt = await geocodeAddr(addr);
+  const addrRoad   = b.newPlatPlc !== "-" ? b.newPlatPlc : null;
+  const addrParcel = b.platPlc    !== "-" ? b.platPlc    : null;
+  let pt = addrRoad ? await geocodeAddr(addrRoad) : null;
+  if(!pt && addrParcel && addrParcel !== addrRoad) pt = await geocodeAddr(addrParcel);
   if(!pt){ panel.innerHTML = '<div class="d-empty">좌표를 찾지 못해 지도를 표시할 수 없습니다</div>'; return; }
   panel.innerHTML = `<div id="dMap" class="d-map"></div><div class="d-map-cap">항공영상·필지경계: VWorld 연속지적도 기준</div>`;
   if(D_MAP){ try{ D_MAP.remove(); }catch(e){} D_MAP=null; }
