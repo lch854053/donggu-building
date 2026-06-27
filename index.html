@@ -1396,22 +1396,22 @@ async function renderMap(panel, dongNm){
     if(single && single.geometry) geoms = [single.geometry];
   }
   if(geoms.length){
-    const group = L.featureGroup().addTo(map);
-    for(const g of geoms){
-      L.geoJSON(g, { style:{ color:"#ffcc00", weight:2.5, fillColor:"#ffcc00", fillOpacity:0.12 } }).addTo(group);
-    }
+    // 먼저 지도에 올리지 않고 경계만 측정 → 거대 지번이면 필지를 아예 그리지 않는다.
+    const group = L.featureGroup(
+      geoms.map(g => L.geoJSON(g, { style:{ color:"#ffcc00", weight:2.5, fillColor:"#ffcc00", fillOpacity:0.12 } }))
+    );
     try{
       const bnds = group.getBounds();
-      // 거대 지번(예: 캠퍼스)은 전체에 맞추면 건물이 안 보임 → 건물 지점 기준으로 본다.
-      const huge = map.distance(bnds.getNorthEast(), bnds.getSouthWest()) > 600;
-      if(!huge){ map.fitBounds(bnds, { padding:[24,24], maxZoom:19 }); fitted=true; }
+      // 거대 지번(예: 대학 캠퍼스 = 단일 지번)은 필지가 의미 없고 화면을 덮으므로
+      // 그리지 않고, 아래에서 건물 지점만 확대해 보여준다.
+      if(map.distance(bnds.getNorthEast(), bnds.getSouthWest()) <= 600){
+        group.addTo(map);
+        map.fitBounds(bnds, { padding:[24,24], maxZoom:19 });
+        fitted=true;
+      }
     }catch(e){}
   }
-  if(!fitted){
-    map.setView([Number(pt.y), Number(pt.x)], 18);
-    // 거대 필지에서 실제 건물 위치 표시(연속지적도엔 동별 필지가 없어 마커로 보강)
-    L.circleMarker([Number(pt.y), Number(pt.x)], { radius:7, color:"#d23730", weight:2, fillColor:"#d23730", fillOpacity:0.85 }).addTo(map);
-  }
+  if(!fitted) map.setView([Number(pt.y), Number(pt.x)], 18);
   
   setTimeout(()=>{ try{ map.invalidateSize(); }catch(e){} }, 120);
 }
