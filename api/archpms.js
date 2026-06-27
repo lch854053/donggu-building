@@ -13,8 +13,7 @@ const VALID_PLATGB = new Set(["0", "1", "2"]);   // 0:대지 1:산 2:블록
 const numRe = /^\d+$/;
 const one = (v) => (Array.isArray(v) ? v[0] : v) ?? "";
 
-// 검증된 오퍼레이션만 허용(화이트리스트). 새 탭 추가 시 확인 후 여기에 추가.
-const ALLOWED_OPS = new Set(["getApBasisOulnInfo", "getApPlatPlcInfo"]);
+const ALLOWED_OPS = new Set(["getApBasisOulnInfo"]);
 
 export default async function handler(req, res) {
   if (!guard(req, res)) return;
