@@ -1061,8 +1061,14 @@ async function runDetail(){
 
     // 1) juso 검색 → 동구 후보(중복 제거). 0건이어도 VWorld 폴백으로 진행
     const jusoList = await searchJuso(query);
+    // 최상위 결과와 '같은 실제 주소'인 행만 사용
+    const top0 = jusoList[0];
+    const rows = top0
+      ? jusoList.filter(j => (j.roadAddrPart1||"") === (top0.roadAddrPart1||"")
+                          && (j.emdNm||"") === (top0.emdNm||""))
+      : [];
     const seen = new Set(); const candidates = [];
-    for(const j of jusoList){
+    for(const j of rows){
       for(const p of jusoToBldCandidates(j)){
         const k = `${p.bjdongCd}-${p.bun}-${p.ji}-${p.platGbCd}`;
         if(seen.has(k)) continue; seen.add(k); candidates.push(p);
