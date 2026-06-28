@@ -227,22 +227,12 @@
 <script src="transform.js"></script>
 <script>
 /* ============================================================
-   1. 변환 로직 — Vercel에 그대로 이식되는 실제 코드
+   1. 공통 상수 + 데이터 레이어 (순수 변환 로직은 transform.js)
    ============================================================ */
 
-// juso 응답 1건 → 건축HUB 조회 후보들(우선순위 순)
-// juso가 bdMgtSn과 lnbr에 서로 다른 지번을 주고, 케이스마다 맞는 쪽이 달라
-// 두 후보를 모두 만들어 순서대로 시도한다 (동구 29110 인 것만)
-  
-  
-// 동구 전용 필터
-function isDonggu(p){ return p.sigunguCd === "29110"; }
-
-  
-
-/* ============================================================
-   2. 데이터 레이어 — Vercel 프록시 호출
-   ============================================================ */
+// 동구 시군구코드 — 전 탭의 building 호출·필터에서 공유
+const SIGUNGU = "29110";
+function isDonggu(p){ return p && p.sigunguCd === SIGUNGU; }
 
 // 모든 /api 프록시 호출 공통 래퍼.
 //   성공        : { ok:true,  status, data }
@@ -385,6 +375,42 @@ async function runLookup(){
   }, 350);
 }
 
+// 후보 필지들(jusoToBldGroup 결과)을 순회하며 건축HUB 표제부를 조회한다.
+// candA(bdMgtSn)와 candB(실제지번)가 다른 지번을 가리키면 juso 오매핑 가능성이 있어
+// (예: 운림길 57-16에 57-12 관리번호 부여) 모든 후보를 조회한 뒤,
+// 도로명이 입력(top)과 일치하는 결과를 우선 선택한다.
+// 반환: { titles:[], usedParams, error } — titles 비고 error 없음 = 대장 없음.
+// 일시 오류가 난 후보가 있어도 다른 후보가 성공하면 성공을 우선한다(error는 버림).
+async function resolveByCandidates(candidates, top){
+  let usedParams = candidates[0] || null;
+  if(!candidates.length) return { titles:[], usedParams, error:null };
+
+  const needVerify = candidates.length >= 2
+    && (candidates[0].bun !== candidates[1].bun || candidates[0].ji !== candidates[1].ji);
+
+  if(needVerify){
+    let firstOk = null, error = null;
+    for(const cand of candidates){
+      const r = await fetchBuilding(cand);
+      if(r.error){ if(!error) error = r.error; continue; }
+      if(r.titles.length){
+        if(!firstOk) firstOk = { titles:r.titles, cand };
+        if(roadMatches(top, r.titles[0])) return { titles:r.titles, usedParams:cand, error:null };
+      }
+    }
+    if(firstOk) return { titles:firstOk.titles, usedParams:firstOk.cand, error:null };
+    return { titles:[], usedParams, error };
+  }
+
+  for(const cand of candidates){
+    const r = await fetchBuilding(cand);
+    usedParams = cand;
+    if(r.error) return { titles:[], usedParams, error:r.error };
+    if(r.titles.length) return { titles:r.titles, usedParams, error:null };
+  }
+  return { titles:[], usedParams, error:null };
+}
+
 async function processOne(raw){
   // 0) 입력에서 동 번호 먼저 추출(원문 기준), 검색어는 상세주소 제거 후 사용
   const wantDong = extractDong(raw);
@@ -404,35 +430,9 @@ async function processOne(raw){
   if(!candidates.length)
     return {input:raw, status:"mute", reason:"동구 외 주소", jibun:top.jibunAddr};
 
-// 4) 건축HUB 조회 (표제부) — 후보 순회하며 첫 정상 결과 사용
-//    단, candA(bdMgtSn)가 candB(lnbr 실제지번)와 다른 지번을 가리키면
-//    juso의 bdMgtSn 오매핑(예: 운림길 57-16에 57-12 관리번호 부여)일 수 있어,
-//    모든 후보를 조회한 뒤 도로명이 입력과 일치하는 결과를 우선 선택한다.
-  let bld = {titles:[], error:null};
-  let usedParams = candidates[0];
-  // candA≠candB(지번 불일치) 여부: 첫 두 후보의 bun/ji만 비교
-  const needVerify = candidates.length >= 2
-    && (candidates[0].bun !== candidates[1].bun || candidates[0].ji !== candidates[1].ji);
-  if(needVerify){
-    // 모든 후보 조회 → 도로명 일치 우선, 그 외 순서대로
-    let firstOk = null;
-    for(const cand of candidates){
-      const r = await fetchBuilding(cand);
-      if(r.error){ if(!bld.error) bld.error = r.error; continue; }
-      if(r.titles.length){
-        if(!firstOk){ firstOk = {r, cand}; usedParams = cand; }
-        if(roadMatches(top, r.titles[0])){ bld = r; usedParams = cand; break; }
-      }
-    }
-    if(!bld.titles.length && firstOk){ bld = firstOk.r; usedParams = firstOk.cand; }
-  } else {
-    for(const cand of candidates){
-      const r = await fetchBuilding(cand);
-      usedParams = cand;
-      if(r.error){ bld.error = r.error; break; }
-      if(r.titles.length){ bld = r; break; }
-    }
-  }
+  // 4) 건축HUB 조회 (표제부) — 후보 순회 + 도로명 검증 (resolveByCandidates)
+  let bld = await resolveByCandidates(candidates, top);
+  let usedParams = bld.usedParams;
 
   // 4-b) juso 경로로 대장이 안 나오면 → VWorld 좌표·PNU 폴백 재시도
   //      (juso의 도로명-지번 매핑 오류, 신축·공공청사 누락 대응)
@@ -663,8 +663,6 @@ function clearAll(){
 /* ============================================================
    조건검색 (행정동 기준)
    ============================================================ */
-const SIGUNGU = "29110";  // 공유: 동구 시군구코드 (전 탭 building 호출에 사용)
-
 /* ── 조건검색(Cond) 상태 ── */
 let HJ = null;            // 행정동 매핑 { jibun2hdong, hdong2bjd }
 let HDONG2JIBUN = null;   // 행정동 → [지번키] 역매핑 (jibun2hdong 역index)
@@ -1093,37 +1091,16 @@ async function runDetail(){
     const candidates = jusoToBldGroup(jusoList);
     const top0 = jusoList[0];
 
-    // 2) juso 후보로 표제부 시도
-    //    candA(bdMgtSn)≠candB(실제지번)면 juso 오매핑 가능성 → 모두 조회 후
-    //    도로명이 입력과 일치하는 결과 우선 선택 (예: 운림길 57-16 오매칭 방지)
-    let titles=[], usedParams=candidates[0]||null, errMsg=null, viaJuso=false;
-    const needVerify = candidates.length >= 2
-      && (candidates[0].bun !== candidates[1].bun || candidates[0].ji !== candidates[1].ji);
-    if(needVerify){
-      let firstOk = null;
-      for(const c of candidates){
-        const r = await fetchBuilding(c);
-        if(r.error){ if(!errMsg) errMsg = r.error; continue; }
-        if(r.titles.length){
-          if(!firstOk){ firstOk = {titles:r.titles, cand:c}; }
-          if(roadMatches(top0, r.titles[0])){ titles = r.titles; usedParams = c; viaJuso = true; break; }
-        }
-      }
-      if(!titles.length && firstOk){ titles = firstOk.titles; usedParams = firstOk.cand; viaJuso = true; }
-    } else {
-      for(const c of candidates){
-        const r = await fetchBuilding(c);
-        usedParams = c;
-        if(r.error){ errMsg = r.error; break; }
-        if(r.titles.length){ titles = r.titles; viaJuso = true; break; }
-      }
-    }
-    
+    // 2) juso 후보로 표제부 시도 (일괄조회와 동일한 resolveByCandidates 사용)
+    const res = await resolveByCandidates(candidates, top0);
+    let titles = res.titles, usedParams = res.usedParams, errMsg = res.error;
+    let viaJuso = titles.length > 0;
+
     // 3) juso로 대장이 안 나오면 → VWorld 좌표·PNU 폴백 (일괄조회 4-b와 동일)
     //    juso 도로명-지번 매핑 오류, 신축·공공청사 누락 대응
     if(!errMsg && !titles.length){
       const v = await paramsViaVworld(query);
-      if(v && v.sigunguCd==="29110"){
+      if(isDonggu(v)){
         const differs = !usedParams || v.bjdongCd!==usedParams.bjdongCd || v.bun!==usedParams.bun || v.ji!==usedParams.ji;
         if(differs){
           const r2 = await fetchBuilding(v);
@@ -1132,16 +1109,17 @@ async function runDetail(){
       }
     }
 
-    if(errMsg){ dStatus(`<span class="badge err">${esc(errMsg)}</span>`); return; }
+    // 일시 오류가 있었더라도 다른 후보/폴백에서 대장을 찾았으면 성공을 우선 (일괄조회와 일관)
+    if(errMsg && !titles.length){ dStatus(`<span class="badge err">${esc(errMsg)}</span>`); return; }
     if(!usedParams){ dStatus('<span class="badge none">동구 내 주소를 찾지 못했습니다</span>'); return; }
     if(!titles.length){ dStatus('<span class="badge none">대장 없음 (나대지·미등록)</span>'); return; }
 
     // 한 지번에 도로명이 다른 여러 동이 등재된 경우(예: 캠퍼스=단일 지번)
     // 도로명으로 검색했으면 검색한 도로명과 일치하는 동만 남긴다.(매칭 없으면 전체 유지)
     if(viaJuso && top0 && /(로|길)\s+\d/.test(query)){
-      const norm = s => String(s||"").replace(/\([^)]*\)/g,"").replace(/\s+/g,"");
-      const want = norm(top0.roadAddrPart1);
-      const hit = titles.filter(t => norm(t.newPlatPlc) === want);
+      const normRoad = s => String(s||"").replace(/\([^)]*\)/g,"").replace(/\s+/g,"");
+      const want = normRoad(top0.roadAddrPart1);
+      const hit = titles.filter(t => normRoad(t.newPlatPlc) === want);
       if(hit.length) titles = hit;
     }
 
