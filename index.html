@@ -1589,21 +1589,21 @@ async function fetchDemol(p){
 }
 
 // 철거·멸실 원본 → 표시용 행 정규화 (필드 누락 대응)
+// 실제 응답 필드: demolExtngGbCdNm(구분), demolStrtDay/demolEndDay(철거기간),
+//   demolExtngDay(멸실일, 거의 비어있음), totArea(연면적, 건축면적은 없음),
+//   bldCnt(건물수), mainPurpsCdNm/strctCdNm, platPlc(지번주소, 도로명 없음)
 function mergeDemol(r){
   return {
-    platPlc:    stripParens(r.platPlc)    || "-",    // 대지위치(지번주소)
-    newPlatPlc: stripParens(r.newPlatPlc) || "-",    // 도로명대지위치
-    demolGb:    String(r.demolGbCdNm || "").trim() || "-",  // 철거/멸실 구분
-    demolDay:   r.demolDay || "-",                     // 철거·멸실일자
-    mainPurps:  r.mainPurpsCdNm || "-",                // 주용도
-    strct:      r.strctCdNm || "-",                    // 주구조
-    archArea:   r.archArea ?? null,                    // 건축면적
-    totArea:    r.totArea  ?? null,                    // 연면적
-    grndFlr:    r.grndFlrCnt ?? null,                  // 지상층수
-    ugrndFlr:   r.ugrndFlrCnt ?? null,                 // 지하층수
-    pmsDay:     r.pmsDay || "-",                       // 건축허가일 (원건물)
-    useAprDay:  r.useAprDay || "-",                    // 사용승인일 (원건물)
-    bun:        r.bun || "", ji: r.ji || "",           // 본번/부번 (필지 식별)
+    platPlc:    stripParens(r.platPlc) || "-",             // 대지위치(지번주소)
+    demolGb:    String(r.demolExtngGbCdNm || "").trim() || "-",  // 철거/부분철거/멸실
+    strtDay:    r.demolStrtDay || "",                       // 철거시작일
+    endDay:     r.demolEndDay  || "",                       // 철거종료일
+    extngDay:   r.demolExtngDay || "",                      // 멸실일(거의 비어있음)
+    mainPurps:  r.mainPurpsCdNm || "-",                     // 주용도
+    strct:      r.strctCdNm || "-",                         // 주구조
+    totArea:    r.totArea ?? null,                          // 연면적 (건축면적 필드 없음)
+    bldCnt:     r.bldCnt ?? null,                           // 건물수
+    bun:        r.bun || "", ji: r.ji || "",                // 본번/부번 (필지 식별)
   };
 }
 
@@ -1666,9 +1666,10 @@ async function runDemol(){
       }
     }
 
-    // 중복 제거(같은 필지·같은 일련번호) 후 철거일 내림차순(최신 먼저)
-    rows = dedupeBy(rows, r=>`${r.bun}-${r.ji}-${r.demolDay}-${r.demolGb}`);
-    rows.sort((a,b)=>String(b.demolDay||"").localeCompare(String(a.demolDay||"")));
+    // 중복 제거(같은 필지·같은 기간·같은 구분) 후 종료일(또는 시작일) 내림차순(최신 먼저)
+    rows = dedupeBy(rows, r=>`${r.bun}-${r.ji}-${r.endDay||r.strtDay}-${r.demolGb}`);
+    const sortKey = r => String(r.endDay || r.strtDay || r.extngDay || "");
+    rows.sort((a,b)=>sortKey(b).localeCompare(sortKey(a)));
 
     renderDemol(rows, topAddr, hadError);
   }catch(e){
@@ -1690,26 +1691,22 @@ function renderDemol(rows, topAddr, hadError){
   }
 
   const head = `<thead><tr>
-    <th>철거·멸실 구분</th>
+    <th>구분</th>
     <th>철거·멸실일</th>
     <th>지번주소</th>
     <th>주용도</th>
     <th>주구조</th>
-    <th class="num">건축면적(㎡)</th>
     <th class="num">연면적(㎡)</th>
-    <th class="num">층(지상/지하)</th>
-    <th>사용승인일</th>
+    <th class="num">건물수</th>
   </tr></thead>`;
   const body = rows.map(r=>`<tr>
     <td>${demolGbCell(r.demolGb)}</td>
-    <td>${histDate(r.demolDay)}</td>
-    <td>${esc(r.platPlc)}${r.newPlatPlc!=="-"?`<br><span class="atch sub">${esc(r.newPlatPlc)}</span>`:""}</td>
+    <td>${demolDateCell(r)}</td>
+    <td>${esc(r.platPlc)}</td>
     <td>${esc(r.mainPurps)}</td>
     <td>${esc(r.strct)}</td>
-    <td class="num">${r.archArea!=null?fmt(r.archArea):"-"}</td>
     <td class="num">${r.totArea!=null?fmt(r.totArea):"-"}</td>
-    <td class="num">${fmt(r.grndFlr)} / ${fmt(r.ugrndFlr)}</td>
-    <td>${histDate(r.useAprDay)}</td>
+    <td class="num">${r.bldCnt!=null?fmt(r.bldCnt):"-"}</td>
   </tr>`).join("");
 
   const addrLine = topAddr ? `<div class="legend"><span>검색 주소: <b>${esc(topAddr)}</b> · 철거·멸실 이력 ${rows.length}건</span></div>` : "";
@@ -1723,12 +1720,25 @@ function renderDemol(rows, topAddr, hadError){
   mStatus("");
 }
 
-// 철거구분 배지: 철거=회색, 멸실=주황
+// 철거·멸실일 표시: 멸실(extngDay)이 있으면 그것, 아니면 시작~종료 기간.
+// demolExtngDay는 멸실 3건에만 있고, 철거는 strt~End 기간이 실질적.
+function demolDateCell(r){
+  const ext = String(r.extngDay||"").replace(/\D/g,"");
+  if(ext && !/^0+$/.test(ext)) return histDate(r.extngDay);
+  const s = String(r.strtDay||"").replace(/\D/g,"");
+  const e = String(r.endDay||"").replace(/\D/g,"");
+  if(s && e && s!==e) return `${histDate(r.strtDay)} ~ ${histDate(r.endDay)}`;
+  if(e) return histDate(r.endDay);
+  if(s) return histDate(r.strtDay);
+  return "-";
+}
+
+// 철거구분 배지: 멸실=주황, 부분철거=회색, 철거=빈 배경(가장 흔함)
 function demolGbCell(gb){
   const s = String(gb||"").trim();
-  if(s==="멸실" || s.includes("멸실")) return `<span class="badge warn">${esc(s)}</span>`;
-  if(s && s!=="-") return `<span class="badge mute">${esc(s)}</span>`;
-  return "-";
+  if(s.includes("멸실")) return `<span class="badge warn">${esc(s)}</span>`;
+  if(s.includes("부분")) return `<span class="badge mute">${esc(s)}</span>`;
+  return esc(s||"-");
 }
 
 </script>
