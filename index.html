@@ -1395,14 +1395,25 @@ async function renderMap(panel, dongNm){
     const single = await parcelFromCoord(pt.x, pt.y);
     if(single && single.geometry) geoms = [single.geometry];
   }
-  
+  // 대표필지 + 건물 근처 부속지번만 남긴다 — 캠퍼스처럼 대장에 멀리 떨어진 부속지번이
+  // 묶여 동떨어진 곳에 필지가 그려지던 문제 대응. (건물 지점 포함 또는 근처 필지만)
+  if(geoms.length > 1){
+    const ptLL = L.latLng(Number(pt.y), Number(pt.x));
+    const NEAR_M = 250;   // 건물 지점에서 이 거리 밖의 부속 필지는 제외
+    const near = geoms.filter(g=>{
+      try{
+        const b = L.geoJSON(g).getBounds();
+        return b.contains(ptLL) || map.distance(ptLL, b.getCenter()) <= NEAR_M;
+      }catch(e){ return true; }
+    });
+    if(near.length) geoms = near;   // 전부 걸러지면 원본 유지(안전)
+  }
   if(geoms.length){
     const group = L.featureGroup(
       geoms.map(g => L.geoJSON(g, { style:{ color:"#ffcc00", weight:2.5, fillColor:"#ffcc00", fillOpacity:0.12 } }))
     ).addTo(map);
     try{ map.fitBounds(group.getBounds(), { padding:[24,24], maxZoom:19 }); fitted=true; }catch(e){}
   }
-  if(!fitted) map.setView([Number(pt.y), Number(pt.x)], 18);
   
   setTimeout(()=>{ try{ map.invalidateSize(); }catch(e){} }, 120);
 }
