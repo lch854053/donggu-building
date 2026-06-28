@@ -52,6 +52,54 @@ function jusoToBldCandidates(j){
   return out;
 }
 
+// juso 결과 배열에서 입력 주소의 건물번호에 맞는 결과가 top([0])이 되도록
+// 순서를 보정한 새 배열을 반환한다. juso는 countPerPage만큼 여러 후보를 주는데,
+// 타깃 건물보다 인근 번지가 먼저 반환되는 경우(예: "증심사길 85" 검색 → [0]=81)가
+// 있다. 이때 jusoToBldGroup이 top(81)을 기준으로 같은 건물군만 남기므로 진짜
+// 타깃(85)이 배제된다. 이를 막기 위해 입력과 본번이 일치하는 결과를 맨 앞으로
+// 끌어올린다. 반환된 배열을 jusoToBldGroup 에 그대로 넘기면 된다.
+// 다만 입력번호가 항상 도로명 본번인 것은 아니므로(동번호·지번주소 등),
+// 아래 안전 조건을 모두 만족할 때만 보정한다:
+//   (a) 동 번호 입력이 아님 (extractDong==null) — 동번호와 충돌 방지
+//   (b) 입력 끝이 "도로명+본번[-부번]" 형태 — 지번주소 보호
+//   (c) top 본번과 다를 때만 — 이미 맞으면 미발동
+//   (d) 같은 도로명(rn)에서 본번이 일치하는 항목이 있을 때
+//   (e) 본번 기준(입력에 부번까지 있으면 부번 우선) — 부번 강제로 다필지 유실 방지
+function pickTop(raw, cands){
+  if(!cands || !cands.length) return [];
+  const fallback = cands.slice();
+  // (a) 동 번호 입력이면 보정 금지
+  if(extractDong(raw) !== null) return fallback;
+
+  // (b) 입력 끝의 "도로명 본번[-부번]" 추출. '번지'가 붙거나 쉼표 뒤 상세주소가 있으면 제외.
+  const tail = String(raw).replace(/\s*번지/g,"").split(",")[0].trim();
+  const m = tail.match(/([가-힣A-Za-z]+(?:길|로|가|나|대로|거리))\s*(\d+)(?:-(\d+))?\s*$/);
+  if(!m) return fallback;                  // 도로명 본번 형태가 아니면 보정 안 함 (지번 등)
+  const inMain = m[2], inSub = m[3] || null;
+
+  // (c) 이미 top 본번과 같으면 보정 불필요
+  const top0 = cands[0];
+  if(String(top0.buldMnnm || "") === inMain) return fallback;
+
+  // (d)(e) 같은 도로명(rn) + 본번 일치 항목 찾기
+  const rn = top0.rn || "";
+  let bestIdx = -1;
+  cands.forEach((j, i) => {
+    if(bestIdx >= 0 && inSub) return;      // 부번까지 맞는 항목 찾았으면 확정
+    if((j.rn || "") !== rn) return;        // 다른 도로명은 무시
+    if(String(j.buldMnnm || "") !== inMain) return;
+    const sub = j.buldSlno && j.buldSlno !== "0" ? j.buldSlno : null;
+    if(inSub && sub === inSub) bestIdx = i; // 부번까지 정확 일치 → 최우선
+    else if(bestIdx < 0) bestIdx = i;       // 본번만 일치 → 첫 후보
+  });
+  if(bestIdx <= 0) return fallback;        // 못 찾거나 이미 [0]이면 원 순서 유지
+
+  // bestIdx 항목을 [0]으로 끌어올린 새 배열 반환 (나머지 순서 보존)
+  const out = [cands[bestIdx]];
+  cands.forEach((j, i) => { if(i !== bestIdx) out.push(j); });
+  return out;
+}
+
 // juso 결과 배열에서 "같은 건물군" 후보 PNU 파라미터들을 모은다.
 // 같은 도로명(rn) + 같은 건물본번(buldMnnm) + 같은 법정동(emdNm)이면
 // 도로명주소 체계상 같은 건물군(본번은 같고 부번만 다른 인접 필지)으로 본다.
@@ -86,8 +134,10 @@ function jusoToBldGroup(jusoList){
 // 입력 주소에서 '동' 번호 추출 (예: "108동", "제108동", "108-1동" → "108")
 // 숫자 기준. 못 찾으면 null
 function extractDong(raw){
-  // 도로명/지번 본번과 혼동 방지: '동' 글자가 붙은 숫자만
-  const m = raw.match(/(\d+)\s*동(?![가-힣])/);
+  // 도로명/지번 본번과 혼동 방지: '동' 글자가 붙은 번호(본번[-부번]동)만.
+  // "108-1동"에서 부번(1)이 아니라 본번(108)을 잡아야 하므로, '동' 직전의
+  // "본번-부번" 전체를 매칭한 뒤 본번(첫 숫자)을 취한다.
+  const m = raw.match(/(\d+)(?:-\d+)?\s*동(?![가-힣])/);
   return m ? m[1] : null;
 }
 

@@ -423,8 +423,11 @@ async function processOne(raw){
   // 2) 변환 — 같은 건물군(도로명+건물본번+법정동 일치)의 모든 필지를 후보로.
   //    부속지번에만 대장이 있는 다필지 건물(예: 중흥로 223→576-16은 부속,
   //    223-1→576-13이 대표) 대응. cands[0] 단건만 쓰던 기존 방식을 확장.
-  const top = cands[0];
-  const candidates = jusoToBldGroup(cands);
+  //    단, juso가 인근 번지를 먼저 반환하는 경우(예: 85 검색→[0]=81)에 대비해
+  //    입력 건물번호와 맞는 결과가 top이 되도록 순서를 보정한다(pickTop).
+  const ordered = pickTop(raw, cands);
+  const top = ordered[0];
+  const candidates = jusoToBldGroup(ordered);
 
   // 3) 동구 필터
   if(!candidates.length)
@@ -1088,8 +1091,11 @@ async function runDetail(){
     // 부속지번에만 대장이 있는 다필지 건물(예: 중흥로 223→576-16 부속,
     // 223-1→576-13 대표) 대응. 기존 roadAddrPart1 일치 필터는 223/223-1을
     // 분리해버려 223이 대장없음으로 떨어지는 원인이었음.
-    const candidates = jusoToBldGroup(jusoList);
-    const top0 = jusoList[0];
+    // 단, juso가 인근 번지를 먼저 반환하는 경우(85 검색→[0]=81)에 대비해
+    // 입력 건물번호와 맞는 결과가 top이 되도록 순서를 보정한다(pickTop).
+    const ordered = pickTop(raw, jusoList);
+    const candidates = jusoToBldGroup(ordered);
+    const top0 = ordered[0];
 
     // 2) juso 후보로 표제부 시도 (일괄조회와 동일한 resolveByCandidates 사용)
     const res = await resolveByCandidates(candidates, top0);
