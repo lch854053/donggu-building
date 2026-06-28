@@ -30,6 +30,7 @@
     <button class="tab active" id="tab-btn-bulk" onclick="switchTab('bulk')">일괄조회</button>
     <button class="tab" id="tab-btn-cond" onclick="switchTab('cond')">조건검색</button>
     <button class="tab" id="tab-btn-detail" onclick="switchTab('detail')">단건 상세조회</button>
+    <button class="tab" id="tab-btn-demol" onclick="switchTab('demol')">철거멸실대장</button>
   </div>
 
   <!-- ===== TAB 1: 일괄조회 ===== -->
@@ -210,6 +211,23 @@
     </div>
     <div id="dResult" style="display:none;margin-top:18px"></div>
   </div><!-- /tab-detail -->
+
+  <!-- ===== 철거멸실관리대장 ===== -->
+  <div id="tab-demol" style="display:none">
+    <div class="card">
+      <div class="card-head"><h2><span class="num-tag">철</span>철거멸실관리대장</h2></div>
+      <div class="card-body">
+        <div class="d-search-row">
+          <input id="mInput" type="text" placeholder="예) 제봉로 167   ·   서남로 14   ·   충장로5가 62-9">
+          <button class="run" id="mRunBtn" onclick="runDemol()">조회</button>
+          <button class="ghost" onclick="clearDemol()">초기화</button>
+        </div>
+        <div class="hint">해당 필지(지번)에서 <b>과거에 철거·멸실된 건축물</b> 이력을 조회합니다. 지번·도로명 모두 가능. 한 필지에 여러 건이 있을 수 있습니다.</div>
+        <div class="d-status" id="mStatus" style="display:none"></div>
+      </div>
+    </div>
+    <div id="mResult" style="display:none;margin-top:18px"></div>
+  </div><!-- /tab-demol -->
 
   <div class="footnote">
     - 조회 범위는 광주광역시 동구이며, 지번·도로명주소로 모두 검색 가능합니다<br>
@@ -1541,9 +1559,9 @@ document.getElementById("dInput")?.addEventListener("keydown", e=>{
   if(e.key==="Enter"){ e.preventDefault(); runDetail(); }
 });
 
-/* ---- 탭 전환 (bulk / cond / detail) — 기존 switchTab 대체 ---- */
+/* ---- 탭 전환 (bulk / cond / detail / demol) ---- */
 function switchTab(which){
-  const tabs = ["bulk","cond","detail"];
+  const tabs = ["bulk","cond","detail","demol"];
   if(!tabs.includes(which)) which="bulk";
   for(const t of tabs){
     document.getElementById("tab-"+t).style.display = (t===which)?"block":"none";
@@ -1551,6 +1569,168 @@ function switchTab(which){
   }
   if(which==="cond") loadHaengjeong();
 }
+
+/* ============================================================
+   철거멸실관리대장 (별도 탭)
+   건축인허가 ArchPmsHubService 의 getApDemolExtngMgmRgstInfo.
+   입력 주소 → juso/pickTop → 같은 건물군 후보 필지 → 각 필지의 철거·멸실 이력.
+   철거대장은 필지(지번) 단위로 등록되므로 jusoToBldGroup 으로 모은 모든 후보를 순회.
+   ============================================================ */
+
+// archpms 철거대장 1개 필지 조회. 반환 { items:[], error:null }
+async function fetchDemol(p){
+  const { ok, status, data, error } = await api("archpms", {
+    op:"getApDemolExtngMgmRgstInfo",
+    sigunguCd:p.sigunguCd, bjdongCd:p.bjdongCd,
+    platGbCd:p.platGbCd, bun:p.bun, ji:p.ji
+  });
+  if(!ok) return { items:[], error: status ? `서버 오류 ${status}` : error };
+  return { items: Array.isArray(data.items) ? data.items : [], error: data.error || null };
+}
+
+// 철거·멸실 원본 → 표시용 행 정규화 (필드 누락 대응)
+function mergeDemol(r){
+  return {
+    platPlc:    stripParens(r.platPlc)    || "-",    // 대지위치(지번주소)
+    newPlatPlc: stripParens(r.newPlatPlc) || "-",    // 도로명대지위치
+    demolGb:    String(r.demolGbCdNm || "").trim() || "-",  // 철거/멸실 구분
+    demolDay:   r.demolDay || "-",                     // 철거·멸실일자
+    mainPurps:  r.mainPurpsCdNm || "-",                // 주용도
+    strct:      r.strctCdNm || "-",                    // 주구조
+    archArea:   r.archArea ?? null,                    // 건축면적
+    totArea:    r.totArea  ?? null,                    // 연면적
+    grndFlr:    r.grndFlrCnt ?? null,                  // 지상층수
+    ugrndFlr:   r.ugrndFlrCnt ?? null,                 // 지하층수
+    pmsDay:     r.pmsDay || "-",                       // 건축허가일 (원건물)
+    useAprDay:  r.useAprDay || "-",                    // 사용승인일 (원건물)
+    bun:        r.bun || "", ji: r.ji || "",           // 본번/부번 (필지 식별)
+  };
+}
+
+function mStatus(html){
+  const el = document.getElementById("mStatus");
+  el.innerHTML = html;
+  el.style.display = html ? "block" : "none";
+}
+
+function clearDemol(){
+  document.getElementById("mInput").value = "";
+  document.getElementById("mResult").style.display = "none";
+  document.getElementById("mResult").innerHTML = "";
+  mStatus("");
+}
+
+// 입력 → 후보 필지 → 철거대장 수집. 일괄조회(processOne)의 juso+pickedTop 흐름 재사용.
+async function runDemol(){
+  const raw = String(document.getElementById("mInput").value || "").trim();
+  if(!raw){ mStatus('<span class="badge err">주소를 입력하세요</span>'); return; }
+
+  document.getElementById("mResult").style.display = "none";
+  document.getElementById("mResult").innerHTML = "";
+  mStatus('<span class="d-spin">주소 검색 중…</span>');
+
+  try{
+    if(!HJ) await loadHaengjeong();   // 행정동 표시용 매핑 (선택)
+
+    const query = cleanForSearch(raw);
+    // 1) juso → 같은 건물군 후보 필지 (pickTop 으로 입력 건물번호 보정 포함)
+    const jusoList = await searchJuso(query);
+    let candidates = [];
+    let topAddr = "";
+    if(jusoList.length){
+      const ordered = pickTop(raw, jusoList);
+      candidates = jusoToBldGroup(ordered);
+      topAddr = stripParens(String(ordered[0].roadAddrPart1 || ordered[0].roadAddr || ordered[0].jibunAddr || "")).trim();
+    }
+
+    // 2) juso 후보가 없거나 동구 필터로 0건 → VWorld 좌표·PNU 폴백
+    if(!candidates.length){
+      const vParams = await paramsViaVworld(query);
+      if(vParams && isDonggu(vParams)) candidates = [vParams];
+    }
+
+    if(!candidates.length){
+      mStatus('<span class="badge err">동구 내 주소를 찾지 못했습니다</span>');
+      return;
+    }
+
+    // 3) 각 후보 필지별 철거·멸실 이력 수집 (다필지 대지 대응)
+    mStatus('<span class="d-spin">철거·멸실 이력 조회 중…</span>');
+    let rows = [];
+    let hadError = false;
+    for(const cand of candidates){
+      const r = await fetchDemol(cand);
+      if(r.error){ hadError = true; continue; }
+      for(const it of r.items){
+        rows.push({ ...mergeDemol(it), _hdong: hdongOf(cand, HJ) });
+      }
+    }
+
+    // 중복 제거(같은 필지·같은 일련번호) 후 철거일 내림차순(최신 먼저)
+    rows = dedupeBy(rows, r=>`${r.bun}-${r.ji}-${r.demolDay}-${r.demolGb}`);
+    rows.sort((a,b)=>String(b.demolDay||"").localeCompare(String(a.demolDay||"")));
+
+    renderDemol(rows, topAddr, hadError);
+  }catch(e){
+    mStatus(`<span class="badge err">오류: ${esc(String(e?.message||e))}</span>`);
+  }
+}
+
+function renderDemol(rows, topAddr, hadError){
+  const out = document.getElementById("mResult");
+  if(!rows.length){
+    const note = hadError ? " (일부 필지 조회 중 오류 발생)" : "";
+    mStatus("");
+    out.innerHTML = `<div class="card"><div class="card-body">
+      <div class="d-empty">해당 필지의 철거·멸실 이력이 없습니다${note}</div>
+      <div class="hint" style="margin-top:10px">철거·멸실되지 않았거나, 인허가 데이터에 등록되지 않은 경우입니다.</div>
+    </div></div>`;
+    out.style.display = "block";
+    return;
+  }
+
+  const head = `<thead><tr>
+    <th>철거·멸실 구분</th>
+    <th>철거·멸실일</th>
+    <th>지번주소</th>
+    <th>주용도</th>
+    <th>주구조</th>
+    <th class="num">건축면적(㎡)</th>
+    <th class="num">연면적(㎡)</th>
+    <th class="num">층(지상/지하)</th>
+    <th>사용승인일</th>
+  </tr></thead>`;
+  const body = rows.map(r=>`<tr>
+    <td>${demolGbCell(r.demolGb)}</td>
+    <td>${histDate(r.demolDay)}</td>
+    <td>${esc(r.platPlc)}${r.newPlatPlc!=="-"?`<br><span class="atch sub">${esc(r.newPlatPlc)}</span>`:""}</td>
+    <td>${esc(r.mainPurps)}</td>
+    <td>${esc(r.strct)}</td>
+    <td class="num">${r.archArea!=null?fmt(r.archArea):"-"}</td>
+    <td class="num">${r.totArea!=null?fmt(r.totArea):"-"}</td>
+    <td class="num">${fmt(r.grndFlr)} / ${fmt(r.ugrndFlr)}</td>
+    <td>${histDate(r.useAprDay)}</td>
+  </tr>`).join("");
+
+  const addrLine = topAddr ? `<div class="legend"><span>검색 주소: <b>${esc(topAddr)}</b> · 철거·멸실 이력 ${rows.length}건</span></div>` : "";
+  const errLine = hadError ? `<div class="hint" style="color:#b87400;margin-bottom:8px">※ 일부 필지 조회 중 오류가 있어 누락된 이력이 있을 수 있습니다.</div>` : "";
+
+  out.innerHTML = `${addrLine}${errLine}
+    <div class="table-scroll">
+      <table>${head}<tbody>${body}</tbody></table>
+    </div>`;
+  out.style.display = "block";
+  mStatus("");
+}
+
+// 철거구분 배지: 철거=회색, 멸실=주황
+function demolGbCell(gb){
+  const s = String(gb||"").trim();
+  if(s==="멸실" || s.includes("멸실")) return `<span class="badge warn">${esc(s)}</span>`;
+  if(s && s!=="-") return `<span class="badge mute">${esc(s)}</span>`;
+  return "-";
+}
+
 </script>
 </body>
 </html>
