@@ -405,13 +405,33 @@ async function processOne(raw){
     return {input:raw, status:"mute", reason:"동구 외 주소", jibun:top.jibunAddr};
 
 // 4) 건축HUB 조회 (표제부) — 후보 순회하며 첫 정상 결과 사용
+//    단, candA(bdMgtSn)가 candB(lnbr 실제지번)와 다른 지번을 가리키면
+//    juso의 bdMgtSn 오매핑(예: 운림길 57-16에 57-12 관리번호 부여)일 수 있어,
+//    모든 후보를 조회한 뒤 도로명이 입력과 일치하는 결과를 우선 선택한다.
   let bld = {titles:[], error:null};
   let usedParams = candidates[0];
-  for(const cand of candidates){
-    const r = await fetchBuilding(cand);
-    usedParams = cand;
-    if(r.error){ bld.error = r.error; break; }
-    if(r.titles.length){ bld = r; break; }
+  // candA≠candB(지번 불일치) 여부: 첫 두 후보의 bun/ji만 비교
+  const needVerify = candidates.length >= 2
+    && (candidates[0].bun !== candidates[1].bun || candidates[0].ji !== candidates[1].ji);
+  if(needVerify){
+    // 모든 후보 조회 → 도로명 일치 우선, 그 외 순서대로
+    let firstOk = null;
+    for(const cand of candidates){
+      const r = await fetchBuilding(cand);
+      if(r.error){ if(!bld.error) bld.error = r.error; continue; }
+      if(r.titles.length){
+        if(!firstOk){ firstOk = {r, cand}; usedParams = cand; }
+        if(roadMatches(top, r.titles[0])){ bld = r; usedParams = cand; break; }
+      }
+    }
+    if(!bld.titles.length && firstOk){ bld = firstOk.r; usedParams = firstOk.cand; }
+  } else {
+    for(const cand of candidates){
+      const r = await fetchBuilding(cand);
+      usedParams = cand;
+      if(r.error){ bld.error = r.error; break; }
+      if(r.titles.length){ bld = r; break; }
+    }
   }
 
   // 4-b) juso 경로로 대장이 안 나오면 → VWorld 좌표·PNU 폴백 재시도
@@ -1074,12 +1094,29 @@ async function runDetail(){
     const top0 = jusoList[0];
 
     // 2) juso 후보로 표제부 시도
+    //    candA(bdMgtSn)≠candB(실제지번)면 juso 오매핑 가능성 → 모두 조회 후
+    //    도로명이 입력과 일치하는 결과 우선 선택 (예: 운림길 57-16 오매칭 방지)
     let titles=[], usedParams=candidates[0]||null, errMsg=null, viaJuso=false;
-    for(const c of candidates){
-      const r = await fetchBuilding(c);
-      usedParams = c;
-      if(r.error){ errMsg = r.error; break; }
-      if(r.titles.length){ titles = r.titles; viaJuso = true; break; }
+    const needVerify = candidates.length >= 2
+      && (candidates[0].bun !== candidates[1].bun || candidates[0].ji !== candidates[1].ji);
+    if(needVerify){
+      let firstOk = null;
+      for(const c of candidates){
+        const r = await fetchBuilding(c);
+        if(r.error){ if(!errMsg) errMsg = r.error; continue; }
+        if(r.titles.length){
+          if(!firstOk){ firstOk = {titles:r.titles, cand:c}; }
+          if(roadMatches(top0, r.titles[0])){ titles = r.titles; usedParams = c; viaJuso = true; break; }
+        }
+      }
+      if(!titles.length && firstOk){ titles = firstOk.titles; usedParams = firstOk.cand; viaJuso = true; }
+    } else {
+      for(const c of candidates){
+        const r = await fetchBuilding(c);
+        usedParams = c;
+        if(r.error){ errMsg = r.error; break; }
+        if(r.titles.length){ titles = r.titles; viaJuso = true; break; }
+      }
     }
     
     // 3) juso로 대장이 안 나오면 → VWorld 좌표·PNU 폴백 (일괄조회 4-b와 동일)

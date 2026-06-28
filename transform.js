@@ -235,3 +235,21 @@ function bldLabel(t){
 }
 
 function gbLabel(rows){ return rows.some(t=>String(t.regstrGbCd)==="2") ? "집합건물" : "일반건축물"; }
+
+// juso 결과(j)의 도로명 건물번호와, 건축물대장 결과(t)의 도로명주소(newPlatPlc)가
+// 일치하는지 검사. juso의 bdMgtSn이 다른 건물(예: 운림길 57-16에 57-12의 관리번호
+// 부여)을 가리키는 오매핑을 걸러내기 위함.
+// 비교: juso의 "도로명 본번-부번"(buldMnnm/buldSlno) ↔ newPlatPlc에서 추출한 번호.
+//   예) j.buldMnnm=57, j.buldSlno=16 ↔ newPlatPlc "...운림길 57-16 ..."
+// 번호가 없거나 도로명이 아니면 true(통과) — 폴백 지번주소 검색 등 무해하게.
+function roadMatches(j, t){
+  const mnnm = String(j?.buldMnnm || "").trim();
+  if(!mnnm) return true;                  // 도로명 정보 없으면 검사 생략
+  const slno = String(j?.buldSlno || "0").trim();
+  const road = String(t?.newPlatPlc || "").replace(/\s*\([^)]*\)/g, "");
+  // 도로명주소 끝의 "본번" 또는 "본번-부번" 추출
+  const m = road.match(/(\d+)(?:-(\d+))?\s*$/);
+  if(!m) return true;                     // 도로명 형태 아니면 검사 생략
+  const main = m[1], sub = m[2] || "0";
+  return main === mnnm && sub === slno;
+}
