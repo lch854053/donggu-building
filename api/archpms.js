@@ -13,7 +13,7 @@ const VALID_PLATGB = new Set(["0", "1", "2"]);   // 0:대지 1:산 2:블록
 const numRe = /^\d+$/;
 const one = (v) => (Array.isArray(v) ? v[0] : v) ?? "";
 
-const ALLOWED_OPS = new Set(["getApBasisOulnInfo"]);
+const ALLOWED_OPS = new Set(["getApBasisOulnInfo", "getApTmpBldInfo", "getApHdcrMgmRgstInfo"]);
 
 export default async function handler(req, res) {
   if (!guard(req, res)) return;
