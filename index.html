@@ -1395,21 +1395,12 @@ async function renderMap(panel, dongNm){
     const single = await parcelFromCoord(pt.x, pt.y);
     if(single && single.geometry) geoms = [single.geometry];
   }
+  
   if(geoms.length){
-    // 먼저 지도에 올리지 않고 경계만 측정 → 거대 지번이면 필지를 아예 그리지 않는다.
     const group = L.featureGroup(
       geoms.map(g => L.geoJSON(g, { style:{ color:"#ffcc00", weight:2.5, fillColor:"#ffcc00", fillOpacity:0.12 } }))
-    );
-    try{
-      const bnds = group.getBounds();
-      // 거대 지번(예: 대학 캠퍼스 = 단일 지번)은 필지가 의미 없고 화면을 덮으므로
-      // 그리지 않고, 아래에서 건물 지점만 확대해 보여준다.
-      if(map.distance(bnds.getNorthEast(), bnds.getSouthWest()) <= 600){
-        group.addTo(map);
-        map.fitBounds(bnds, { padding:[24,24], maxZoom:19 });
-        fitted=true;
-      }
-    }catch(e){}
+    ).addTo(map);
+    try{ map.fitBounds(group.getBounds(), { padding:[24,24], maxZoom:19 }); fitted=true; }catch(e){}
   }
   if(!fitted) map.setView([Number(pt.y), Number(pt.x)], 18);
   
