@@ -184,6 +184,35 @@ test("통합: pickTop + jusoToBldGroup 으로 증심사길 85 후보 보존", ()
 });
 
 /* ============================================================
+   roadMatches — 공공 데이터 불일치 감지 (증심사길 85 시나리오)
+   juso 도로명(85)과 대장 newPlatPlc(81)가 다른 경우를 잡아낸다.
+   실제 사례: 증심사길 85 = 운림동 95-1 (juso/VWorld 일치),
+   그러나 95-1 대장의 도로명주소가 "증심사길 81"로 등록된 데이터 오류.
+   ============================================================ */
+test("roadMatches: juso(85) ↔ 대장(81) 불일치 감지 (공공 데이터 오류)", () => {
+  // juso가 정확히 85를 반환
+  const j = { buldMnnm:"85", buldSlno:"0" };
+  // 운림동 95-1 대장의 newPlatPlc는 81로 잘못 등록됨
+  const t = { newPlatPlc:"광주광역시 동구 증심사길 81 (운림동)" };
+  assert.equal(f.roadMatches(j, t), false);  // 불일치 → roadMismatch=true → 교정+경고
+});
+
+test("roadMatches: juso(85) ↔ 대장(85) 일치 (정상)", () => {
+  const j = { buldMnnm:"85", buldSlno:"0" };
+  const t = { newPlatPlc:"광주광역시 동구 증심사길 85 (운림동)" };
+  assert.equal(f.roadMatches(j, t), true);   // 일치 → 정상 ok
+});
+
+test("도로명 교정: 불일치 시 juso 도로명으로 newPlatPlc 덮어쓰기", () => {
+  // processOne 의 교정 로직: roadMismatch 시 stripParens(juso roadAddrPart1)로 덮어쓴다
+  const jusoTop = { roadAddrPart1:"광주광역시 동구 증심사길 85" };
+  const jusoRoad = f.stripParens(String(jusoTop.roadAddrPart1 || "")).trim();
+  const fixed = { newPlatPlc:"광주광역시 동구 증심사길 81 (운림동)" };
+  fixed.newPlatPlc = jusoRoad;
+  assert.equal(fixed.newPlatPlc, "광주광역시 동구 증심사길 85");
+});
+
+/* ============================================================
    roadMatches — juso 도로명번호 ↔ 대장 newPlatPlc 일치 (bdMgtSn 오매핑 방지)
    ============================================================ */
 test("roadMatches: 일치하면 true (운림길 57-16 정답)", () => {

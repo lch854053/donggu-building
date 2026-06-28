@@ -379,11 +379,14 @@ async function runLookup(){
 // candA(bdMgtSn)와 candB(실제지번)가 다른 지번을 가리키면 juso 오매핑 가능성이 있어
 // (예: 운림길 57-16에 57-12 관리번호 부여) 모든 후보를 조회한 뒤,
 // 도로명이 입력(top)과 일치하는 결과를 우선 선택한다.
-// 반환: { titles:[], usedParams, error } — titles 비고 error 없음 = 대장 없음.
+// 반환: { titles:[], usedParams, error, roadMismatch } — titles 비고 error 없음 = 대장 없음.
+// roadMismatch=true: 대장은 찾았으나 대장의 도로명(newPlatPlc) 번호가 juso(top)의
+//   도로명 번호와 다름. 공공 데이터 간 불일치(예: 증심사길 85=운림동 95-1인데
+//   95-1 대장의 도로명이 81로 등록) 시 호출측에서 juso 도로명으로 표시 교정 + 경고.
 // 일시 오류가 난 후보가 있어도 다른 후보가 성공하면 성공을 우선한다(error는 버림).
 async function resolveByCandidates(candidates, top){
   let usedParams = candidates[0] || null;
-  if(!candidates.length) return { titles:[], usedParams, error:null };
+  if(!candidates.length) return { titles:[], usedParams, error:null, roadMismatch:false };
 
   const needVerify = candidates.length >= 2
     && (candidates[0].bun !== candidates[1].bun || candidates[0].ji !== candidates[1].ji);
@@ -395,20 +398,30 @@ async function resolveByCandidates(candidates, top){
       if(r.error){ if(!error) error = r.error; continue; }
       if(r.titles.length){
         if(!firstOk) firstOk = { titles:r.titles, cand };
-        if(roadMatches(top, r.titles[0])) return { titles:r.titles, usedParams:cand, error:null };
+        if(roadMatches(top, r.titles[0]))
+          return { titles:r.titles, usedParams:cand, error:null, roadMismatch:false };
       }
     }
-    if(firstOk) return { titles:firstOk.titles, usedParams:firstOk.cand, error:null };
-    return { titles:[], usedParams, error };
+    if(firstOk){
+      // 일치 항목은 없지만 대장은 있음 → 대장 도로명이 juso와 다를 수 있음(데이터 불일치)
+      const mismatch = !roadMatches(top, firstOk.titles[0]);
+      return { titles:firstOk.titles, usedParams:firstOk.cand, error:null, roadMismatch:mismatch };
+    }
+    return { titles:[], usedParams, error, roadMismatch:false };
   }
 
   for(const cand of candidates){
     const r = await fetchBuilding(cand);
     usedParams = cand;
-    if(r.error) return { titles:[], usedParams, error:r.error };
-    if(r.titles.length) return { titles:r.titles, usedParams, error:null };
+    if(r.error) return { titles:[], usedParams, error:r.error, roadMismatch:false };
+    if(r.titles.length){
+      // 후보가 1개(또는 같은 지번)여도 도로명 불일치 감지 — 대장 도로명이 juso와 다르면
+      // 공공 데이터 오류일 수 있으므로 호출측에 알려 juso 도로명으로 표시 교정.
+      const mismatch = !roadMatches(top, r.titles[0]);
+      return { titles:r.titles, usedParams, error:null, roadMismatch:mismatch };
+    }
   }
-  return { titles:[], usedParams, error:null };
+  return { titles:[], usedParams, error:null, roadMismatch:false };
 }
 
 async function processOne(raw){
@@ -436,6 +449,18 @@ async function processOne(raw){
   // 4) 건축HUB 조회 (표제부) — 후보 순회 + 도로명 검증 (resolveByCandidates)
   let bld = await resolveByCandidates(candidates, top);
   let usedParams = bld.usedParams;
+  // 대장 도로명이 juso(입력) 도로명과 불일치(공공 데이터 오류)면 juso 도로명으로 교정 표시.
+  // 예) 증심사길 85 → 운림동 95-1 → 대장 newPlatPlc가 "증심사길 81"로 잘못 등록된 경우,
+  //     지번 기반 대장 데이터 자체는 타깃(85) 건물이 맞으므로 데이터를 버리지 않고
+  //     juso가 준 도로명(85)으로 보여주되 "확인 필요" 경고.
+  let roadFixed = false;
+  if(bld.roadMismatch && bld.titles.length){
+    const jusoRoad = stripParens(String(top.roadAddrPart1 || top.roadAddr || "")).trim();
+    if(jusoRoad){
+      bld.titles = bld.titles.map(t => ({ ...t, newPlatPlc: jusoRoad }));
+      roadFixed = true;
+    }
+  }
 
   // 4-b) juso 경로로 대장이 안 나오면 → VWorld 좌표·PNU 폴백 재시도
   //      (juso의 도로명-지번 매핑 오류, 신축·공공청사 누락 대응)
@@ -476,12 +501,15 @@ async function processOne(raw){
 
   // 서로 다른 건물군(법정동 또는 도로명 건물번호가 다른 후보)이 2건 이상이면 확인 필요.
   // 같은 건물군의 부속 필지(예: 중흥로 223/223-1)는 한 건물로 보아 ok 처리.
+  // 대장 도로명이 juso와 불일치해 교정 표시(roadFixed)한 경우도 확인 필요 알림.
   const groupKeys = new Set(cands.map(j => `${j.emdNm||""}-${j.rn||""}-${j.buldMnnm||""}`));
   const multiGroup = groupKeys.size > 1;
-  const status = multiGroup ? "warn" : "ok";
+  const status = (multiGroup || roadFixed) ? "warn" : "ok";
   return {
     input:raw, status,
-    reason: multiGroup ? `서로 다른 건물 후보 ${groupKeys.size}건` : "",
+    reason: roadFixed
+      ? "대장 도로명주소가 검색 결과와 달라 표시를 보정함 (확인 권장)"
+      : (multiGroup ? `서로 다른 건물 후보 ${groupKeys.size}건` : ""),
     params:usedParams, data:rep, buildings, dongFiltered
   };
 }
@@ -1101,6 +1129,12 @@ async function runDetail(){
     const res = await resolveByCandidates(candidates, top0);
     let titles = res.titles, usedParams = res.usedParams, errMsg = res.error;
     let viaJuso = titles.length > 0;
+    // 대장 도로명이 juso(입력)와 불일치(공공 데이터 오류)면 juso 도로명으로 교정 표시.
+    // 지번 기반 대장 데이터는 타깃 건물이 맞으므로 버리지 않고 도로명만 보정(일괄조회와 동일).
+    if(res.roadMismatch && titles.length){
+      const jusoRoad = stripParens(String(top0.roadAddrPart1 || top0.roadAddr || "")).trim();
+      if(jusoRoad) titles = titles.map(t => ({ ...t, newPlatPlc: jusoRoad }));
+    }
 
     // 3) juso로 대장이 안 나오면 → VWorld 좌표·PNU 폴백 (일괄조회 4-b와 동일)
     //    juso 도로명-지번 매핑 오류, 신축·공공청사 누락 대응
