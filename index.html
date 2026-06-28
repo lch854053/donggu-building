@@ -1060,6 +1060,7 @@ async function runDetail(){
   Object.keys(D_CACHE).forEach(k=>delete D_CACHE[k]);
   dStatus('<span class="d-spin">주소 검색 중…</span>');
   try{
+    if(!HJ) await loadHaengjeong();   // 행정동 표시용 매핑 보장 로드 (내부 if(HJ) 가드)
     const wantDong = extractDong(raw);
     const query = cleanForSearch(raw);
 
@@ -1152,6 +1153,9 @@ function cardHTML(t, kind){
   const pc = v => v==null ? "-" : fmt(v)+"%";
   const addr = b.newPlatPlc!=="-" ? b.newPlatPlc : b.platPlc;
   const title = bldLabel(t);
+  // 행정동 — 대표지번(D_CAND) 기준. 다동 건물도 지번은 공통이므로 카드당 1회 표시.
+  const hdong = D_CAND ? hdongOf(D_CAND, HJ) : "";
+  const hdongCell = hdong ? `<div class="d-addr sub">행정동 <b>${esc(hdong)}</b></div>` : "";
   const seismic = String(t.rserthqkDsgnApplyYn)==="1"
     ? '<span class="badge ok">적용</span>' + (String(t.rserthqkAblty||"").trim() ? ` <span class="age">${esc(t.rserthqkAblty)}</span>` : "")
     : '<span class="badge mute">미적용</span>';
@@ -1164,6 +1168,7 @@ function cardHTML(t, kind){
     <div class="card-body">
       <div class="d-addr">${esc(addr)}</div>
       <div class="d-addr sub">${esc(b.platPlc)}</div>
+      ${hdongCell}
 
       <div class="d-sec-title">규모 · 용도</div>
       <div class="d-kv">

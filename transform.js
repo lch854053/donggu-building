@@ -157,6 +157,16 @@ function toPNU(p){
          `${String(p.bun).padStart(4,"0")}${String(p.ji).padStart(4,"0")}`;
 }
 
+// 필지 파라미터 → 행정동명.
+// 매핑 키는 법정동코드(5)+번(4)+지(4)=13자리 (haengjeong.json jibun2hdong 키와 동일).
+// HJ(행정동 매핑 객체)를 인자로 받아 DOM·전역 의존 없이 순수 유지.
+// 매핑이 없으면 빈 문자열 반환.
+function hdongOf(p, HJ){
+  if(!p || !HJ) return "";
+  const key = `${p.bjdongCd}${String(p.bun||"").padStart(4,"0")}${String(p.ji||"").padStart(4,"0")}`;
+  return (HJ.jibun2hdong || {})[key] || "";
+}
+
 function fmt(n){ return n==null ? "-" : Number(n).toLocaleString("ko-KR"); }
 
 function esc(s){ return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
