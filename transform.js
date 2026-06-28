@@ -253,3 +253,48 @@ function roadMatches(j, t){
   const main = m[1], sub = m[2] || "0";
   return main === mnnm && sub === slno;
 }
+
+// GeoJSON 필지 geometry의 대략적 면적(㎡) 계산.
+// 위경도 좌표를 평면 투영 근사(cos(lat) 보정). 지도 표시용 필터링에만 쓰임.
+// MultiPolygon/Polygon 모두 처리(외곽 링만 합산). 비정상적으로 큰 부속 필지(산림 등)를
+// 거르는 용도이므로 정밀도보다 크기 차수가 중요.
+function geomAreaM2(geom){
+  if(!geom || !geom.coordinates) return 0;
+  const R = 6378137;   // 지구 반경(m)
+  const toRad = d => d * Math.PI / 180;
+  const ringArea = (ring) => {
+    if(!ring || ring.length < 3) return 0;
+    let s = 0;
+    for(let i=0; i<ring.length; i++){
+      const a = ring[i], b = ring[(i+1) % ring.length];
+      const ax = a[0] * Math.cos(toRad((a[1]+b[1])/2)) * (Math.PI/180) * R;
+      const bx = b[0] * Math.cos(toRad((a[1]+b[1])/2)) * (Math.PI/180) * R;
+      const ay = a[1] * (Math.PI/180) * R;
+      const by = b[1] * (Math.PI/180) * R;
+      s += ax * by - bx * ay;
+    }
+    return Math.abs(s) / 2;
+  };
+  let total = 0;
+  if(geom.type === "Polygon") total += ringArea(geom.coordinates[0]);
+  else if(geom.type === "MultiPolygon") for(const poly of geom.coordinates) total += ringArea(poly[0]);
+  return total;
+}
+
+// GeoJSON 폴리곤 안에 점(lon,lat)이 포함되는가 (Ray-casting, 외곽 링 기준).
+// Polygon/MultiPolygon 모두 처리. bbox contains와 달리 실제 모양을 따져 거대 산림
+// 필지가 좌표를 bbox로만 덮을 때 오탐되는 것을 방지.
+function geomContainsPoint(geom, lon, lat){
+  if(!geom || !geom.coordinates) return false;
+  const inRing = (ring) => {
+    let inside = false;
+    for(let i=0, j=ring.length-1; i<ring.length; j=i++){
+      const xi=ring[i][0], yi=ring[i][1], xj=ring[j][0], yj=ring[j][1];
+      if(((yi>lat)!=(yj>lat)) && (lon < (xj-xi)*(lat-yi)/(yj-yi)+xi)) inside = !inside;
+    }
+    return inside;
+  };
+  if(geom.type === "Polygon") return inRing(geom.coordinates[0]);
+  if(geom.type === "MultiPolygon") return geom.coordinates.some(p => inRing(p[0]));
+  return false;
+}

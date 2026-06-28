@@ -1483,15 +1483,21 @@ async function renderMap(panel, dongNm){
     const single = await parcelFromCoord(pt.x, pt.y);
     if(single && single.geometry) geoms = [single.geometry];
   }
-  // 대표필지 + 건물 근처 부속지번만 남긴다 — 캠퍼스처럼 대장에 멀리 떨어진 부속지번이
-  // 묶여 동떨어진 곳에 필지가 그려지던 문제 대응. (건물 지점 포함 또는 근처 필지만)
+  // 대표필지 + 건물 근처 부속지번만 남긴다 — 캠퍼스/사찰처럼 대장에 멀리 떨어지거나
+  // 거대한(산림 등) 부속지번이 묶여 지도가 과도하게 축소되던 문제 대응.
+  // 기준: (1) 건물 좌표가 필지 '실제 폴리곤' 안, 또는 (2) 필지 중심이 가까움,
+  //       그리고 (3) 필지 면적이 비정상적으로 크지 않을 것(산림 등 제외).
   if(geoms.length > 1){
-    const ptLL = L.latLng(Number(pt.y), Number(pt.x));
-    const NEAR_M = 250;   // 건물 지점에서 이 거리 밖의 부속 필지는 제외
+    const ptLon = Number(pt.x), ptLat = Number(pt.y);
+    const ptLL = L.latLng(ptLat, ptLon);
+    const NEAR_M = 250;      // 건물 지점에서 이 거리 밖의 부속 필지는 제외
+    const MAX_AREA_M2 = 100000;   // ~10만평 초과 필지는 산림/비정상으로 보아 제외
     const near = geoms.filter(g=>{
       try{
+        if(geomAreaM2(g) > MAX_AREA_M2) return false;          // 거대 필지 제외
+        if(geomContainsPoint(g, ptLon, ptLat)) return true;    // 실제 폴리곤 포함
         const b = L.geoJSON(g).getBounds();
-        return b.contains(ptLL) || map.distance(ptLL, b.getCenter()) <= NEAR_M;
+        return map.distance(ptLL, b.getCenter()) <= NEAR_M;     // 중심 거리 근접
       }catch(e){ return true; }
     });
     if(near.length) geoms = near;   // 전부 걸러지면 원본 유지(안전)
