@@ -1294,6 +1294,19 @@ function renderParking(dongNm){
   return miniTable(cols, rows);
 }
 
+
+// [임시·디버그] 이력 공백 행 정체 확인: 가설건축물·공작물 응답 덤프
+// 사용법: 단건 상세조회 후 콘솔에서 dumpTmpHdcr() 실행
+async function dumpTmpHdcr(){
+  if(typeof D_CAND==="undefined" || !D_CAND){ console.warn("먼저 단건 상세조회를 실행하세요"); return; }
+  const base = { sigunguCd:D_CAND.sigunguCd, bjdongCd:D_CAND.bjdongCd, platGbCd:D_CAND.platGbCd||"", bun:D_CAND.bun, ji:D_CAND.ji, numOfRows:"100" };
+  const tmp  = await api("archpms", { op:"getApTmpBldInfo", ...base });
+  const hdcr = await api("archpms", { op:"getApHdcrMgmRgstInfo", ...base });
+  console.log("[가설건축물 getApTmpBldInfo]", tmp.data);
+  console.log("[공작물 getApHdcrMgmRgstInfo]", hdcr.data);
+  return { tmp:tmp.data, hdcr:hdcr.data };
+}
+
 /* ---- 이력 (건축인허가 기본개요 = 건축허가→착공→사용승인 생애주기) ---- */
 // 별도 프록시 /api/archpms 사용. 필지 단위로 D_CACHE["hist"]에 캐시(검색마다 초기화).
 async function loadHistory(panel){
