@@ -394,35 +394,20 @@ async function processOne(raw){
   const cands = await searchJuso(query);
   if(!cands.length) return {input:raw, status:"err", reason:"주소를 찾을 수 없음"};
 
-  // 2) 변환 — 모든 juso 후보에서 building 후보 수집 (중복 제거)
-  //    기존에는 cands[0]만 사용했으나, 도로명 A가 나대지로 매핑되어 0건이더라도
-  //    인접 도로명 B(예: 중흥로 223 → 223-1)에 같은 건물단지가 등록된 경우가 있어
-  //    juso가 준 모든 후보를 순서대로 시도한다. (다필지 대지, 합필 전 잔존 지번 등)
-  //    각 후보의 출처 juso 결과를 같이 저장하여, 인접 주소에서 찾은 경우 표시에 사용.
+  // 2) 변환
   const top = cands[0];
-  const seen = new Set();
-  const candidates = [];   // [{p: params, src: jusoRow}, ...]
-  for(const j of cands){
-    for(const p of jusoToBldCandidates(j)){
-      const k = `${p.bjdongCd}-${p.bun}-${p.ji}-${p.platGbCd}`;
-      if(seen.has(k)) continue;
-      seen.add(k);
-      candidates.push({ p, src: j });
-    }
-  }
+  const candidates = jusoToBldCandidates(top);
   
   // 3) 동구 필터
   if(!candidates.length)
     return {input:raw, status:"mute", reason:"동구 외 주소", jibun:top.jibunAddr};
 
-  // 4) 건축HUB 조회 (표제부) — 후보 순서대로, 첫 히트에서 중단
+// 4) 건축HUB 조회 (표제부)
   let bld = {titles:[], error:null};
-  let usedParams = candidates[0].p;
-  let usedSrc    = candidates[0].src;     // 어느 juso 결과에서 찾았는지
-  for(const c of candidates){
-    const r = await fetchBuilding(c.p);
-    usedParams = c.p;
-    usedSrc    = c.src;
+  let usedParams = candidates[0];
+  for(const cand of candidates){
+    const r = await fetchBuilding(cand);
+    usedParams = cand;
   }
 
   // 4-b) juso 경로로 대장이 안 나오면 → VWorld 좌표·PNU 폴백 재시도
@@ -439,7 +424,6 @@ async function processOne(raw){
         if(!bld2.error && bld2.titles.length){
           bld = bld2;
           usedParams = vParams;
-          usedSrc = null;       // VWorld 폴백으로 찾음 (juso 출처 아님)
         }
       }
     }
@@ -463,24 +447,11 @@ async function processOne(raw){
   // 대표 1행: 첫 주건축물 (없으면 첫 동)
   const rep = buildings.find(b => b.atchGb === "주건축물") || buildings[0];
 
-  // 상태 결정:
-  //  - 인접 주소(첫 juso 후보가 아닌 곳에서 찾음)에서 찾은 경우 → warn
-  //  - juso 후보가 여러 건이고 첫 후보에서 찾은 경우 → warn (기존 동작 유지)
-  //  - 그 외 → ok
-  const userInputNorm = query.replace(/\s+/g, "");
-  const srcRoadNorm   = String(usedSrc?.roadAddrPart1 || "").replace(/\s+/g, "");
-  const isAdjacentHit = !!usedSrc && srcRoadNorm && userInputNorm !== srcRoadNorm;
-
-  const status = isAdjacentHit ? "warn"
-               : cands.length > 1 ? "warn"
-               : "ok";
-  const reason = isAdjacentHit
-    ? `인접 주소(${usedSrc.roadAddrPart1})에서 대장 발견`
-    : (cands.length > 1 ? `후보 ${cands.length}건 중 최상위 선택` : "");
-
-  return {
+  // 후보가 2건 이상이면 확인 필요로 표시
+  const status = cands.length > 1 ? "warn" : "ok";
+return {
     input:raw, status,
-    reason,
+    reason: status==="warn" ? `후보 ${cands.length}건 중 최상위 선택` : "",
     params:usedParams, data:rep, buildings, dongFiltered
   };
 }
