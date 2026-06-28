@@ -1696,8 +1696,10 @@ function demolDateStr(r){
   return "-";
 }
 
-// 중복 제거 키: 같은 필지 + 같은 구분 + 같은 철거완료일 + 같은 면적이면 동일 건물로 본다.
-// 단, 같은 자리에 건물을 지었다가 허물기를 반복한 별개 이력(완료일·면적이 다름)은 유지.
+// 중복 제거 키: 같은 필지 + 같은 구분 + 같은 철거완료일 + 같은 면적 + 같은 구조면 동일 건물.
+// 단, 같은 자리에 건물을 지었다가 허물기를 반복한 별개 이력(완료일·면적·구조가 다름)은 유지.
+// 구조를 포함시킨 이유: 날짜 미확인 옛 데이터 중 같은 필지·같은 면적이어도
+// 구조가 다르면 별개 건물이므로(예: 벽돌조 vs 일반목구조) 과도한 병합을 막는다.
 // 폴백 날짜(완료일 없으면 시작일, 그도 없으면 멸실일)로 종료일이 비어있는 옛 데이터도 커버.
 function demolDedupeKey(r){
   const end = String(r.endDay||"").replace(/\D/g,"");
@@ -1705,7 +1707,7 @@ function demolDedupeKey(r){
   const ext = String(r.extngDay||"").replace(/\D/g,"");
   const day = end || ext || strt || "";
   const area = r.totArea!=null ? String(r.totArea) : "";
-  return `${r.bjd}-${r.bun}-${r.ji}-${r.demolGb}-${day}-${area}`;
+  return `${r.bjd}-${r.bun}-${r.ji}-${r.demolGb}-${day}-${area}-${r.strct}`;
 }
 
 // 철거구분 배지: 멸실=주황, 부분철거=회색, 철거=빈 배경
