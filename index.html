@@ -1191,6 +1191,7 @@ function cardHTML(t, kind){
         <button class="d-subtab" data-tab="wclf">오수정화시설</button>
         <button class="d-subtab" data-tab="jiji">지역지구</button>
         <button class="d-subtab" data-tab="hist">이력</button>
+        <button class="d-subtab" data-tab="tmphdcr">가설·공작물</button>
         <button class="d-subtab" data-tab="map">지도</button>
       </div>
       <div class="d-panel" id="dPanel"><div class="d-panel-hint">위 항목을 누르면 해당 정보를 불러옵니다</div></div>
@@ -1211,7 +1212,8 @@ function wireSubtabs(dongNm){
 async function loadSubtab(key, dongNm){
   const panel = document.getElementById("dPanel");
   if(key==="map"){ await renderMap(panel, dongNm); return; }   // 지도는 별도 처리
-  if(key==="hist"){ await loadHistory(panel); return; }        // 이력은 건축인허가(ArchPms) API
+  if(key==="hist"){ await loadHistory(panel); return; }
+  if(key==="tmphdcr"){ await loadTmpHdcr(panel); return; }     // 가설건축물·공작물(ArchPms 전용 op)
   if(key==="park"){ panel.innerHTML = renderParking(dongNm); return; }  // 주차: 표제부(D_TITLES) 재사용, 추가 호출 없음
   const meta = D_OPS[key]; if(!meta) return;
   let raw = D_CACHE[key];
@@ -1294,19 +1296,51 @@ function renderParking(dongNm){
   return miniTable(cols, rows);
 }
 
-
-// [임시·디버그] 이력 공백 행 정체 확인: 가설건축물·공작물 응답 덤프
-// 사용법: 단건 상세조회 후 콘솔에서 dumpTmpHdcr() 실행
-async function dumpTmpHdcr(){
-  if(typeof D_CAND==="undefined" || !D_CAND){ console.warn("먼저 단건 상세조회를 실행하세요"); return; }
-  const base = { sigunguCd:D_CAND.sigunguCd, bjdongCd:D_CAND.bjdongCd, platGbCd:D_CAND.platGbCd||"", bun:D_CAND.bun, ji:D_CAND.ji, numOfRows:"100" };
-  const tmp  = await api("archpms", { op:"getApTmpBldInfo", ...base });
-  const hdcr = await api("archpms", { op:"getApHdcrMgmRgstInfo", ...base });
-  console.log("[가설건축물 getApTmpBldInfo]", tmp.data);
-  console.log("[공작물 getApHdcrMgmRgstInfo]", hdcr.data);
-  return { tmp:tmp.data, hdcr:hdcr.data };
+/* ---- 가설건축물·공작물 (건축인허가 전용 op) — 필지 단위, D_CACHE 캐시 ---- */
+async function loadTmpHdcr(panel){
+  let data = D_CACHE["tmphdcr"];
+  if(!data){
+    panel.innerHTML = `<div class="d-panel-hint">가설건축물·공작물 불러오는 중…</div>`;
+    const base = { sigunguCd:D_CAND.sigunguCd, bjdongCd:D_CAND.bjdongCd, platGbCd:D_CAND.platGbCd||"", bun:D_CAND.bun, ji:D_CAND.ji, numOfRows:"100" };
+    const [tmp, hdcr] = await Promise.all([
+      api("archpms", { op:"getApTmpBldInfo", ...base }),
+      api("archpms", { op:"getApHdcrMgmRgstInfo", ...base }),
+    ]);
+    data = {
+      tmp:  (tmp.ok  && Array.isArray(tmp.data.items))  ? tmp.data.items  : [],
+      hdcr: (hdcr.ok && Array.isArray(hdcr.data.items)) ? hdcr.data.items : [],
+    };
+    D_CACHE["tmphdcr"] = data;
+  }
+  panel.innerHTML = renderTmpHdcr(data);
 }
 
+function renderTmpHdcr({tmp, hdcr}){
+  if(!tmp.length && !hdcr.length) return `<div class="d-empty">가설건축물·공작물 정보가 없습니다</div>`;
+  let html = "";
+  if(tmp.length){
+    html += `<div class="d-sec-title">가설건축물 <span class="d-kind">${tmp.length}건</span></div>`;
+    html += miniTable([
+      {h:"주용도", f:r=>esc(String(r.mainPurpsCdNm||"").trim()||"-")},
+      {h:"구조", f:r=>esc(String(r.strctCdNm||"").trim()||"-")},
+      {h:"건축면적", num:true, f:r=>histArea(r.archArea)},
+      {h:"층수", num:true, f:r=>r.grndFlrCnt!=null ? fmt(r.grndFlrCnt) : "-"},
+      {h:"존치만료일", f:r=>histDate(r.tmpbldPrsvExpDay)},
+    ], tmp);
+  }
+  if(hdcr.length){
+    html += `<div class="d-sec-title">공작물 <span class="d-kind">${hdcr.length}건</span></div>`;
+    html += miniTable([
+      {h:"종류", f:r=>esc(String(r.hdcrKindCdNm||"").trim()||"-")},
+      {h:"구조", f:r=>esc(String(r.strctCdNm||"").trim()||"-")},
+      {h:"높이", num:true, f:r=>r.heit!=null ? fmt(r.heit)+" m" : "-"},
+      {h:"길이", num:true, f:r=>r.len!=null ? fmt(r.len)+" m" : "-"},
+      {h:"면적", num:true, f:r=>r.area!=null ? fmt(r.area)+" ㎡" : "-"},
+    ], hdcr);
+  }
+  return html;
+}
+  
 /* ---- 이력 (건축인허가 기본개요 = 건축허가→착공→사용승인 생애주기) ---- */
 // 별도 프록시 /api/archpms 사용. 필지 단위로 D_CACHE["hist"]에 캐시(검색마다 초기화).
 async function loadHistory(panel){
@@ -1352,7 +1386,9 @@ function registerHistoryRow(){
 }
 
 function renderHistory(items){
-  if(!items.length){
+  // 구분(건축구분)이 있는 행만 = 건물 생애주기. 공백 행(가설·멸실 등)은 '가설·공작물' 탭에서 본다.
+  const life = (items||[]).filter(r=>String(r.archGbCdNm||"").trim());
+  if(!life.length){
     const fb = registerHistoryRow();
     if(!fb) return `<div class="d-empty">건축인허가 이력이 없습니다</div>`;
     return `<div class="d-map-cap">건축인허가 이력이 없어 건축물대장 기준 최초 건축 정보를 표시합니다.</div>`
@@ -1363,7 +1399,7 @@ function renderHistory(items){
         {h:"사용승인일", f:r=>histDate(r.useAprDay)},
       ], [fb]);
   }
-  const rows = items.slice().sort((a,b)=>String(a.archPmsDay||"").localeCompare(String(b.archPmsDay||"")));
+  const rows = life.slice().sort((a,b)=>String(a.archPmsDay||"").localeCompare(String(b.archPmsDay||"")));
   return miniTable([
     {h:"구분", f:r=>esc(r.archGbCdNm||r.bldNm||"-")},
     {h:"주용도", f:r=>esc(String(r.mainPurpsCdNm||"").trim() || "-")},
