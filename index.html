@@ -1683,16 +1683,29 @@ function demolYear(r){
   return null;   // 날짜 없음
 }
 
-// 표시용: 멸실=단일일, 철거=기간
+// 표시용: 철거·멸실 완료 시점을 단일일로 표시.
+// 우선순위: 멸실일(extngDay) > 철거종료일(endDay) > 철거시작일(strtDay).
+// 기간 형식(시작~종료) 대신 완료 시점 하나로 표시해 가독성을 높인다.
 function demolDateStr(r){
   const ext = String(r.extngDay||"").replace(/\D/g,"");
   if(ext && !/^0+$/.test(ext)) return histDate(r.extngDay);
-  const s = String(r.strtDay||"").replace(/\D/g,"");
   const e = String(r.endDay||"").replace(/\D/g,"");
-  if(s && e && s!==e) return `${histDate(r.strtDay)} ~ ${histDate(r.endDay)}`;
-  if(e) return histDate(r.endDay);
-  if(s) return histDate(r.strtDay);
+  if(e && !/^0+$/.test(e)) return histDate(r.endDay);
+  const s = String(r.strtDay||"").replace(/\D/g,"");
+  if(s && !/^0+$/.test(s)) return histDate(r.strtDay);
   return "-";
+}
+
+// 중복 제거 키: 같은 필지 + 같은 구분 + 같은 철거완료일 + 같은 면적이면 동일 건물로 본다.
+// 단, 같은 자리에 건물을 지었다가 허물기를 반복한 별개 이력(완료일·면적이 다름)은 유지.
+// 폴백 날짜(완료일 없으면 시작일, 그도 없으면 멸실일)로 종료일이 비어있는 옛 데이터도 커버.
+function demolDedupeKey(r){
+  const end = String(r.endDay||"").replace(/\D/g,"");
+  const strt = String(r.strtDay||"").replace(/\D/g,"");
+  const ext = String(r.extngDay||"").replace(/\D/g,"");
+  const day = end || ext || strt || "";
+  const area = r.totArea!=null ? String(r.totArea) : "";
+  return `${r.bjd}-${r.bun}-${r.ji}-${r.demolGb}-${day}-${area}`;
 }
 
 // 철거구분 배지: 멸실=주황, 부분철거=회색, 철거=빈 배경
@@ -1788,11 +1801,15 @@ async function runDemolSearch(){
     matched.push(r);
   }
 
+  // 중복 제거: 같은 필지·같은 구분·같은 완료일·같은 면적 = 동일 건물.
+  // 시점이 다르면 별개 이력(재건축 후 재철거 등)으로 인정해 유지.
+  const uniq = dedupeBy(matched, demolDedupeKey);
+
   // 종료일(또는 시작일) 내림차순(최신 먼저), 같으면 지번 오름차순
   const sortKey = r => String(r.endDay || r.strtDay || r.extngDay || "");
-  matched.sort((a,b)=> sortKey(b).localeCompare(sortKey(a)) || String(a.platPlc).localeCompare(String(b.platPlc),"ko"));
+  uniq.sort((a,b)=> sortKey(b).localeCompare(sortKey(a)) || String(a.platPlc).localeCompare(String(b.platPlc),"ko"));
 
-  MRESULTS = matched;
+  MRESULTS = uniq;
 
   setTimeout(()=>{
     document.getElementById("mProgWrap").classList.remove("on");
