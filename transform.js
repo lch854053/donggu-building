@@ -52,6 +52,37 @@ function jusoToBldCandidates(j){
   return out;
 }
 
+// juso 결과 배열에서 "같은 건물군" 후보 PNU 파라미터들을 모은다.
+// 같은 도로명(rn) + 같은 건물본번(buldMnnm) + 같은 법정동(emdNm)이면
+// 도로명주소 체계상 같은 건물군(본번은 같고 부번만 다른 인접 필지)으로 본다.
+// 예) "중흥로 223" 검색 → [223→576-16, 223-1→576-13] 모두 후보
+// 부속지번에만 대장이 걸려 있는 다필지 건물(대표지번엔 대장 없음) 대응.
+function jusoToBldGroup(jusoList){
+  if(!jusoList || !jusoList.length) return [];
+  const top = jusoList[0];
+  const rn = top.rn || "";
+  const mnnm = top.buldMnnm || "";
+  const emd = top.emdNm || "";
+  // 도로명 정보가 없는 결과(지번 검색 등)면 최상위 1건만 그룹으로 인정
+  const useGroup = !!(rn && mnnm);
+  const seen = new Set();
+  const out = [];
+  for(const j of jusoList){
+    if(useGroup){
+      const sameGroup = (j.rn||"") === rn
+                     && (j.buldMnnm||"") === mnnm
+                     && (j.emdNm||"") === emd;
+      if(!sameGroup) continue;          // 다른 건물군은 제외
+    }
+    for(const p of jusoToBldCandidates(j)){
+      const k = `${p.bjdongCd}-${p.bun}-${p.ji}-${p.platGbCd}`;
+      if(seen.has(k)) continue;
+      seen.add(k); out.push(p);
+    }
+  }
+  return out;
+}
+
 // 입력 주소에서 '동' 번호 추출 (예: "108동", "제108동", "108-1동" → "108")
 // 숫자 기준. 못 찾으면 null
 function extractDong(raw){
