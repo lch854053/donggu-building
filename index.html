@@ -402,12 +402,14 @@ async function processOne(raw){
   if(!candidates.length)
     return {input:raw, status:"mute", reason:"동구 외 주소", jibun:top.jibunAddr};
 
-// 4) 건축HUB 조회 (표제부)
+// 4) 건축HUB 조회 (표제부) — 후보 순회하며 첫 정상 결과 사용
   let bld = {titles:[], error:null};
   let usedParams = candidates[0];
   for(const cand of candidates){
     const r = await fetchBuilding(cand);
     usedParams = cand;
+    if(r.error){ bld.error = r.error; break; }
+    if(r.titles.length){ bld = r; break; }
   }
 
   // 4-b) juso 경로로 대장이 안 나오면 → VWorld 좌표·PNU 폴백 재시도
@@ -448,10 +450,10 @@ async function processOne(raw){
   const rep = buildings.find(b => b.atchGb === "주건축물") || buildings[0];
 
   // 후보가 2건 이상이면 확인 필요로 표시
-  const status = cands.length > 1 ? "warn" : "ok";
-return {
+  const status = candidates.length > 1 ? "warn" : "ok";
+  return {
     input:raw, status,
-    reason: status==="warn" ? `후보 ${cands.length}건 중 최상위 선택` : "",
+    reason: status==="warn" ? `후보 ${candidates.length}건 중 최상위 선택` : "",
     params:usedParams, data:rep, buildings, dongFiltered
   };
 }
