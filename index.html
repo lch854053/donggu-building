@@ -254,7 +254,22 @@
           엑셀 다운로드
         </button>
       </div>
-      <div id="hCards"></div>
+      <div id="hDetail" style="display:none;margin-bottom:16px"></div>
+      <div class="table-scroll">
+        <table id="hTable">
+          <thead><tr>
+            <th class="num">#</th>
+            <th>공동주택명</th>
+            <th>종류</th>
+            <th>행정동</th>
+            <th>지번주소</th>
+            <th class="num">세대수</th>
+            <th class="num">동수</th>
+            <th>사용승인일</th>
+          </tr></thead>
+          <tbody id="hResultBody"></tbody>
+        </table>
+      </div>
       <div id="hPager" class="cpager"></div>
     </div>
   </div><!-- /tab-housing -->
@@ -2009,7 +2024,8 @@ function renderHousingResults(scanned, dongLabel){
 function gotoHousingPage(p){
   H_PAGE = p;
   renderHousingPage();
-  document.getElementById("hCards").scrollIntoView({ block:"start", behavior:"smooth" });
+  const sc = document.querySelector("#hResultArea .table-scroll");
+  if(sc) sc.scrollIntoView({ block:"start", behavior:"smooth" });
 }
 
 function renderHousingPage(){
@@ -2019,109 +2035,120 @@ function renderHousingPage(){
   const offset = (H_PAGE - 1) * H_PAGE_SIZE;
   const slice  = HRESULTS.slice(offset, offset + H_PAGE_SIZE);
 
-  const host = document.getElementById("hCards");
-  host.innerHTML = "";
+  const body = document.getElementById("hResultBody");
+  body.innerHTML = "";
   const frag = document.createDocumentFragment();
   slice.forEach((d,i)=>{
-    const card = document.createElement("div");
-    card.className = "card d-card";
-    card.style.animationDelay = (Math.min(i,40)*0.01)+"s";
-    card.innerHTML = housingCardHTML(d, offset+i+1);
-    frag.appendChild(card);
+    const tr = document.createElement("tr");
+    tr.style.animationDelay = (Math.min(i,40)*0.01)+"s";
+    const clickable = d.kaptCode ? "clickable" : "";
+    const nmCell = d.kaptCode
+      ? `<a href="#" class="h-name ${clickable}" data-dtl="${esc(d.kaptCode)}">${esc(d.complexNm)}</a>`
+      : `<span class="h-name-nolink">${esc(d.complexNm)}</span>`;
+    tr.innerHTML = `
+      <td class="num">${offset + i + 1}</td>
+      <td class="addr">${nmCell}</td>
+      <td>${esc(d.kind||"-")}</td>
+      <td>${esc(d.bHdong||"-")}</td>
+      <td class="code">${esc(d.adres||"-")}</td>
+      <td class="num">${fmt(d.hhld)}</td>
+      <td class="num">${fmt(d.dongCnt)}</td>
+      <td>${useAprCell(d.useAprDay)}</td>`;
+    frag.appendChild(tr);
   });
-  host.appendChild(frag);
-  // 상세정보 토글 바인딩
-  host.querySelectorAll("[data-dtl]").forEach(btn=>{
-    btn.addEventListener("click", ()=>toggleHousingDtl(btn));
+  body.appendChild(frag);
+  // 공동주택명 클릭 → 인라인 상세
+  body.querySelectorAll("[data-dtl]").forEach(a=>{
+    a.addEventListener("click", e=>{ e.preventDefault(); openHousingDetail(a.dataset.dtl, a); });
   });
   renderHousingPager(total, pages, offset, slice.length);
 }
 
-function housingCardHTML(d, idx){
-  const kindBadge = d.kind ? `<span class="badge ok">${esc(d.kind)}</span>` : "";
-  const srcBadge = d.source==="한국부동산원" ? "" : `<span class="badge mute">${esc(d.source)}</span>`;
-  const hasDtl = !!d.kaptCode;   // K-apt PNU 매칭된 단지만 상세정보 가능
-  const dtlBtn = hasDtl
-    ? `<div class="d-subtabs"><button class="d-subtab" data-dtl="${esc(d.kaptCode)}">상세정보 (주차·관리·편의)</button></div>
-       <div class="d-panel" id="hPanel-${esc(d.kaptCode)}"><div class="d-panel-hint">버튼을 누르면 상세정보를 불러옵니다</div></div>`
-    : "";
-  return `
-  <div class="card-head">
-    <h2><span class="num-tag">단지</span>${esc(d.complexNm)} ${kindBadge} ${srcBadge}</h2>
-    <span class="d-kind">${esc(d.bHdong||"")}</span>
-  </div>
-  <div class="card-body">
-    <div class="d-addr">${esc(d.adres)}</div>
-
-    <div class="d-sec-title">규모</div>
-    <div class="d-kv">
-      <div class="k">세대수</div><div class="v">${fmt(d.hhld)} 세대</div>
-      <div class="k">동수</div><div class="v">${fmt(d.dongCnt)} 동</div>
-      ${d.area ? `<div class="k">면적</div><div class="v">${fmt(d.area)} ㎡</div>` : ""}
-      <div class="k">사용승인일</div><div class="v">${useAprCell(d.useAprDay)}</div>
-    </div>
-
-    ${dtlBtn}
-  </div>`;
-}
-
-// 상세정보 lazy 토글
-async function toggleHousingDtl(btn){
-  const code = btn.dataset.dtl;
-  const panel = document.getElementById("hPanel-"+code);
-  if(!panel) return;
-  if(btn.classList.contains("active")){
-    btn.classList.remove("active");
-    panel.innerHTML = '<div class="d-panel-hint">버튼을 누르면 상세정보를 불러옵니다</div>';
+// 공동주택명 클릭 → 표 상단 hDetail 영역에 인라인 상세 카드 표시
+async function openHousingDetail(kaptCode, anchor){
+  const panel = document.getElementById("hDetail");
+  // 같은 단지再클릭 시 토글 닫기
+  if(panel.dataset.code === kaptCode && panel.style.display !== "none"){
+    panel.style.display = "none";
+    panel.dataset.code = "";
+    document.querySelectorAll(".h-name.active").forEach(a=>a.classList.remove("active"));
     return;
   }
-  btn.classList.add("active");
-  panel.innerHTML = '<div class="d-panel-hint">상세정보 불러오는 중…</div>';
-  const dtl = await fetchAptDtl(code);
-  if(!dtl){ panel.innerHTML = '<div class="d-empty">상세정보가 없습니다</div>'; return; }
-  panel.innerHTML = renderHousingDtl(dtl);
+  document.querySelectorAll(".h-name.active").forEach(a=>a.classList.remove("active"));
+  if(anchor) anchor.classList.add("active");
+  panel.dataset.code = kaptCode;
+  panel.style.display = "block";
+  panel.innerHTML = '<div class="d-card" style="padding:18px"><div class="d-panel-hint">단지 상세정보 불러오는 중…</div></div>';
+  panel.scrollIntoView({ block:"start", behavior:"smooth" });
+
+  // 기본정보 + 상세정보 동시 조회
+  const [bass, dtl] = await Promise.all([ fetchAptBass(kaptCode), fetchAptDtl(kaptCode) ]);
+  if(!bass){ panel.innerHTML = '<div class="d-empty">상세정보를 불러오지 못했습니다.</div>'; return; }
+  panel.innerHTML = housingDetailHTML(bass, dtl);
 }
 
-function renderHousingDtl(d){
+function housingDetailHTML(b, d){
   const cnt = v => { const n = Number(v||0); return n>0 ? fmt(n) : "-"; };
   const plain = v => { const s = String(v||"").trim(); return s ? esc(s) : "-"; };
-  // 주차 총합(지상+지하)
-  const ptot = (Number(d.kaptdPcnt||0) + Number(d.kaptdPcntu||0));
-  let html = '<div class="d-sec-title">주차 · 설비</div>';
-  html += miniTable([
-    {h:"주차 총대수", num:true, f:r=>{ const n=Number(r.kaptdPcnt||0)+Number(r.kaptdPcntu||0); return n>0?fmt(n):"-"; }},
-    {h:"주차(지상)", num:true, f:r=>cnt(r.kaptdPcnt)},
-    {h:"주차(지하)", num:true, f:r=>cnt(r.kaptdPcntu)},
-    {h:"승강기", num:true, f:r=>cnt(r.kaptdEcnt)},
-    {h:"CCTV", num:true, f:r=>cnt(r.kaptdCccnt)},
-    {h:"전기차(지상/지하)", f:r=>`${cnt(r.groundElChargerCnt)} / ${cnt(r.undergroundElChargerCnt)}`},
-  ], [d]);
+  const parking = d ? (Number(d.kaptdPcnt||0) + Number(d.kaptdPcntu||0)) : 0;
+  const flr = b.kaptTopFloor!=null ? `지하 ${b.kaptBaseFloor||0} / 지상 ${b.kaptTopFloor}층` : "-";
+  const structure = d ? plain(d.codeStr) : "-";
+  return `
+  <div class="card d-card">
+    <div class="card-head">
+      <h2><span class="num-tag">단지</span>${esc(b.kaptName)} <span class="badge ok">${esc(b.codeAptNm||"")}</span></h2>
+      <button class="ghost" onclick="document.getElementById('hDetail').style.display='none'">닫기</button>
+    </div>
+    <div class="card-body">
+      <div class="d-addr">${esc(b.doroJuso||b.kaptAddr||"-")}</div>
+      <div class="d-addr sub">${esc(b.kaptAddr||"-")}</div>
 
-  html += '<div class="d-sec-title">관리방식</div>';
-  html += miniTable([
-    {h:"일반관리", f:r=>plain(r.codeMgr)},
-    {h:"경비관리", f:r=>plain(r.codeSec)},
-    {h:"청소관리", f:r=>plain(r.codeClean)},
-    {h:"소독관리", f:r=>plain(r.codeDisinf)},
-    {h:"음식물처리", f:r=>plain(r.codeGarbage)},
-  ], [d]);
+      <div class="d-sec-title">규모 · 시공</div>
+      <div class="d-kv">
+        <div class="k">세대수</div><div class="v">${fmt(b.hoCnt||b.kaptdaCnt)} 세대</div>
+        <div class="k">동수</div><div class="v">${fmt(b.kaptDongCnt)} 동</div>
+        <div class="k">층수</div><div class="v">${flr}</div>
+        <div class="k">연면적</div><div class="v">${fmt(b.kaptTarea)} ㎡</div>
+        <div class="k">난방방식</div><div class="v">${plain(b.codeHeatNm)}</div>
+        <div class="k">분양형태</div><div class="v">${plain(b.codeSaleNm)}</div>
+        <div class="k">시공사</div><div class="v">${plain(b.kaptBcompany)}</div>
+        <div class="k">시행사</div><div class="v">${plain(b.kaptAcompany)}</div>
+        <div class="k">사용승인일</div><div class="v">${useAprCell(b.kaptUsedate)}</div>
+        <div class="k">관리방식</div><div class="v">${plain(b.codeMgrNm)}</div>
+      </div>
 
-  html += '<div class="d-sec-title">안전 · 설비</div>';
-  html += miniTable([
-    {h:"건물구조", f:r=>plain(r.codeStr)},
-    {h:"화재수신반", f:r=>plain(r.codeFalarm)},
-    {h:"급수방식", f:r=>plain(r.codeWsupply)},
-    {h:"승강기관리", f:r=>plain(r.codeElev)},
-  ], [d]);
+      <div class="d-sec-title">관리사무소</div>
+      <div class="d-kv">
+        <div class="k">전화</div><div class="v">${plain(b.kaptTel)}</div>
+        <div class="k">팩스</div><div class="v">${plain(b.kaptFax)}</div>
+      </div>
 
-  html += '<div class="d-sec-title">편의 · 교통</div>';
-  html += miniTable([
-    {h:"편의시설", f:r=>plain(r.convenientFacility)},
-    {h:"복리시설", f:r=>plain(r.welfareFacility)},
-    {h:"교육시설", f:r=>plain(r.educationFacility)},
-    {h:"지하철", f:r=>plain((r.subwayLine?r.subwayLine+" ":"")+(r.subwayStation||""))},
-  ], [d]);
-  return html;
+      ${d ? `
+      <div class="d-sec-title">주차 · 안전 · 설비</div>
+      ${miniTable([
+        {h:"총 주차대수", num:true, f:r=>{ const n=Number(r.kaptdPcnt||0)+Number(r.kaptdPcntu||0); return n>0?fmt(n):"-"; }},
+        {h:"주차(지상)", num:true, f:r=>cnt(r.kaptdPcnt)},
+        {h:"주차(지하)", num:true, f:r=>cnt(r.kaptdPcntu)},
+        {h:"건물구조", f:r=>plain(r.codeStr)},
+        {h:"승강기", num:true, f:r=>cnt(r.kaptdEcnt)},
+        {h:"CCTV", num:true, f:r=>cnt(r.kaptdCccnt)},
+        {h:"화재수신반", f:r=>plain(r.codeFalarm)},
+        {h:"급수방식", f:r=>plain(r.codeWsupply)},
+      ], [d])}
+
+      <div class="d-sec-title">관리 · 편의</div>
+      ${miniTable([
+        {h:"일반관리", f:r=>plain(r.codeMgr)},
+        {h:"경비관리", f:r=>plain(r.codeSec)},
+        {h:"청소관리", f:r=>plain(r.codeClean)},
+        {h:"소독관리", f:r=>plain(r.codeDisinf)},
+        {h:"편의시설", f:r=>plain(r.convenientFacility)},
+        {h:"복리시설", f:r=>plain(r.welfareFacility)},
+        {h:"교육시설", f:r=>plain(r.educationFacility)},
+      ], [d])}
+      ` : '<div class="d-sec-title">상세</div><div class="d-empty">K-apt 상세정보(주차·건물구조·관리방식 등)가 없습니다.</div>'}
+    </div>
+  </div>`;
 }
 
 function renderHousingPager(total, pages, offset, shown){
@@ -2162,7 +2189,8 @@ function clearHousing(){
   document.getElementById("hStats").style.display="none";
   HRESULTS=[]; H_PAGE=1;
   const pg=document.getElementById("hPager"); if(pg) pg.innerHTML="";
-  const cards=document.getElementById("hCards"); if(cards) cards.innerHTML="";
+  const body=document.getElementById("hResultBody"); if(body) body.innerHTML="";
+  const dtl=document.getElementById("hDetail"); if(dtl){ dtl.innerHTML=""; dtl.style.display="none"; }
   Object.keys(H_DTL_CACHE).forEach(k=>delete H_DTL_CACHE[k]);
 }
 

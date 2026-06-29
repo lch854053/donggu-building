@@ -217,6 +217,11 @@
   /* Table */
   .table-scroll{overflow-x:auto;border:1px solid var(--line);border-radius:6px;background:var(--card)}
   table{border-collapse:collapse;width:100%;min-width:1080px;font-size:12.5px}
+  #hTable{min-width:760px}   /* 공동주택 표는 컬럼이 적어 좁게 */
+  .h-name{color:var(--accent);text-decoration:none;font-weight:500;cursor:pointer}
+  .h-name:hover{text-decoration:underline}
+  .h-name.active{color:var(--accent-deep);font-weight:600}
+  .h-name-nolink{color:var(--ink-soft)}
   thead th{
     background:var(--ink);color:var(--paper);font-weight:500;
     padding:11px 12px;text-align:left;white-space:nowrap;
