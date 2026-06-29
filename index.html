@@ -1700,8 +1700,8 @@ function switchTab(which){
 
 /* ── 공동주택관리(Housing) 상태 ── */
 let   HJ_H = null;             // 행정동 매핑(조건검색 HJ 와 동일 구조, 별도 캐시)
-// 단지종류: 1=아파트/연립, 2=다세대 (한국부동산원 COMPLEX_GB_CD) + 오피스텔/도시형생활주택 (보충)
-const HKIND_OPTS = ["아파트·연립","다세대","오피스텔","도시형생활주택","기타"];
+// 단지종류: 1=아파트, 2=연립, 3=다세대 (한국부동산원 COMPLEX_GB_CD) + 오피스텔/도시형생활주택 (보충)
+const HKIND_OPTS = ["아파트","연립","다세대","오피스텔","도시형생활주택"];
 const H_MS = {};               // 다중선택
 const H_DUAL = {};             // 슬라이더
 let   H_FILTERS_READY = false;
@@ -1787,9 +1787,11 @@ function pnuFromKapt(info){
 }
 
 // 한국부동산원 단지(COMPLEX_GB_CD) → 단지종류 라벨
+// 1=아파트, 2=연립, 3=다세대
 function aptKindFromCode(gbCd){
-  if(gbCd==="1") return "아파트·연립";
-  if(gbCd==="2") return "다세대";
+  if(gbCd==="1") return "아파트";
+  if(gbCd==="2") return "연립";
+  if(gbCd==="3") return "다세대";
   return "기타";
 }
 
