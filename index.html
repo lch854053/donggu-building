@@ -236,6 +236,7 @@
           <div class="progress-bar"><div class="progress-fill" id="hProgFill"></div></div>
           <div class="progress-text" id="hProgText">대기 중…</div>
         </div>
+        <div class="hint">준주택(오피스텔)·도시형생활주택은 주택유형 관리대장 기준, 아파트·공동주택은 건축물대장에서 보충 표시합니다. 일부 건물(예: 신축 오피스텔)은 주택유형 대장에 등록되지 않아 조회되지 않을 수 있습니다.</div>
       </div>
     </div>
 
@@ -1713,7 +1714,7 @@ function switchTab(which){
 
 /* ── 공동주택관리(Housing) 상태 ── */
 let   HJ_H = null;             // 행정동 매핑(조건검색 HJ 와 별도 캐시 불필요, HJ 재사용 가능하지만 독립 유지)
-const HSTP_OPTS = ["단독주택","다세대주택","연립주택","아파트","주상복합","오피스텔"];
+const HSTP_OPTS = ["준주택(오피스텔)","도시형생활주택(원룸형주택)","도시형생활주택(소형주택)","도시형생활주택(단지형다세대주택)","도시형생활주택(단지형연립주택)","준주택(기숙사)","아파트·공동주택(건축물대장)"];
 const H_MS = {};               // 다중선택
 const H_DUAL = {};             // 슬라이더
 let   H_FILTERS_READY = false;
@@ -1817,8 +1818,36 @@ async function runHousingSearch(){
   // 2) 표제부(getBrTitleInfo) 보충 — 사용승인일/도로명주소/지번주소 보충용
   //    getApHsTpInfo는 useAprDay·newPlatPlc 를 주지 않으므로 같은 법정동의 표제부에서 조인.
   //    주택유형 결과가 있는 법정동만 조회 (불필요한 호출 제외).
+  //    아파트·공동주택은 주택유형 대장에 없으므로 표제부 주용도에서 보충행을 생성.
   const bjdsNeeded = [...new Set(all.map(t=>t.bjdongCd).filter(Boolean))];
   const titleMap = {};   // key: bjdongCd+bun+ji → {useAprDay, newPlatPlc, platPlc}
+  // 표제부 행 1건 → titleMap 갱신 + 아파트/공동주택이면 보충행 push
+  const aptSupp = [];   // 아파트·공동주택 보충행 (주택유형 all 에 합류시켜 함께 필터·그룹화)
+  const APT_HSTP = "아파트·공동주택(건축물대장)";
+  const APT_RE = /아파트|공동주택/;
+  const ingestTitle = (t) => {
+    const k = `${t.bjdongCd}${(t.bun||"").padStart(4,"0")}${(t.ji||"").padStart(4,"0")}`;
+    if(!titleMap[k]){   // 첫 표제부 행을 대표로 (사용승인일/도로명이 동 단지에서 동일)
+      titleMap[k] = {
+        useAprDay: t.useAprDay || "",
+        newPlatPlc: stripParens(t.newPlatPlc) || "",
+        platPlc: stripParens(t.platPlc) || "",
+      };
+    }
+    // 아파트/공동주택 보충 — 표제부 주용도 기준. 세대수는 표제부에 없어 0.
+    if(APT_RE.test(String(t.mainPurpsCdNm||""))){
+      aptSupp.push({
+        bjdongCd: t.bjdongCd, bun: t.bun, ji: t.ji,
+        platPlc: stripParens(t.platPlc) || "",
+        bldNm: stripParens(t.bldNm) || "",
+        hstpGbCdNm: APT_HSTP,
+        silHoHhldCnt: 0,                       // 표제부에 세대수 없음
+        silHoHhldArea: Number(t.totArea||0),   // 연면적을 면적으로 대체 표시
+        useAprDay: t.useAprDay || "",
+        _apt: true,
+      });
+    }
+  };
   if(bjdsNeeded.length){
     let t2done = 0; hUpdate(0, bjdsNeeded.length, "건축물대장");
     const tp1 = await runPool(bjdsNeeded, async (bjd)=>{
@@ -1827,16 +1856,7 @@ async function runHousingSearch(){
     }, 5, ()=>hUpdate(++t2done, bjdsNeeded.length, "건축물대장"));
     const tmore = [];
     tp1.forEach(r=>{
-      for(const t of r.titles){
-        const k = `${t.bjdongCd}${(t.bun||"").padStart(4,"0")}${(t.ji||"").padStart(4,"0")}`;
-        if(!titleMap[k]){   // 첫 표제부 행을 대표로 (사용승인일/도로명이 동 단지에서 동일)
-          titleMap[k] = {
-            useAprDay: t.useAprDay || "",
-            newPlatPlc: stripParens(t.newPlatPlc) || "",
-            platPlc: stripParens(t.platPlc) || "",
-          };
-        }
-      }
+      for(const t of r.titles) ingestTitle(t);
       const pageSize = Math.max(r.titles.length, 1);
       if(r.totalCount > pageSize){
         const pages = Math.min(Math.ceil(r.totalCount / pageSize), MAX_PAGES);
@@ -1849,20 +1869,11 @@ async function runHousingSearch(){
         const {titles} = await fetchDongPage(m.bjd, m.pg);
         return titles;
       }, 5, ()=>hUpdate(++tmdone, tmore.length, "건축물대장"));
-      tgot.forEach(ts=>{
-        for(const t of ts){
-          const k = `${t.bjdongCd}${(t.bun||"").padStart(4,"0")}${(t.ji||"").padStart(4,"0")}`;
-          if(!titleMap[k]){
-            titleMap[k] = {
-              useAprDay: t.useAprDay || "",
-              newPlatPlc: stripParens(t.newPlatPlc) || "",
-              platPlc: stripParens(t.platPlc) || "",
-            };
-          }
-        }
-      });
+      tgot.forEach(ts=>{ for(const t of ts) ingestTitle(t); });
     }
   }
+  // 보충한 아파트·공동주택 행을 주택유형 결과에 합류
+  all.push(...aptSupp);
 
   // 3) 행정동 + 조건 필터 (세대수·면적·주택유형은 주택유형 데이터 기준,
   //    사용승인 연도는 표제부에서 보충한 useAprDay 기준)
@@ -1878,7 +1889,7 @@ async function runHousingSearch(){
     const area = Number(t.silHoHhldArea||0);
     if(area < areaMin || area > areaMax) continue;              // 면적
     const tb = titleMap[key] || {};
-    const useAprDay = tb.useAprDay || "";
+    const useAprDay = t._apt ? (t.useAprDay || tb.useAprDay || "") : (tb.useAprDay || "");
     const yr = extractYear(useAprDay);
     if(yr===null){
       if(!incUnknown) continue;
@@ -1891,6 +1902,7 @@ async function runHousingSearch(){
       platPlc:   stripParens(tb.platPlc || t.platPlc) || "-",
       newPlatPlc: stripParens(tb.newPlatPlc) || "-",
       bldNm:     stripParens(t.bldNm) || "-",
+      source: t._apt ? "건축물대장" : "주택유형",
       dongNm:    t.dongNm || "",
       hstp:      t.hstpGbCdNm || "-",
       hhld, area,
@@ -1998,7 +2010,7 @@ function exportHousingExcel(){
       "순번":i+1,"행정동":d.hdong||"","지번주소":d.platPlc||"","도로명주소":d.newPlatPlc||"",
       "건물명":d.bldNm||"","주택유형":d.hstp||"","세대수":d.hhld||0,"면적(㎡)":d.area||"",
       "사용승인일":d.useAprDay||"","경과연수":yr===null?"미확인":(nowY-yr),
-      "통합행수":d.rows||1
+      "통합행수":d.rows||1,"데이터출처":d.source||"주택유형"
     };
   });
   const ws = XLSX.utils.json_to_sheet(rows);
