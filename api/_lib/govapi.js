@@ -28,5 +28,7 @@ export function unwrapGov(text, endpoint) {
   if (code !== "00" && code !== "03") throw new Error(`${endpoint}: ${header.resultMsg || code}`);
 
   const body = data?.response?.body || {};
-  return { items: toArray(body?.items?.item), totalCount: Number(body?.totalCount || 0) };
+  // items.item (건축HUB 계열) 또는 items 자체가 배열(K-apt 계열) 모두 지원
+  const rawItems = body?.items?.item !== undefined ? body.items.item : body?.items;
+  return { items: toArray(rawItems), totalCount: Number(body?.totalCount || 0) };
 }
