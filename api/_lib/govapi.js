@@ -28,7 +28,14 @@ export function unwrapGov(text, endpoint) {
   if (code !== "00" && code !== "03") throw new Error(`${endpoint}: ${header.resultMsg || code}`);
 
   const body = data?.response?.body || {};
-  // items.item (건축HUB 계열) 또는 items 자체가 배열(K-apt 계열) 모두 지원
-  const rawItems = body?.items?.item !== undefined ? body.items.item : body?.items;
+  // 응답 형태가 세 가지:
+  //  1) body.items.item       (건축HUB 계열, 다건)
+  //  2) body.items (배열)      (K-apt 목록 계열)
+  //  3) body.item (단건 객체)  (K-apt 단건조회 getAphusBassInfoV4 등)
+  let rawItems;
+  if (body?.items?.item !== undefined) rawItems = body.items.item;
+  else if (body?.items !== undefined) rawItems = body.items;
+  else if (body?.item !== undefined) rawItems = body.item;
+  else rawItems = [];
   return { items: toArray(rawItems), totalCount: Number(body?.totalCount || 0) };
 }
