@@ -23,7 +23,7 @@ export default async function handler(req, res) {
   // 공동주택 단지목록 서비스 전용 키. 미설정 시 기존 키로 폴백
   const serviceKey = process.env.APT_SERVICE_KEY || process.env.BLD_SERVICE_KEY;
   if (!serviceKey)
-    return res.status(500).json({ complexes: [], error: "APT_SERVICE_KEY 환경변수 미설정" });
+    return res.status(500).json({ complexes: [], error: "APT_SERVICE_KEY/BLD_SERVICE_KEY 환경변수 미설정" });
 
   const q = { _type: "json", pageNo: one(req.query.pageNo).trim() || "1", numOfRows: one(req.query.numOfRows).trim() || "500" };
 
