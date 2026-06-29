@@ -1739,11 +1739,20 @@ async function loadHousing(){
     + names.map(n=>`<option value="${n}">${n}</option>`).join("");
 }
 
-// 동구 전체 단지 목록 1회 조회 (aptlist 프록시 → getTotalAptList3 + 동구 필터)
+// 동구 전체 단지 목록 — getTotalAptList3 는 44초(전국 22페이지 순회)라
+// 정적 파일(aptlist_donggu.json, 동구 단지 60개)을 로드해 즉시 사용.
+// 단지 목록은 거의 변동 없으므로 정적 캐싱이 적합.
+let H_APTLIST_CACHE = null;
 async function fetchAptList(){
-  const { ok, data } = await api("aptlist", {});
-  if(!ok) return { complexes:[], totalCount:0 };
-  return { complexes:Array.isArray(data.complexes)?data.complexes:[], totalCount:Number(data.totalCount||0) };
+  if(H_APTLIST_CACHE) return { complexes:H_APTLIST_CACHE, totalCount:H_APTLIST_CACHE.length };
+  try{
+    const r = await fetch("/aptlist_donggu.json");
+    if(!r.ok) throw new Error("단지목록 로드 실패");
+    H_APTLIST_CACHE = await r.json();
+    return { complexes:H_APTLIST_CACHE, totalCount:H_APTLIST_CACHE.length };
+  }catch(e){
+    return { complexes:[], totalCount:0 };
+  }
 }
 
 // 단지 기본정보 1건 (AptBasisInfoServiceV4)
