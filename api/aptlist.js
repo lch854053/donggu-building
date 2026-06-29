@@ -1,66 +1,53 @@
-// /api/aptlist?op=getSigunguAptList3&sigunguCd=29110
+// /api/aptlist
 // 국토교통부 공동주택 단지 목록제공 서비스(AptListService3) 프록시
-// 시군구코드로 동구 전체 단지코드/단지명 목록을 한 번에 조회
-// 응답: { complexes:[{kaptCode,kaptName}], totalCount } / 오류 시 { complexes:[], error }
+// getSigunguAptList3 / getSidoAptList3 는 빈 결과를 반환하는 불량 op라 사용하지 않음.
+// getTotalAptList3(전국 단지)에서 동구(sigunguCd 접두 5자리 29110)만 필터링해 반환.
+// 응답: { complexes:[{kaptCode,kaptName,bjdCode,as1,as2,as3}], totalCount } / 오류 시 { complexes:[], error }
 import { guard, fetchWithTimeout, setSecurity } from "./_lib/proxy.js";
 import { unwrapGov } from "./_lib/govapi.js";
 
 const BASE = "https://apis.data.go.kr/1613000/AptListService3";
-const FETCH_TIMEOUT_MS = 8000;
+const FETCH_TIMEOUT_MS = 15000;
+const MAX_ROWS = 1000;
+const MAX_PAGES = 30;   // 전국 ~22000건 / 1000 = 22페이지 정도
 
-const numRe = /^\d+$/;
 const one = (v) => (Array.isArray(v) ? v[0] : v) ?? "";
-
-const ALLOWED_OPS = new Set(["getSidoAptList3", "getSigunguAptList3", "getTotalAptList3", "getLegaldongAptList3", "getRoadnameAptList3"]);
+const SIGUNGU = "29110";   // 광주 동구
 
 export default async function handler(req, res) {
   if (!guard(req, res)) return;
 
-  const op = one(req.query.op).trim();
-  if (!ALLOWED_OPS.has(op))
-    return res.status(400).json({ complexes: [], error: "허용되지 않은 op" });
-
-  // 공동주택 단지목록 서비스 전용 키. 미설정 시 기존 키로 폴백
+  // 공동주택 단지목록 서비스 전용 키. 미설정 시 건축물대장 키로 폴백(동일 키)
   const serviceKey = process.env.APT_SERVICE_KEY || process.env.BLD_SERVICE_KEY;
   if (!serviceKey)
     return res.status(500).json({ complexes: [], error: "APT_SERVICE_KEY/BLD_SERVICE_KEY 환경변수 미설정" });
 
-  const q = { _type: "json", pageNo: one(req.query.pageNo).trim() || "1", numOfRows: one(req.query.numOfRows).trim() || "500" };
-
-  // op별 필수 파라미터 검증
-  if (op === "getSigunguAptList3") {
-    const sigunguCd = one(req.query.sigunguCd).trim();
-    if (!sigunguCd || !numRe.test(sigunguCd))
-      return res.status(400).json({ complexes: [], error: "sigunguCd 누락/형식 오류" });
-    q.sigunguCd = sigunguCd;
-  } else if (op === "getSidoAptList3") {
-    const sidoCd = one(req.query.sidoCd).trim();
-    if (!sidoCd || !numRe.test(sidoCd))
-      return res.status(400).json({ complexes: [], error: "sidoCd 누락/형식 오류" });
-    q.sidoCd = sidoCd;
-  } else if (op === "getLegaldongAptList3") {
-    const bjdongCd = one(req.query.bjdongCd).trim();
-    if (!bjdongCd || !numRe.test(bjdongCd))
-      return res.status(400).json({ complexes: [], error: "bjdongCd 누락/형식 오류" });
-    q.bjdongCd = bjdongCd;
-  }
-  // getTotalAptList3 / getRoadnameAptList3 는 추가 파라미터 선택
-
-  // serviceKey 는 '디코딩 키'를 환경변수에 넣고 여기서 1회만 인코딩
-  const url = `${BASE}/${op}?serviceKey=${encodeURIComponent(serviceKey)}&${new URLSearchParams(q)}`;
-
+  // getTotalAptList3 로 전국 단지를 페이지로 긁어 동구만 필터링.
+  // (getSigunguAptList3?sigunguCd=29110 는 현재 빈 결과 반환 — API 불량)
+  const complexes = [];
   try {
-    const r = await fetchWithTimeout(url, { timeout: FETCH_TIMEOUT_MS });
-    const text = await r.text();
-    const { items, totalCount } = unwrapGov(text, op);
-    // 단지코드/단지명만 뽑아 정제
-    const complexes = items.map(it => ({
-      kaptCode: String(it.kaptCode || it.aptCode || "").trim(),
-      kaptName: String(it.kaptName || it.aptName || "").trim(),
-    })).filter(c => c.kaptCode);
-    setSecurity(res);
-    res.setHeader("Cache-Control", "s-maxage=3600, stale-while-revalidate");
-    return res.status(200).json({ complexes, totalCount });
+    for (let pg = 1; pg <= MAX_PAGES; pg++) {
+      const qs = new URLSearchParams({ _type: "json", numOfRows: String(MAX_ROWS), pageNo: String(pg) });
+      const url = `${BASE}/getTotalAptList3?serviceKey=${encodeURIComponent(serviceKey)}&${qs}`;
+      const r = await fetchWithTimeout(url, { timeout: FETCH_TIMEOUT_MS });
+      const text = await r.text();
+      const { items, totalCount } = unwrapGov(text, "getTotalAptList3");
+      if (!items.length) break;
+      for (const it of items) {
+        const bjdCode = String(it.bjdCode || "");
+        if (!bjdCode.startsWith(SIGUNGU)) continue;   // 동구만
+        complexes.push({
+          kaptCode: String(it.kaptCode || "").trim(),
+          kaptName: String(it.kaptName || "").trim(),
+          bjdCode,
+          as1: String(it.as1 || "").trim(),
+          as2: String(it.as2 || "").trim(),
+          as3: String(it.as3 || "").trim(),
+        });
+      }
+      const fetched = pg * MAX_ROWS;
+      if (fetched >= totalCount || items.length < MAX_ROWS) break;   // 전국 끝
+    }
   } catch (e) {
     const aborted = e?.name === "AbortError";
     const masked = String(e?.message || e).replace(/serviceKey=[^&\s]+/gi, "serviceKey=***");
@@ -68,4 +55,9 @@ export default async function handler(req, res) {
     return res.status(aborted ? 504 : 502)
       .json({ complexes: [], error: aborted ? "상류 응답 시간 초과" : "외부 API 오류" });
   }
+
+  setSecurity(res);
+  // 동구 단지 목록은 자주 바뀌지 않아 1시간 캐시
+  res.setHeader("Cache-Control", "s-maxage=3600, stale-while-revalidate");
+  return res.status(200).json({ complexes, totalCount: complexes.length });
 }
