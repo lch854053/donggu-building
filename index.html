@@ -31,6 +31,7 @@
     <button class="tab" id="tab-btn-cond" onclick="switchTab('cond')">조건검색</button>
     <button class="tab" id="tab-btn-detail" onclick="switchTab('detail')">단건 상세조회</button>
     <button class="tab" id="tab-btn-demol" onclick="switchTab('demol')">철거멸실대장</button>
+    <button class="tab" id="tab-btn-housing" onclick="switchTab('housing')">공동주택 관리</button>
   </div>
 
   <!-- ===== TAB 1: 일괄조회 ===== -->
@@ -195,6 +196,83 @@
     </div>
   </div><!-- /tab-cond -->
 
+  <!-- ===== 공동주택 관리 ===== -->
+  <div id="tab-housing" style="display:none">
+    <div class="card">
+      <div class="card-head"><h2><span class="num-tag">1</span>검색 조건</h2></div>
+      <div class="card-body">
+        <div class="form-grid">
+          <div class="field">
+            <label>행정동</label>
+            <select id="h-hdong"><option value="">불러오는 중…</option></select>
+          </div>
+          <div class="field">
+            <label>주택유형 <span class="sel-hint">(미선택 = 전체)</span></label>
+            <div class="ms" id="h-ms-hstp"></div>
+          </div>
+          <div class="field">
+            <label class="lbl-row"><span>세대수</span><span class="readout" id="h-ro-hhld">전체</span></label>
+            <div class="dual" id="h-dual-hhld" data-min="0" data-max="2000" data-step="50" data-unit="세대" data-group="1"></div>
+          </div>
+          <div class="field">
+            <label class="lbl-row"><span>면적(㎡)</span><span class="readout" id="h-ro-area">전체</span></label>
+            <div class="dual" id="h-dual-area" data-min="0" data-max="5000" data-step="50" data-unit="㎡" data-group="1"></div>
+          </div>
+          <div class="field">
+            <label class="lbl-row"><span>사용승인 연도</span><span class="readout" id="h-ro-year">전체</span></label>
+            <div class="dual" id="h-dual-year" data-min="1900" data-max="2026" data-step="1" data-unit="" data-group="0"></div>
+            <label class="chk-row"><input type="checkbox" id="h-yearunknown" checked><span>연도 미확인 포함</span></label>
+          </div>
+        </div>
+        <div class="controls">
+          <button class="run" id="hRunBtn" onclick="runHousingSearch()">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+            검색
+          </button>
+          <button class="ghost" onclick="clearHousing()">초기화</button>
+          <span class="cond-hint" id="hHint"></span>
+        </div>
+        <div class="progress-wrap" id="hProgWrap">
+          <div class="progress-bar"><div class="progress-fill" id="hProgFill"></div></div>
+          <div class="progress-text" id="hProgText">대기 중…</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="stats" id="hStats" style="display:none">
+      <div class="stat total"><div class="k">조건 일치</div><div class="v" id="hs-match">0</div></div>
+      <div class="stat none"><div class="k">검색 대상 주택</div><div class="v" id="hs-scan">0</div></div>
+      <div class="stat ok"><div class="k">총 세대수</div><div class="v" id="hs-hhld">0</div></div>
+    </div>
+
+    <div id="hResultArea" style="display:none">
+      <div class="result-head">
+        <div class="legend"><span>행정동 <b id="hResDong"></b> · 조건에 맞는 주택유형</span></div>
+        <button class="export" id="hExportBtn" onclick="exportHousingExcel()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg>
+          엑셀 다운로드
+        </button>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead><tr>
+            <th class="num">#</th>
+            <th>행정동</th>
+            <th>지번주소</th>
+            <th>건물명</th>
+            <th>동</th>
+            <th>주택유형</th>
+            <th class="num">세대수</th>
+            <th class="num">면적(㎡)</th>
+            <th>사용승인일</th>
+          </tr></thead>
+          <tbody id="hResultBody"></tbody>
+        </table>
+      </div>
+      <div id="hPager" class="cpager"></div>
+    </div>
+  </div><!-- /tab-housing -->
+
   <!-- ===== 단건 상세조회 ===== -->
   <div id="tab-detail" style="display:none">
     <div class="card">
@@ -286,9 +364,10 @@
     - 데이터<br>
       &ensp;· 주소 검색 : 행정안전부 도로명주소 API (실시간 갱신)<br>
       &ensp;· 건축물대장 : 국토교통부 건축물대장 API (매월 갱신, 세움터 기준)<br>
+      &ensp;· 주택유형 : 국토교통부 건축인허가정보 API (매월 갱신)<br>
       &ensp;· 지번 및 좌표 보정 : 국토교통부 V-World API (실시간 갱신)<br>
       &ensp;· 항공영상 및 필지경계 : 국토교통부 V-World API<br>
-    - 마지막 업데이트 : 2026. 6. 25.<br>
+    - 마지막 업데이트 : 2026. 6. 29.<br>
     - 오류 제보 및 기능 추가 문의 : ch4834@korea.kr
   </div>
 </div>
@@ -1613,9 +1692,9 @@ document.getElementById("dInput")?.addEventListener("keydown", e=>{
   if(e.key==="Enter"){ e.preventDefault(); runDetail(); }
 });
 
-/* ---- 탭 전환 (bulk / cond / detail / demol) ---- */
+/* ---- 탭 전환 (bulk / cond / detail / demol / housing) ---- */
 function switchTab(which){
-  const tabs = ["bulk","cond","detail","demol"];
+  const tabs = ["bulk","cond","detail","demol","housing"];
   if(!tabs.includes(which)) which="bulk";
   for(const t of tabs){
     document.getElementById("tab-"+t).style.display = (t===which)?"block":"none";
@@ -1623,6 +1702,251 @@ function switchTab(which){
   }
   if(which==="cond") loadHaengjeong();
   if(which==="demol"){ loadHaengjeong(); initDemolFilters(); }
+  if(which==="housing") loadHousing();
+}
+
+/* ============================================================
+   공동주택 관리 (주택유형 getApHsTpInfo 기반)
+   - 조건검색과 동일한 법정동 단위 페이징 + 행정동 역매핑 전략
+   - getApHsTpInfo 는 bun/ji 선택 → 법정동만으로 일괄 페이징 가능
+   ============================================================ */
+
+/* ── 공동주택관리(Housing) 상태 ── */
+let   HJ_H = null;             // 행정동 매핑(조건검색 HJ 와 별도 캐시 불필요, HJ 재사용 가능하지만 독립 유지)
+const HSTP_OPTS = ["단독주택","다세대주택","연립주택","아파트","주상복합","오피스텔"];
+const H_MS = {};               // 다중선택
+const H_DUAL = {};             // 슬라이더
+let   H_FILTERS_READY = false;
+let   HRESULTS = [];           // 결과(표시용 주택 객체 배열)
+const H_PAGE_SIZE = 1000;
+let   H_PAGE = 1;
+
+function initHousingFilters(){
+  if(H_FILTERS_READY) return;
+  H_MS.hstp = buildMultiselect("h-ms-hstp", HSTP_OPTS);
+  H_DUAL.hhld = buildDual("h-dual-hhld","h-ro-hhld");
+  H_DUAL.area = buildDual("h-dual-area","h-ro-area");
+  const yh = document.getElementById("h-dual-year");
+  if(yh) yh.dataset.max = String(new Date().getFullYear());
+  H_DUAL.year = buildDual("h-dual-year","h-ro-year");
+  H_FILTERS_READY = true;
+}
+
+// 행정동 매핑 1회 로드 + 드롭다운 구성 (조건검색 loadHaengjeong 과 동일 구조)
+async function loadHousing(){
+  initHousingFilters();
+  const sel = document.getElementById("h-hdong");
+  if(HJ_H){ return; }
+  try{
+    const r = await fetch("/haengjeong.json");
+    HJ_H = await r.json();
+  }catch(e){
+    sel.innerHTML = '<option value="">매핑 로드 실패</option>';
+    return;
+  }
+  const set = new Set();
+  Object.values(HJ_H.hdong2bjd).forEach(arr => arr.forEach(c => set.add(c)));
+  const names = Object.keys(HJ_H.hdong2bjd).sort((a,b)=>a.localeCompare(b,"ko"));
+  sel.innerHTML = '<option value="__ALL__">전체 (동구 전역)</option>'
+    + names.map(n=>`<option value="${n}">${n}</option>`).join("");
+}
+
+// 법정동 단위 주택유형 페이지 조회 (archpms 프록시, getApHsTpInfo)
+async function fetchHsTpDongPage(bjd, pageNo){
+  const { ok, data } = await api("archpms", {
+    op:"getApHsTpInfo",
+    sigunguCd:SIGUNGU, bjdongCd:bjd, numOfRows:"1000", pageNo:String(pageNo)
+  });
+  if(!ok) return {items:[], totalCount:0};
+  return {items:Array.isArray(data.items)?data.items:[], totalCount:Number(data.totalCount||0)};
+}
+
+async function runHousingSearch(){
+  if(!HJ_H){ await loadHousing(); }
+  const hdong = document.getElementById("h-hdong").value;
+  if(!hdong){ alert("행정동을 선택하세요."); return; }
+  const isAll = hdong==="__ALL__";
+
+  const bjdList = isAll
+    ? [...new Set(Object.values(HJ_H.hdong2bjd).flat())]
+    : (HJ_H.hdong2bjd[hdong]||[]);
+  if(!bjdList.length){ alert("해당 행정동의 법정동 정보가 없습니다."); return; }
+
+  const selHstp = H_MS.hstp.selected();
+  const [hhldMin, hhldMaxRaw] = H_DUAL.hhld.values();
+  const [areaMin, areaMaxRaw] = H_DUAL.area.values();
+  const hhldMax = H_DUAL.hhld.atCap() ? Infinity : hhldMaxRaw;
+  const areaMax = H_DUAL.area.atCap() ? Infinity : areaMaxRaw;
+  const [yearMin, yearMax] = H_DUAL.year.values();
+  const yearActive = !H_DUAL.year.isFull();
+  const incUnknown = document.getElementById("h-yearunknown").checked;
+
+  const hRunBtn = document.getElementById("hRunBtn");
+  hRunBtn.disabled = true;
+  document.getElementById("hProgWrap").classList.add("on");
+  document.getElementById("hResultArea").style.display="none";
+  document.getElementById("hStats").style.display="none";
+  if(isAll) document.getElementById("hHint").textContent = "전체 검색은 시간이 걸립니다…";
+
+  // 1) 법정동별 1페이지 → totalCount → 잔여페이지 산정
+  const MAX_PAGES = 50;
+  const all = [];
+  let p1done = 0; hUpdate(0, bjdList.length);
+  const page1 = await runPool(bjdList, async (bjd)=>{
+    const {items,totalCount} = await fetchHsTpDongPage(bjd,1);
+    return {bjd, items, totalCount};
+  }, 5, ()=>hUpdate(++p1done, bjdList.length));
+  const more = [];
+  page1.forEach(r=>{
+    all.push(...r.items);
+    const pageSize = Math.max(r.items.length, 1);
+    if(r.totalCount > pageSize){
+      const pages = Math.min(Math.ceil(r.totalCount / pageSize), MAX_PAGES);
+      for(let pg=2; pg<=pages; pg++) more.push({bjd:r.bjd, pg});
+    }
+  });
+
+  // 2) 잔여 페이지 병렬 수집
+  if(more.length){
+    let tdone = 0; hUpdate(0, more.length);
+    const got = await runPool(more, async (m)=>{
+      const {items} = await fetchHsTpDongPage(m.bjd, m.pg);
+      return items;
+    }, 5, ()=>hUpdate(++tdone, more.length));
+    got.forEach(ts=> all.push(...ts));
+  }
+
+  // 3) 행정동 + 조건 필터
+  const scanned = all.length;
+  const matched = [];
+  for(const t of all){
+    const key = `${t.bjdongCd}${(t.bun||"").padStart(4,"0")}${(t.ji||"").padStart(4,"0")}`;
+    const bHdong = HJ_H.jibun2hdong[key] || "";
+    if(!isAll && bHdong !== hdong) continue;
+    if(!matchCat(t.hstpGbCdNm, selHstp, HSTP_OPTS)) continue;   // 주택유형
+    const hhld = Number(t.silHoHhldCnt||0);
+    if(hhld < hhldMin || hhld > hhldMax) continue;              // 세대수
+    const area = Number(t.silHoHhldArea||0);
+    if(area < areaMin || area > areaMax) continue;              // 면적
+    const yr = extractYear(t.useAprDay);
+    if(yr===null){
+      if(!incUnknown) continue;
+    }else if(yearActive){
+      if(yr < yearMin || yr > yearMax) continue;
+    }
+    matched.push({
+      hdong:bHdong,
+      platPlc: stripParens(t.platPlc) || "-",
+      bldNm:   stripParens(t.bldNm) || "-",
+      dongNm:  t.dongNm || "",
+      hstp:    t.hstpGbCdNm || "-",
+      hhld, area,
+      useAprDay: t.useAprDay || "-",
+    });
+  }
+
+  HRESULTS = matched;
+  setTimeout(()=>{
+    document.getElementById("hProgWrap").classList.remove("on");
+    document.getElementById("hHint").textContent = "";
+    hRunBtn.disabled = false;
+    renderHousingResults(scanned, isAll?"전체":hdong);
+  }, 300);
+}
+
+function hUpdate(done,total){
+  const pct = total ? Math.round(done/total*100) : 0;
+  document.getElementById("hProgFill").style.width = pct+"%";
+  document.getElementById("hProgText").textContent =
+    done>=total ? `조회 완료 · 필터링 중…` : `주택유형 조회 중 … ${done}/${total}`;
+}
+
+function renderHousingResults(scanned, dongLabel){
+  H_PAGE = 1;
+  const totHhld = HRESULTS.reduce((s,d)=>s+(d.hhld||0),0);
+  document.getElementById("hs-match").textContent = HRESULTS.length.toLocaleString("ko-KR");
+  document.getElementById("hs-scan").textContent  = scanned.toLocaleString("ko-KR");
+  document.getElementById("hs-hhld").textContent  = totHhld.toLocaleString("ko-KR");
+  document.getElementById("hResDong").textContent = dongLabel;
+  document.getElementById("hStats").style.display = "flex";
+  document.getElementById("hResultArea").style.display = "block";
+  document.getElementById("hExportBtn").disabled = HRESULTS.length === 0;
+  renderHousingPage();
+}
+
+function gotoHousingPage(p){
+  H_PAGE = p;
+  renderHousingPage();
+  const sc = document.querySelector("#hResultArea .table-scroll");
+  if(sc) sc.scrollTop = 0;
+}
+
+function renderHousingPage(){
+  const total  = HRESULTS.length;
+  const pages  = Math.max(1, Math.ceil(total / H_PAGE_SIZE));
+  H_PAGE = Math.min(Math.max(H_PAGE, 1), pages);
+  const offset = (H_PAGE - 1) * H_PAGE_SIZE;
+  const slice  = HRESULTS.slice(offset, offset + H_PAGE_SIZE);
+
+  const body = document.getElementById("hResultBody");
+  body.innerHTML = "";
+  const frag = document.createDocumentFragment();
+  slice.forEach((d,i)=>{
+    const tr = document.createElement("tr");
+    tr.style.animationDelay = (Math.min(i,40)*0.01)+"s";
+    tr.innerHTML = `
+      <td class="num">${offset + i + 1}</td>
+      <td>${esc(d.hdong)}</td>
+      <td class="code">${esc(d.platPlc)}</td>
+      <td>${esc(d.bldNm)}</td>
+      <td>${esc(d.dongNm||"-")}</td>
+      <td>${esc(d.hstp)}</td>
+      <td class="num">${fmt(d.hhld)}</td>
+      <td class="num">${fmt(d.area)}</td>
+      <td>${useAprCell(d.useAprDay)}</td>`;
+    frag.appendChild(tr);
+  });
+  body.appendChild(frag);
+  renderHousingPager(total, pages, offset, slice.length);
+}
+
+function renderHousingPager(total, pages, offset, shown){
+  const el = document.getElementById("hPager");
+  if(!el) return;
+  if(pages <= 1){ el.innerHTML = ""; return; }
+  const from = offset + 1, to = offset + shown;
+  el.innerHTML = `
+    <button ${H_PAGE<=1?"disabled":""} onclick="gotoHousingPage(1)">«</button>
+    <button ${H_PAGE<=1?"disabled":""} onclick="gotoHousingPage(${H_PAGE-1})">‹</button>
+    <span class="cur"><b>${H_PAGE}</b> / ${pages} 페이지 · ${from.toLocaleString("ko-KR")}–${to.toLocaleString("ko-KR")} / ${total.toLocaleString("ko-KR")}건</span>
+    <button ${H_PAGE>=pages?"disabled":""} onclick="gotoHousingPage(${H_PAGE+1})">›</button>
+    <button ${H_PAGE>=pages?"disabled":""} onclick="gotoHousingPage(${pages})">»</button>`;
+}
+
+function exportHousingExcel(){
+  const nowY = new Date().getFullYear();
+  const rows = HRESULTS.map((d,i)=>{
+    const yr = extractYear(d.useAprDay);
+    return {
+      "순번":i+1,"행정동":d.hdong||"","지번주소":d.platPlc||"","건물명":d.bldNm||"",
+      "동":d.dongNm||"","주택유형":d.hstp||"","세대수":d.hhld||0,"면적(㎡)":d.area||"",
+      "사용승인일":d.useAprDay||"","경과연수":yr===null?"미확인":(nowY-yr)
+    };
+  });
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "공동주택관리");
+  const today = new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb, `공동주택관리_${today}.xlsx`);
+}
+
+function clearHousing(){
+  if(H_FILTERS_READY){ H_MS.hstp.reset(); H_DUAL.hhld.reset(); H_DUAL.area.reset(); H_DUAL.year.reset(); }
+  const cu = document.getElementById("h-yearunknown"); if(cu) cu.checked = true;
+  document.getElementById("hResultArea").style.display="none";
+  document.getElementById("hStats").style.display="none";
+  HRESULTS=[]; H_PAGE=1;
+  const pg=document.getElementById("hPager"); if(pg) pg.innerHTML="";
 }
 
 /* ============================================================
