@@ -1782,6 +1782,27 @@ function aptKind(info){
   return raw ? "기타" : "";
 }
 
+// 단지의 정확한 행정동 추정.
+// kaptAddr(법정동주소)에서 번지수(번-지) 추출 → 13자리 키(법정동5+번4+지4)로
+// jibun2hdong 조회. 번지수가 없거나 미스면 법정동코드(bjdongCd) 기준 사전(bjd2hd)으로 폴백.
+function aptHdong(info, bjd2hd){
+  const bjdFull = String(info.bjdCode || "").padEnd(10,"0");
+  const bjdongCd = bjdFull.slice(5,10);
+  // kaptAddr 예: "광주광역시 동구 계림동 1869 계림아이파크SK뷰"
+  //             "광주광역시 동구 계림동 100-1 계림금호1차"
+  const addr = String(info.kaptAddr || "");
+  // 끝에서 올라오는 "동 NN(-NN)" 패턴에서 번/지 추출
+  const m = addr.match(/(\d{1,4})(?:-(\d{1,4}))?\s/);
+  if(m){
+    const bun = m[1].padStart(4,"0");
+    const ji  = (m[2]||"0").padStart(4,"0");
+    const key = bjdongCd + bun + ji;
+    if(HJ_H.jibun2hdong[key]) return HJ_H.jibun2hdong[key];
+  }
+  // 폴백: 법정동코드 기준 (모호 가능)
+  return bjd2hd[bjdongCd] || "";
+}
+
 async function runHousingSearch(){
   if(!HJ_H){ await loadHousing(); }
   const hdong = document.getElementById("h-hdong").value;
@@ -1821,7 +1842,7 @@ async function runHousingSearch(){
   }, 5, ()=>hUpdate(++done, complexes.length, "단지정보"));
 
   // 3) 필터링
-  // 법정동코드(5자리) → 행정동 정확 매핑 (hdong2bjd 역매핑 사전 구성)
+  // 법정동코드(5자리) → 행정동 사전(폴백용)
   const bjd2hd = {};
   for(const [hd, bjds] of Object.entries(HJ_H.hdong2bjd||{})){
     for(const b of bjds) bjd2hd[b] = hd;
@@ -1831,10 +1852,9 @@ async function runHousingSearch(){
   let f_hdong=0, f_kind=0, f_hhld=0, f_area=0, f_year=0;
   for(const info of infos){
     if(!info) continue;
-    // 행정동 역매핑: bjdCode(10자리)에서 법정동코드(뒤5자리) 추출 → 사전 맵에서 행정동
+    // 행정동: kaptAddr 번지수로 정확 매핑(aptHdong), 폴백 법정동코드
     const bjdFull = String(info.bjdCode || "").padEnd(10,"0");
-    const bjdongCd = bjdFull.slice(5,10);
-    const bHdong = bjd2hd[bjdongCd] || "";
+    const bHdong = aptHdong(info, bjd2hd);
     if(!isAll && bHdong !== hdong){ f_hdong++; continue; }
     const kind = aptKind(info);
     if(selKind.length && !selKind.includes(kind || "기타")){ f_kind++; continue; }
