@@ -1823,6 +1823,7 @@ async function runHousingSearch(){
   // 3) 필터링
   const scanned = infos.filter(Boolean).length;
   const matched = [];
+  let f_hdong=0, f_kind=0, f_hhld=0, f_area=0, f_year=0;
   for(const info of infos){
     if(!info) continue;
     // 행정동 역매핑: bjdCode(10자리)에서 법정동코드(뒤5자리) 추출 → 역색인으로 행정동 추정
@@ -1832,15 +1833,15 @@ async function runHousingSearch(){
     for(const [k,h] of Object.entries(HJ_H.jibun2hdong||{})){
       if(k.slice(0,5) === bjdongCd){ bHdong = h; break; }
     }
-    if(!isAll && bHdong !== hdong) continue;
+    if(!isAll && bHdong !== hdong){ f_hdong++; continue; }
     const kind = aptKind(info);
-    if(selKind.length && !selKind.includes(kind || "기타")) continue;
+    if(selKind.length && !selKind.includes(kind || "기타")){ f_kind++; continue; }
     // 세대수: hoCnt(실제 호수) 우선, kaptdaCnt(세대수칸)는 0인 경우가 많아 폴백
     const hhld = Number(info.hoCnt || info.kaptdaCnt || 0);
-    if(hhld < hhldMin || hhld > hhldMax) continue;
+    if(hhld < hhldMin || hhld > hhldMax){ f_hhld++; continue; }
     // 연면적: kaptTarea(대지면적기준 연면적) 우선, kaptMarea(전용면적합) 폴백
     const area = Number(info.kaptTarea || info.kaptMarea || 0);
-    if(area < areaMin || area > areaMax) continue;
+    if(area < areaMin || area > areaMax){ f_area++; continue; }
     const useAprDay = String(info.kaptUsedate || "");
     const yr = extractYear(useAprDay);
     if(yr===null){
@@ -1870,9 +1871,15 @@ async function runHousingSearch(){
   }
   HRESULTS = matched;
 
+  // 진단: 0건일 때 어느 필터에서 다 걸렸는지 힌트로 노출
+  let diag = "";
+  if(!matched.length){
+    diag = `조회 ${scanned}건 중 매칭 0건 (제외: 행정동 ${f_hdong}·종류 ${f_kind}·세대수 ${f_hhld}·면적 ${f_area}·연도 ${f_year})`;
+  }
+
   setTimeout(()=>{
     document.getElementById("hProgWrap").classList.remove("on");
-    document.getElementById("hHint").textContent = "";
+    document.getElementById("hHint").textContent = diag;
     hRunBtn.disabled = false;
     renderHousingResults(scanned, isAll?"전체":hdong);
   }, 300);
