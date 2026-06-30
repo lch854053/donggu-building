@@ -889,6 +889,12 @@ function buildMultiselect(hostId, opts, addEtc){
   };
 }
 
+// 멀티셀렉트 드롭다운: 다른 영역 클릭 시 열린 패널 모두 닫기
+document.addEventListener("click", (e)=>{
+  if(e.target.closest(".ms")) return;
+  document.querySelectorAll(".ms-panel.open").forEach(p=>p.classList.remove("open"));
+});
+
 // 듀얼 슬라이더
 function buildDual(hostId, readoutId){
   const host = document.getElementById(hostId);
