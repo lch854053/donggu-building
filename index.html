@@ -236,7 +236,7 @@
           <div class="progress-bar"><div class="progress-fill" id="hProgFill"></div></div>
           <div class="progress-text" id="hProgText">대기 중…</div>
         </div>
-        <div class="hint">한국부동산원 단지 식별정보(아파트·연립·다세대·맨션·빌라) 기준이며, 오피스텔·도시형생활주택은 건축인허가 정보로 보충합니다. K-apt에 등록된 단지는 카드에서 상세정보(주차·승강기·관리방식·편의시설)를 확인할 수 있습니다.</div>
+        <div class="hint">표 데이터는 K-apt API를 우선 사용하며, K-apt 정보가 없거나 부족한 단지는 주소(PNU) 기반 건축물대장 API로 보강합니다. 단지 목록은 한국부동산원(아파트·연립·다세대·맨션·빌라)과 건축인허가(오피스텔·도시형생활주택)를 결합합니다. K-apt에 등록된 단지는 공동주택명 클릭 시 상세 카드를 확인할 수 있습니다.</div>
       </div>
     </div>
 
@@ -262,10 +262,14 @@
             <th>공동주택명</th>
             <th>종류</th>
             <th>행정동</th>
+            <th>도로명주소</th>
             <th>지번주소</th>
             <th class="num">세대수</th>
             <th class="num">동수</th>
+            <th class="num">층수</th>
             <th>사용승인일</th>
+            <th class="num">총 주차대수</th>
+            <th>걸물구조</th>
           </tr></thead>
           <tbody id="hResultBody"></tbody>
         </table>
@@ -1723,8 +1727,9 @@ let   H_FILTERS_READY = false;
 let   HRESULTS = [];           // 결과(단지 객체 배열)
 const H_PAGE_SIZE = 30;        // 카드는 표보다 무거워 페이지당 30
 let   H_PAGE = 1;
+const H_BASS_CACHE = {};       // kaptCode → 기본정보(lazy 캐시)
 const H_DTL_CACHE = {};        // kaptCode → 상세정보(lazy 캐시)
-let   H_KAPT_BY_PNU = {};      // PNU → K-apt kaptCode 사전 (상세 조인용)
+let   H_KAPT_BY_PNU = {};      // PNU → { kaptCode, bass, dtl } 사전 (표 데이터 우선 적용 + 상세 조인용)
 
 function initHousingFilters(){
   if(H_FILTERS_READY) return;
@@ -1767,9 +1772,11 @@ async function fetchAptIdList(){
 
 // 2순위: K-apt 단지 기본정보 (PNU→kaptCode 사전 구축용)
 async function fetchAptBass(kaptCode){
+  if(H_BASS_CACHE[kaptCode] !== undefined) return H_BASS_CACHE[kaptCode];
   const { ok, data } = await api("aptinfo", { op:"getAphusBassInfoV4", kaptCode });
-  if(!ok) return null;
-  return data.info || null;
+  const info = (ok && data.info) ? data.info : null;
+  H_BASS_CACHE[kaptCode] = info;
+  return info;
 }
 
 // K-apt 단지 상세정보 1건 (lazy, 캐시)
@@ -1825,8 +1832,61 @@ function hdongFromPnu(pnu, bjd2hd){
   const ji  = pnu.slice(15,19);
   const key = bjdongCd + bun + ji;
   if(HJ_H.jibun2hdong[key]) return HJ_H.jibun2hdong[key];
-  // 폴백: 법정동코드 기준 (모호 가능)
+  // 폭백: 법정동코드 기준 (모호 가능)
   return bjd2hd[bjdongCd] || "";
+}
+
+// K-apt codeAptNm(예: "아파트", "연립주택", "다세대주택") → 화면 필터/표시용 종류로 정규화
+function normalizeKaptKind(nm){
+  const s = String(nm || "");
+  for(const k of HKIND_OPTS){ if(s.includes(k)) return k; }
+  if(s.includes("연립")) return "연립";
+  if(s.includes("다세대")) return "다세대";
+  if(s.includes("도시형")) return "도시형생활주택";
+  if(s.includes("오피스텔")) return "오피스텔";
+  return "";
+}
+
+// K-apt 기본/상세 정보를 행 객체에 우선 적용. 이미 있는 한국부동산원 값은 K-apt 값이 있을 때만 덮어씀
+function mergeKaptIntoRow(row, kaptData){
+  if(!kaptData || !kaptData.bass) return row;
+  const b = kaptData.bass, d = kaptData.dtl;
+  const kind = normalizeKaptKind(b.codeAptNm);
+  const parking = d ? (Number(d.kaptdPcnt||0) + Number(d.kaptdPcntu||0)) : 0;
+  if(b.kaptName)       row.complexNm = b.kaptName;
+  if(kind)             row.kind = kind;
+  if(b.doroJuso)       row.doroAddr = stripParens(b.doroJuso);
+  if(b.kaptAddr)       row.adres = stripParens(b.kaptAddr);
+  if(b.hoCnt != null)  row.hhld = Number(b.hoCnt);
+  else if(b.kaptdaCnt != null) row.hhld = Number(b.kaptdaCnt);
+  if(b.kaptDongCnt != null) row.dongCnt = Number(b.kaptDongCnt);
+  if(b.kaptTopFloor != null) row.grndFlr = Number(b.kaptTopFloor);
+  if(b.kaptBaseFloor != null) row.ugrndFlr = Number(b.kaptBaseFloor);
+  if(b.kaptUsedate)    row.useAprDay = b.kaptUsedate;
+  if(parking > 0)      row.parking = parking;
+  if(d && d.codeStr)   row.strct = d.codeStr;
+  row.kaptCode = kaptData.kaptCode;
+  row.source = "K-apt";
+  return row;
+}
+
+// 건축물대장 표제부로 K-apt가 채우지 못한 필드만 보강
+function fillMissingFromBuilding(row, titles){
+  if(!titles || !titles.length) return row;
+  const rep = titles.find(t=>String(t.mainAtchGbCdNm||"").trim()==="주건축물") || titles[0];
+  if((row.doroAddr||"-") === "-" && rep.newPlatPlc)
+    row.doroAddr = stripParens(rep.newPlatPlc);
+  if(row.grndFlr == null && rep.grndFlrCnt != null)
+    row.grndFlr = Number(rep.grndFlrCnt);
+  if(row.ugrndFlr == null && rep.ugrndFlrCnt != null)
+    row.ugrndFlr = Number(rep.ugrndFlrCnt);
+  if((row.strct||"-") === "-" && rep.strctCdNm)
+    row.strct = rep.strctCdNm;
+  if(row.parking == null){
+    const pk = titles.reduce((s,t)=> s + totalParking(t), 0);
+    if(pk > 0) row.parking = pk;
+  }
+  return row;
 }
 
 async function runHousingSearch(){
@@ -1867,8 +1927,8 @@ async function runHousingSearch(){
     return;
   }
 
-  // ── 2순위: K-apt 60개 단지의 PNU→kaptCode 사전 구축 (상세 조인용)
-  //   K-apt 목록은 정적파일(aptlist_donggu.json)에서 kaptCode만 읽어 병렬 조회
+  // ── 2순위: K-apt 60개 단지의 PNU→{kaptCode,bass,dtl} 사전 구축
+  //   표 데이터를 K-apt 우선으로 채우고, 상세 카드도 캐시된 데이터를 재사용함
   H_KAPT_BY_PNU = {};
   let kaptList = [];
   try{
@@ -1878,40 +1938,50 @@ async function runHousingSearch(){
   if(kaptList.length){
     let kdone = 0; hUpdate(0, kaptList.length, "K-apt조인");
     const kInfos = await runPool(kaptList, async (c)=>{
-      const info = await fetchAptBass(c.kaptCode);
-      return info ? { kaptCode:c.kaptCode, pnu:pnuFromKapt(info), info } : null;
+      const [bass, dtl] = await Promise.all([
+        fetchAptBass(c.kaptCode),
+        fetchAptDtl(c.kaptCode)
+      ]);
+      return bass ? { kaptCode:c.kaptCode, pnu:pnuFromKapt(bass), bass, dtl } : null;
     }, 5, ()=>hUpdate(++kdone, kaptList.length, "K-apt조인"));
     for(const k of kInfos){
-      if(k && k.pnu) H_KAPT_BY_PNU[k.pnu] = k.kaptCode;
+      if(k && k.pnu) H_KAPT_BY_PNU[k.pnu] = k;
     }
   }
 
-  // ── 한국부동산원 단지 → 표시 객체로 변환 + 필터
+  // ── 한국부동산원 단지 → 표시 객체로 변환 + K-apt 우선 병합 + 필터
   const matched = [];
   let f_hdong=0, f_kind=0, f_hhld=0, f_year=0;
   for(const c of complexes){
     const bHdong = hdongFromPnu(c.pnu, bjd2hd);
     if(!isAll && bHdong !== hdong){ f_hdong++; continue; }
-    const kind = aptKindFromCode(c.complexGbCd);
-    if(selKind.length && !selKind.includes(kind)){ f_kind++; continue; }
-    const hhld = c.unitCnt;
-    if(hhld < hhldMin || hhld > hhldMax){ f_hhld++; continue; }
-    // 연면적은 한국부동산원에 없음 → 면적 필터는 오피스텔 보충에만 적용, 여기선 건너뜀
-    const yr = extractYear(c.useaprDt);
-    if(yr===null){ if(!incUnknown){ f_year++; continue; } }
-    else if(yearActive && (yr < yearMin || yr > yearMax)){ f_year++; continue; }
-    matched.push({
+
+    // 한국부동산원 기반 기본 행
+    let row = {
       source: "한국부동산원",
       pnu: c.pnu,
-      kaptCode: H_KAPT_BY_PNU[c.pnu] || "",   // K-apt 상세 조인 가능 여부
+      kaptCode: (H_KAPT_BY_PNU[c.pnu] || {}).kaptCode || "",
       complexNm: c.complexNm,
-      kind,
+      kind: aptKindFromCode(c.complexGbCd),
       bHdong,
       adres: c.adres,
-      hhld,
+      hhld: c.unitCnt,
       dongCnt: c.dongCnt,
       useAprDay: c.useaprDt || "-",
-    });
+      // 표제부 조인으로 채울 필드 (초기값)
+      doroAddr: "-", grndFlr: null, ugrndFlr: null, parking: null, strct: "-",
+    };
+
+    // K-apt 데이터가 있으면 우선 병합 (종류·세대수·동수·층수·주차·구조 등)
+    if(H_KAPT_BY_PNU[c.pnu]) row = mergeKaptIntoRow(row, H_KAPT_BY_PNU[c.pnu]);
+
+    if(selKind.length && !selKind.includes(row.kind)){ f_kind++; continue; }
+    if(row.hhld < hhldMin || row.hhld > hhldMax){ f_hhld++; continue; }
+    // 연면적은 한국부동산원에 없음 → 면적 필터는 오피스텔 보충에만 적용, 여기선 걸어뜀
+    const yr = extractYear(row.useAprDay);
+    if(yr===null){ if(!incUnknown){ f_year++; continue; } }
+    else if(yearActive && (yr < yearMin || yr > yearMax)){ f_year++; continue; }
+    matched.push(row);
   }
 
   // ── 3순위: 오피스텔/도시형생활주택 보충 (getApHsTpInfo)
@@ -1981,7 +2051,31 @@ async function runHousingSearch(){
       area,
       dongCnt: 0,
       useAprDay: useAprDay || "-",
+      // 표제부 조인으로 채울 필드 (초기값)
+      doroAddr: "-", grndFlr: null, ugrndFlr: null, parking: null, strct: "-",
     });
+  }
+
+  // ── 표제부 일괄 조인: PNU → 지번 → getBrTitleInfo
+  //   K-apt에 없거나 누락된 도로명/층/구조/주차만 보강 (K-apt 우선 유지)
+  if(matched.length){
+    let tdone = 0; hUpdate(0, matched.length, "건축물대장");
+    await runPool(matched, async (m)=>{
+      if(!m.pnu || m.pnu.length < 19) return m;
+      // PNU(19) → sigunguCd(5)+bjdongCd(5)+platGbCd(1:1=대지→0, 2=산→1)+bun(4)+ji(4)
+      const sigunguCd = m.pnu.slice(0,5);
+      const bjdongCd  = m.pnu.slice(5,10);
+      const platGbCd  = m.pnu.slice(10,11) === "2" ? "1" : "0";
+      const bun       = m.pnu.slice(11,15);
+      const ji        = m.pnu.slice(15,19);
+      const { ok, data } = await api("building", {
+        sigunguCd, bjdongCd, platGbCd, bun, ji
+      });
+      if(ok && Array.isArray(data.titles) && data.titles.length){
+        fillMissingFromBuilding(m, data.titles);
+      }
+      return m;
+    }, 5, ()=>hUpdate(++tdone, matched.length, "건축물대장"));
   }
 
   HRESULTS = matched;
@@ -2045,15 +2139,20 @@ function renderHousingPage(){
     const nmCell = d.kaptCode
       ? `<a href="#" class="h-name ${clickable}" data-dtl="${esc(d.kaptCode)}">${esc(d.complexNm)}</a>`
       : `<span class="h-name-nolink">${esc(d.complexNm)}</span>`;
+    const flrTxt = d.grndFlr!=null ? `지하${d.ugrndFlr||0}/지상${d.grndFlr}` : "-";
     tr.innerHTML = `
       <td class="num">${offset + i + 1}</td>
       <td class="addr">${nmCell}</td>
       <td>${esc(d.kind||"-")}</td>
       <td>${esc(d.bHdong||"-")}</td>
+      <td class="code">${esc(d.doroAddr||"-")}</td>
       <td class="code">${esc(d.adres||"-")}</td>
       <td class="num">${fmt(d.hhld)}</td>
       <td class="num">${fmt(d.dongCnt)}</td>
-      <td>${useAprCell(d.useAprDay)}</td>`;
+      <td class="num">${flrTxt}</td>
+      <td>${useAprCell(d.useAprDay)}</td>
+      <td class="num">${d.parking!=null?fmt(d.parking):"-"}</td>
+      <td>${esc(d.strct||"-")}</td>`;
     frag.appendChild(tr);
   });
   body.appendChild(frag);
@@ -2169,9 +2268,14 @@ function exportHousingExcel(){
   const rows = HRESULTS.map((d,i)=>{
     const yr = extractYear(d.useAprDay);
     return {
-      "순번":i+1,"행정동":d.bHdong||"","단지명":d.complexNm||"","단지종류":d.kind||"",
-      "주소":d.adres||"","세대수":d.hhld||0,"동수":d.dongCnt||0,
-      "면적(㎡)":d.area||"","사용승인일":d.useAprDay||"","경과연수":yr===null?"미확인":(nowY-yr),
+      "순번":i+1,"공동주택명":d.complexNm||"","종류":d.kind||"","행정동":d.bHdong||"",
+      "도로명주소":d.doroAddr||"-","지번주소":d.adres||"-",
+      "세대수":d.hhld||0,"동수":d.dongCnt||0,
+      "층수":d.grndFlr!=null?`지하${d.ugrndFlr||0}/지상${d.grndFlr}`:"-",
+      "사용승인일":d.useAprDay||"",
+      "총 주차대수":d.parking!=null?d.parking:"-",
+      "걸물구조":d.strct||"-",
+      "면적(㎡)":d.area||"","경과연수":yr===null?"미확인":(nowY-yr),
       "데이터출처":d.source||""
     };
   });
@@ -2191,6 +2295,7 @@ function clearHousing(){
   const pg=document.getElementById("hPager"); if(pg) pg.innerHTML="";
   const body=document.getElementById("hResultBody"); if(body) body.innerHTML="";
   const dtl=document.getElementById("hDetail"); if(dtl){ dtl.innerHTML=""; dtl.style.display="none"; }
+  Object.keys(H_BASS_CACHE).forEach(k=>delete H_BASS_CACHE[k]);
   Object.keys(H_DTL_CACHE).forEach(k=>delete H_DTL_CACHE[k]);
 }
 
