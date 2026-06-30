@@ -222,6 +222,22 @@
   .h-name:hover{text-decoration:underline}
   .h-name.active{color:var(--accent-deep);font-weight:600}
   .h-name-nolink{color:var(--ink-soft)}
+  /* 공동주택 관리 인라인 상세 카드 */
+  tr.h-detail-row td{
+    background:#f7f9fb;
+    border-bottom:2px solid var(--line);
+    padding:0;
+  }
+  tr.h-detail-row .d-card{
+    margin:12px;
+    box-shadow:0 2px 10px rgba(21,38,59,.08);
+  }
+  .h-detail-loading{
+    padding:28px 12px;
+    text-align:center;
+    color:var(--ink-soft);
+    font-size:13px;
+  }
   thead th{
     background:var(--ink);color:var(--paper);font-weight:500;
     padding:11px 12px;text-align:left;white-space:nowrap;

@@ -2138,6 +2138,7 @@ function renderHousingPage(){
   slice.forEach((d,i)=>{
     const tr = document.createElement("tr");
     tr.style.animationDelay = (Math.min(i,40)*0.01)+"s";
+    tr.dataset.kapt = d.kaptCode || "";
     const clickable = d.kaptCode ? "clickable" : "";
     const nmCell = d.kaptCode
       ? `<a href="#" class="h-name ${clickable}" data-dtl="${esc(d.kaptCode)}">${esc(d.complexNm)}</a>`
@@ -2159,34 +2160,50 @@ function renderHousingPage(){
     frag.appendChild(tr);
   });
   body.appendChild(frag);
-  // 공동주택명 클릭 → 인라인 상세
+  // 공동주택명 클릭 → 같은 행 바로 아래에 인라인 상세 카드 펼치기
   body.querySelectorAll("[data-dtl]").forEach(a=>{
-    a.addEventListener("click", e=>{ e.preventDefault(); openHousingDetail(a.dataset.dtl, a); });
+    a.addEventListener("click", e=>{ e.preventDefault(); openHousingDetail(a.dataset.dtl, a.closest("tr")); });
   });
   renderHousingPager(total, pages, offset, slice.length);
 }
 
-// 공동주택명 클릭 → 표 상단 hDetail 영역에 인라인 상세 카드 표시
-async function openHousingDetail(kaptCode, anchor){
-  const panel = document.getElementById("hDetail");
-  // 같은 단지再클릭 시 토글 닫기
-  if(panel.dataset.code === kaptCode && panel.style.display !== "none"){
-    panel.style.display = "none";
-    panel.dataset.code = "";
-    document.querySelectorAll(".h-name.active").forEach(a=>a.classList.remove("active"));
+// 열린 인라인 상세 카드 모두 닫기
+function closeHousingDetail(){
+  document.querySelectorAll("tr.h-detail-row").forEach(r=>r.remove());
+  document.querySelectorAll(".h-name.active").forEach(a=>a.classList.remove("active"));
+}
+
+// 공동주택명 클릭 → 같은 행 바로 아래에 인라인 상세 카드 표시
+async function openHousingDetail(kaptCode, row){
+  if(!row) return;
+
+  // 같은 단지 재클릭 시 토글 닫기
+  const next = row.nextElementSibling;
+  if(next && next.classList.contains("h-detail-row")){
+    next.remove();
+    row.querySelector(".h-name")?.classList.remove("active");
     return;
   }
-  document.querySelectorAll(".h-name.active").forEach(a=>a.classList.remove("active"));
-  if(anchor) anchor.classList.add("active");
-  panel.dataset.code = kaptCode;
-  panel.style.display = "block";
-  panel.innerHTML = '<div class="d-card" style="padding:18px"><div class="d-panel-hint">단지 상세정보 불러오는 중…</div></div>';
-  panel.scrollIntoView({ block:"start", behavior:"smooth" });
+
+  // 다른 단지가 열린 상태면 먼저 닫기
+  closeHousingDetail();
+
+  // 현재 단지 활성 표시
+  const nameEl = row.querySelector(".h-name");
+  if(nameEl) nameEl.classList.add("active");
+
+  // 상세 행을 바로 다음에 삽입
+  const detailRow = document.createElement("tr");
+  detailRow.className = "h-detail-row";
+  detailRow.innerHTML = `<td colspan="12"><div class="h-detail-loading">단지 상세정보 불러오는 중…</div></td>`;
+  row.after(detailRow);
 
   // 기본정보 + 상세정보 동시 조회
   const [bass, dtl] = await Promise.all([ fetchAptBass(kaptCode), fetchAptDtl(kaptCode) ]);
-  if(!bass){ panel.innerHTML = '<div class="d-empty">상세정보를 불러오지 못했습니다.</div>'; return; }
-  panel.innerHTML = housingDetailHTML(bass, dtl);
+  const cell = detailRow.querySelector("td");
+  if(!bass){ cell.innerHTML = '<div class="d-empty">상세정보를 불러오지 못했습니다.</div>'; detailRow.scrollIntoView({ block:"nearest", behavior:"smooth" }); return; }
+  cell.innerHTML = housingDetailHTML(bass, dtl);
+  detailRow.scrollIntoView({ block:"nearest", behavior:"smooth" });
 }
 
 function housingDetailHTML(b, d){
@@ -2199,7 +2216,7 @@ function housingDetailHTML(b, d){
   <div class="card d-card">
     <div class="card-head">
       <h2><span class="num-tag">단지</span>${esc(b.kaptName)} <span class="badge ok">${esc(b.codeAptNm||"")}</span></h2>
-      <button class="ghost" onclick="document.getElementById('hDetail').style.display='none'">닫기</button>
+      <button class="ghost" onclick="closeHousingDetail()">닫기</button>
     </div>
     <div class="card-body">
       <div class="d-addr">${esc(b.doroJuso||b.kaptAddr||"-")}</div>
@@ -2297,6 +2314,7 @@ function clearHousing(){
   HRESULTS=[]; H_PAGE=1;
   const pg=document.getElementById("hPager"); if(pg) pg.innerHTML="";
   const body=document.getElementById("hResultBody"); if(body) body.innerHTML="";
+  closeHousingDetail();
   const dtl=document.getElementById("hDetail"); if(dtl){ dtl.innerHTML=""; dtl.style.display="none"; }
   Object.keys(H_BASS_CACHE).forEach(k=>delete H_BASS_CACHE[k]);
   Object.keys(H_DTL_CACHE).forEach(k=>delete H_DTL_CACHE[k]);
