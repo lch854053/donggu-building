@@ -254,7 +254,6 @@
           엑셀 다운로드
         </button>
       </div>
-      <div id="hDetail" style="display:none;margin-bottom:16px"></div>
       <div class="table-scroll">
         <table id="hTable">
           <thead><tr>
@@ -2315,7 +2314,6 @@ function clearHousing(){
   const pg=document.getElementById("hPager"); if(pg) pg.innerHTML="";
   const body=document.getElementById("hResultBody"); if(body) body.innerHTML="";
   closeHousingDetail();
-  const dtl=document.getElementById("hDetail"); if(dtl){ dtl.innerHTML=""; dtl.style.display="none"; }
   Object.keys(H_BASS_CACHE).forEach(k=>delete H_BASS_CACHE[k]);
   Object.keys(H_DTL_CACHE).forEach(k=>delete H_DTL_CACHE[k]);
 }
