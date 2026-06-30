@@ -236,7 +236,6 @@
           <div class="progress-bar"><div class="progress-fill" id="hProgFill"></div></div>
           <div class="progress-text" id="hProgText">대기 중…</div>
         </div>
-        <div class="hint">표 데이터는 K-apt API를 우선 사용하며, K-apt 정보가 없거나 부족한 단지는 주소(PNU) 기반 건축물대장 API로 보강합니다. 단지 목록은 한국부동산원(아파트·연립·다세대·맨션·빌라)과 건축인허가(오피스텔·도시형생활주택)를 결합합니다. K-apt에 등록된 단지는 공동주택명 클릭 시 상세 카드를 확인할 수 있습니다.</div>
       </div>
     </div>
 
@@ -2260,9 +2259,7 @@ function housingDetailHTML(b, d){
         {h:"경비관리", f:r=>plain(r.codeSec)},
         {h:"청소관리", f:r=>plain(r.codeClean)},
         {h:"소독관리", f:r=>plain(r.codeDisinf)},
-        {h:"편의시설", f:r=>plain(r.convenientFacility)},
         {h:"복리시설", f:r=>plain(r.welfareFacility)},
-        {h:"교육시설", f:r=>plain(r.educationFacility)},
       ], [d])}
       ` : '<div class="d-sec-title">상세</div><div class="d-empty">K-apt 상세정보(주차·건물구조·관리방식 등)가 없습니다.</div>'}
     </div>
