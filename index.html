@@ -1896,6 +1896,10 @@ function fillMissingFromBuilding(row, titles){
     const pk = titles.reduce((s,t)=> s + totalParking(t), 0);
     if(pk > 0) out.parking = pk;
   }
+  if(out.tarea == null){
+    const area = titles.reduce((s,t)=> s + (Number(t.totArea)||0), 0);
+    if(area > 0) out.tarea = area;
+  }
   return out;
 }
 
