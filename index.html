@@ -264,10 +264,11 @@
             <th>지번주소</th>
             <th class="num">세대수</th>
             <th class="num">동수</th>
-            <th class="num">층수</th>
+            <th class="num">지하 층</th>
+            <th class="num">지상 층</th>
             <th>사용승인일</th>
             <th class="num">총 주차대수</th>
-            <th>걸물구조</th>
+            <th class="num">연면적(㎡)</th>
           </tr></thead>
           <tbody id="hResultBody"></tbody>
         </table>
@@ -1870,6 +1871,7 @@ function mergeKaptIntoRow(row, kaptData){
   if(b.kaptTopFloor != null) out.grndFlr = Number(b.kaptTopFloor);
   if(b.kaptBaseFloor != null) out.ugrndFlr = Number(b.kaptBaseFloor);
   if(b.kaptUsedate)    out.useAprDay = b.kaptUsedate;
+  if(b.kaptTarea != null) out.tarea = Number(b.kaptTarea);
   if(parking > 0)      out.parking = parking;
   if(d && d.codeStr)   out.strct = d.codeStr;
   out.kaptCode = kaptData.kaptCode;
@@ -1976,7 +1978,7 @@ async function runHousingSearch(){
         hhld: c.unitCnt,
         dongCnt: c.dongCnt,
         useAprDay: c.useaprDt || "-",
-        doroAddr: "-", grndFlr: null, ugrndFlr: null, parking: null, strct: "-",
+        doroAddr: "-", grndFlr: null, ugrndFlr: null, parking: null, tarea: null, strct: "-",
       };
 
       if(H_KAPT_BY_PNU[c.pnu]) row = mergeKaptIntoRow(row, H_KAPT_BY_PNU[c.pnu]);
@@ -2051,7 +2053,7 @@ async function runHousingSearch(){
         area,
         dongCnt: 0,
         useAprDay: useAprDay || "-",
-        doroAddr: "-", grndFlr: null, ugrndFlr: null, parking: null, strct: "-",
+        doroAddr: "-", grndFlr: null, ugrndFlr: null, parking: null, tarea: null, strct: "-",
       });
     }
 
@@ -2149,7 +2151,8 @@ function renderHousingPage(){
     const nmCell = d.kaptCode
       ? `<a href="#" class="h-name ${clickable}" data-dtl="${esc(d.kaptCode)}">${esc(d.complexNm)}</a>`
       : `<span class="h-name-nolink">${esc(d.complexNm)}</span>`;
-    const flrTxt = d.grndFlr!=null ? `지하${d.ugrndFlr||0}/지상${d.grndFlr}` : "-";
+    const ugFlr = d.ugrndFlr!=null ? d.ugrndFlr : "-";
+    const grFlr = d.grndFlr!=null ? d.grndFlr : "-";
     tr.innerHTML = `
       <td class="num">${offset + i + 1}</td>
       <td class="addr">${nmCell}</td>
@@ -2159,10 +2162,10 @@ function renderHousingPage(){
       <td class="code">${esc(d.adres||"-")}</td>
       <td class="num">${fmt(d.hhld)}</td>
       <td class="num">${fmt(d.dongCnt)}</td>
-      <td class="num">${flrTxt}</td>
+      <td class="num">${ugFlr}</td>
+      <td class="num">${grFlr}</td>
       <td>${useAprCell(d.useAprDay)}</td>
-      <td class="num">${d.parking!=null?fmt(d.parking):"-"}</td>
-      <td>${esc(d.strct||"-")}</td>`;
+      <td class="num">${d.tarea!=null?fmt(Math.round(d.tarea)):"-"}</td>`;
     frag.appendChild(tr);
   });
   body.appendChild(frag);
@@ -2295,10 +2298,11 @@ function exportHousingExcel(){
       "순번":i+1,"공동주택명":d.complexNm||"","종류":d.kind||"","행정동":d.bHdong||"",
       "도로명주소":d.doroAddr||"-","지번주소":d.adres||"-",
       "세대수":d.hhld||0,"동수":d.dongCnt||0,
-      "층수":d.grndFlr!=null?`지하${d.ugrndFlr||0}/지상${d.grndFlr}`:"-",
+      "지하 층":d.ugrndFlr!=null?d.ugrndFlr:"-",
+      "지상 층":d.grndFlr!=null?d.grndFlr:"-",
       "사용승인일":d.useAprDay||"",
       "총 주차대수":d.parking!=null?d.parking:"-",
-      "걸물구조":d.strct||"-",
+      "연면적(㎡)":d.tarea!=null?Math.round(d.tarea):"-",
       "면적(㎡)":d.area||"","경과연수":yr===null?"미확인":(nowY-yr),
       "데이터출처":d.source||""
     };
