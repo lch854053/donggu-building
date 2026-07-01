@@ -217,7 +217,7 @@
   /* Table */
   .table-scroll{overflow-x:auto;border:1px solid var(--line);border-radius:6px;background:var(--card)}
   table{border-collapse:collapse;width:100%;min-width:1080px;font-size:12.5px}
-  #hTable{min-width:1000px}   /* 공동주택 표 (12컬럼) */
+  #hTable{min-width:1120px}   /* 공동주택 표 (14컬럼) */
   #hTable th{padding:9px 10px}
   #hTable td{padding:8px 10px}
   #hTable td.code{white-space:normal;word-break:break-all}

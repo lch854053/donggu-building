@@ -269,6 +269,7 @@
             <th>사용승인일</th>
             <th class="num">총 주차대수</th>
             <th class="num">연면적(㎡)</th>
+            <th class="num">면적(㎡)</th>
           </tr></thead>
           <tbody id="hResultBody"></tbody>
         </table>
@@ -1966,7 +1967,7 @@ async function runHousingSearch(){
 
     // ── 한국부동산원 단지 → 표시 객체로 변환 + K-apt 우선 병합 + 필터
     const matched = [];
-    let f_hdong=0, f_kind=0, f_hhld=0, f_year=0;
+    let f_hdong=0, f_kind=0, f_hhld=0, f_area=0, f_year=0;
     for(const c of complexes){
       const bHdong = hdongFromPnu(c.pnu, bjd2hd);
       if(!isAll && bHdong !== hdong){ f_hdong++; continue; }
@@ -1989,6 +1990,7 @@ async function runHousingSearch(){
 
       if(selKind.length && !selKind.includes(row.kind)){ f_kind++; continue; }
       if(row.hhld < hhldMin || row.hhld > hhldMax){ f_hhld++; continue; }
+      if(row.tarea == null || row.tarea < areaMin || row.tarea > areaMax){ f_area++; continue; }
       const yr = extractYear(row.useAprDay);
       if(yr===null){ if(!incUnknown){ f_year++; continue; } }
       else if(yearActive && (yr < yearMin || yr > yearMax)){ f_year++; continue; }
@@ -2089,7 +2091,7 @@ async function runHousingSearch(){
     const scanned = complexes.length;
     let diag = "";
     if(!matched.length){
-      diag = `조회 ${scanned}건 중 매칭 0건 (제외: 행정동 ${f_hdong}·종류 ${f_kind}·세대수 ${f_hhld}·연도 ${f_year})`;
+      diag = `조회 ${scanned}건 중 매칭 0건 (제외: 행정동 ${f_hdong}·종류 ${f_kind}·세대수 ${f_hhld}·연면적 ${f_area}·연도 ${f_year})`;
     }
 
     setTimeout(()=>{
@@ -2169,7 +2171,9 @@ function renderHousingPage(){
       <td class="num">${ugFlr}</td>
       <td class="num">${grFlr}</td>
       <td>${useAprCell(d.useAprDay)}</td>
-      <td class="num">${d.tarea!=null?fmt(Math.round(d.tarea)):"-"}</td>`;
+      <td class="num">${d.parking!=null?fmt(d.parking):"-"}</td>
+      <td class="num">${d.tarea!=null?fmt(Math.round(d.tarea)):"-"}</td>
+      <td class="num">${d.area!=null?fmt(Math.round(d.area)):"-"}</td>`;
     frag.appendChild(tr);
   });
   body.appendChild(frag);
