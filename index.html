@@ -2094,9 +2094,12 @@ async function runHousingSearch(){
     }, 300);
   }catch(e){
     console.error("[runHousingSearch]", e);
-    document.getElementById("hProgWrap")?.classList.remove("on");
-    document.getElementById("hHint").textContent = "오류 발생: " + (e?.message || e);
-    document.getElementById("hRunBtn")?.disabled = false;
+    const hProgWrap = document.getElementById("hProgWrap");
+    if(hProgWrap) hProgWrap.classList.remove("on");
+    const hHint = document.getElementById("hHint");
+    if(hHint) hHint.textContent = "오류 발생: " + (e?.message || e);
+    const hRunBtnErr = document.getElementById("hRunBtn");
+    if(hRunBtnErr) hRunBtnErr.disabled = false;
   }
 }
 
