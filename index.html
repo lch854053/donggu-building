@@ -215,12 +215,13 @@
             <div class="dual" id="h-dual-hhld" data-min="0" data-max="2000" data-step="50" data-unit="세대" data-group="1"></div>
           </div>
           <div class="field">
-            <label class="lbl-row"><span>연면적(㎡)</span><span class="readout" id="h-ro-area">전체</span></label>
-            <div class="dual" id="h-dual-area" data-min="0" data-max="100000" data-step="500" data-unit="㎡" data-group="1"></div>
+            <label class="lbl-row"><span>총 주차대수</span><span class="readout" id="h-ro-parking">전체</span></label>
+            <div class="dual" id="h-dual-parking" data-min="1" data-max="5000" data-step="50" data-unit="대" data-group="1"></div>
+            <label class="chk-row"><input type="checkbox" id="h-parkingunknown" checked><span>정보 없음 포함</span></label>
           </div>
           <div class="field">
             <label class="lbl-row"><span>사용승인 연도</span><span class="readout" id="h-ro-year">전체</span></label>
-            <div class="dual" id="h-dual-year" data-min="1900" data-max="2026" data-step="1" data-unit="" data-group="0"></div>
+            <div class="dual" id="h-dual-year" data-min="1970" data-max="2026" data-step="1" data-unit="" data-group="0"></div>
             <label class="chk-row"><input type="checkbox" id="h-yearunknown" checked><span>연도 미확인 포함</span></label>
           </div>
         </div>
@@ -237,12 +238,6 @@
           <div class="progress-text" id="hProgText">대기 중…</div>
         </div>
       </div>
-    </div>
-
-    <div class="stats" id="hStats" style="display:none">
-      <div class="stat total"><div class="k">조건 일치 단지</div><div class="v" id="hs-match">0</div></div>
-      <div class="stat none"><div class="k">검색 대상 단지</div><div class="v" id="hs-scan">0</div></div>
-      <div class="stat ok"><div class="k">총 세대수</div><div class="v" id="hs-hhld">0</div></div>
     </div>
 
     <div id="hResultArea" style="display:none">
@@ -267,7 +262,6 @@
             <th class="num">층수</th>
             <th>사용승인일</th>
             <th class="num">총 주차대수</th>
-            <th>걸물구조</th>
           </tr></thead>
           <tbody id="hResultBody"></tbody>
         </table>
@@ -1739,7 +1733,7 @@ function initHousingFilters(){
   if(H_FILTERS_READY) return;
   H_MS.kind = buildMultiselect("h-ms-kind", HKIND_OPTS, false);   // '기타' 자동추가 방지
   H_DUAL.hhld = buildDual("h-dual-hhld","h-ro-hhld");
-  H_DUAL.area = buildDual("h-dual-area","h-ro-area");
+  H_DUAL.parking = buildDual("h-dual-parking","h-ro-parking");
   const yh = document.getElementById("h-dual-year");
   if(yh) yh.dataset.max = String(new Date().getFullYear());
   H_DUAL.year = buildDual("h-dual-year","h-ro-year");
@@ -1901,9 +1895,11 @@ async function runHousingSearch(){
 
   const selKind = H_MS.kind.selected();
   const [hhldMin, hhldMaxRaw] = H_DUAL.hhld.values();
-  const [areaMin, areaMaxRaw] = H_DUAL.area.values();
   const hhldMax = H_DUAL.hhld.atCap() ? Infinity : hhldMaxRaw;
-  const areaMax = H_DUAL.area.atCap() ? Infinity : areaMaxRaw;
+  const [parkingMin, parkingMaxRaw] = H_DUAL.parking.values();
+  const parkingMax = H_DUAL.parking.atCap() ? Infinity : parkingMaxRaw;
+  const parkingActive = !H_DUAL.parking.isFull();
+  const incParkingUnknown = document.getElementById("h-parkingunknown").checked;
   const [yearMin, yearMax] = H_DUAL.year.values();
   const yearActive = !H_DUAL.year.isFull();
   const incUnknown = document.getElementById("h-yearunknown").checked;
@@ -1912,7 +1908,6 @@ async function runHousingSearch(){
   hRunBtn.disabled = true;
   document.getElementById("hProgWrap").classList.add("on");
   document.getElementById("hResultArea").style.display="none";
-  document.getElementById("hStats").style.display="none";
   if(isAll) document.getElementById("hHint").textContent = "전체 검색은 시간이 걸립니다…";
 
   // 법정동코드(5자리) → 행정동 사전(폴백용)
@@ -1984,7 +1979,6 @@ async function runHousingSearch(){
 
     if(selKind.length && !selKind.includes(row.kind)){ f_kind++; continue; }
     if(row.hhld < hhldMin || row.hhld > hhldMax){ f_hhld++; continue; }
-    // 연면적은 한국부동산원에 없음 → 면적 필터는 오피스텔 보충에만 적용, 여기선 걸어뜀
     const yr = extractYear(row.useAprDay);
     if(yr===null){ if(!incUnknown){ f_year++; continue; } }
     else if(yearActive && (yr < yearMin || yr > yearMax)){ f_year++; continue; }
@@ -2040,8 +2034,6 @@ async function runHousingSearch(){
     if(!isAll && bHdong !== hdong) continue;
     const hhld = Number(t.silHoHhldCnt||0);
     if(hhld < hhldMin || hhld > hhldMax) continue;
-    const area = Number(t.silHoHhldArea||0);
-    if(area < areaMin || area > areaMax) continue;
     const useAprDay = String(t.useAprDay || t.crtnDay || "");
     const yr = extractYear(useAprDay);
     if(yr===null){ if(!incUnknown) continue; }
@@ -2055,7 +2047,6 @@ async function runHousingSearch(){
       bHdong,
       adres: stripParens(t.platPlc) || "-",
       hhld,
-      area,
       dongCnt: 0,
       useAprDay: useAprDay || "-",
       // 표제부 조인으로 채울 필드 (초기값)
@@ -2085,12 +2076,25 @@ async function runHousingSearch(){
     }, 5, ()=>hUpdate(++tdone, matched.length, "건축물대장"));
   }
 
+  // 총 주차대수 필터는 건축물대장/K-apt 보강 이후 적용
+  if(matched.length && (parkingActive || !incParkingUnknown)){
+    let f_parking=0;
+    matched = matched.filter(m=>{
+      if(m.parking == null){
+        if(!incParkingUnknown){ f_parking++; return false; }
+        return true;
+      }
+      if(m.parking < parkingMin || m.parking > parkingMax){ f_parking++; return false; }
+      return true;
+    });
+  }
+
   HRESULTS = matched;
 
   const scanned = complexes.length;
   let diag = "";
   if(!matched.length){
-    diag = `조회 ${scanned}건 중 매칭 0건 (제외: 행정동 ${f_hdong}·종류 ${f_kind}·세대수 ${f_hhld}·연도 ${f_year})`;
+    diag = `조회 ${scanned}건 중 매칭 0건 (제외: 행정동 ${f_hdong}·종류 ${f_kind}·세대수 ${f_hhld}·주차 ${f_parking||0}·연도 ${f_year})`;
   }
 
   setTimeout(()=>{
@@ -2111,12 +2115,7 @@ function hUpdate(done,total,phase){
 
 function renderHousingResults(scanned, dongLabel){
   H_PAGE = 1;
-  const totHhld = HRESULTS.reduce((s,d)=>s+(d.hhld||0),0);
-  document.getElementById("hs-match").textContent = HRESULTS.length.toLocaleString("ko-KR");
-  document.getElementById("hs-scan").textContent  = scanned.toLocaleString("ko-KR");
-  document.getElementById("hs-hhld").textContent  = totHhld.toLocaleString("ko-KR");
   document.getElementById("hResDong").textContent = dongLabel;
-  document.getElementById("hStats").style.display = "flex";
   document.getElementById("hResultArea").style.display = "block";
   document.getElementById("hExportBtn").disabled = HRESULTS.length === 0;
   renderHousingPage();
@@ -2159,8 +2158,7 @@ function renderHousingPage(){
       <td class="num">${fmt(d.dongCnt)}</td>
       <td class="num">${flrTxt}</td>
       <td>${useAprCell(d.useAprDay)}</td>
-      <td class="num">${d.parking!=null?fmt(d.parking):"-"}</td>
-      <td>${esc(d.strct||"-")}</td>`;
+      <td class="num">${d.parking!=null?fmt(d.parking):"-"}</td>`;
     frag.appendChild(tr);
   });
   body.appendChild(frag);
@@ -2296,8 +2294,7 @@ function exportHousingExcel(){
       "층수":d.grndFlr!=null?`지하${d.ugrndFlr||0}/지상${d.grndFlr}`:"-",
       "사용승인일":d.useAprDay||"",
       "총 주차대수":d.parking!=null?d.parking:"-",
-      "걸물구조":d.strct||"-",
-      "면적(㎡)":d.area||"","경과연수":yr===null?"미확인":(nowY-yr),
+      "경과연수":yr===null?"미확인":(nowY-yr),
       "데이터출처":d.source||""
     };
   });
@@ -2309,10 +2306,10 @@ function exportHousingExcel(){
 }
 
 function clearHousing(){
-  if(H_FILTERS_READY){ H_MS.kind.reset(); H_DUAL.hhld.reset(); H_DUAL.area.reset(); H_DUAL.year.reset(); }
+  if(H_FILTERS_READY){ H_MS.kind.reset(); H_DUAL.hhld.reset(); H_DUAL.parking.reset(); H_DUAL.year.reset(); }
   const cu = document.getElementById("h-yearunknown"); if(cu) cu.checked = true;
+  const pu = document.getElementById("h-parkingunknown"); if(pu) pu.checked = true;
   document.getElementById("hResultArea").style.display="none";
-  document.getElementById("hStats").style.display="none";
   HRESULTS=[]; H_PAGE=1;
   const pg=document.getElementById("hPager"); if(pg) pg.innerHTML="";
   const body=document.getElementById("hResultBody"); if(body) body.innerHTML="";
