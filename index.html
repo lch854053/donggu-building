@@ -1990,7 +1990,7 @@ async function runHousingSearch(){
 
       if(selKind.length && !selKind.includes(row.kind)){ f_kind++; continue; }
       if(row.hhld < hhldMin || row.hhld > hhldMax){ f_hhld++; continue; }
-      if(row.tarea == null || row.tarea < areaMin || row.tarea > areaMax){ f_area++; continue; }
+      if(row.tarea != null && (row.tarea < areaMin || row.tarea > areaMax)){ f_area++; continue; }
       const yr = extractYear(row.useAprDay);
       if(yr===null){ if(!incUnknown){ f_year++; continue; } }
       else if(yearActive && (yr < yearMin || yr > yearMax)){ f_year++; continue; }
@@ -2041,8 +2041,9 @@ async function runHousingSearch(){
       if(!isAll && bHdong !== hdong) continue;
       const hhld = Number(t.silHoHhldCnt||0);
       if(hhld < hhldMin || hhld > hhldMax) continue;
-      const area = Number(t.silHoHhldArea||0);
-      if(area < areaMin || area > areaMax) continue;
+      const areaRaw = t.silHoHhldArea;
+      const area = areaRaw != null ? Number(areaRaw) : null;
+      if(area != null && (area < areaMin || area > areaMax)) continue;
       const useAprDay = String(t.useAprDay || t.crtnDay || "");
       const yr = extractYear(useAprDay);
       if(yr===null){ if(!incUnknown) continue; }

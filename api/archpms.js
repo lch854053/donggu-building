@@ -43,7 +43,7 @@ export default async function handler(req, res) {
   if (!serviceKey)
     return res.status(500).json({ items: [], error: "ARCH_SERVICE_KEY 환경변수 미설정" });
 
-  const q = { sigunguCd, bjdongCd, _type: "json", numOfRows: "100", pageNo: "1" };
+  const q = { sigunguCd, bjdongCd, _type: "json", numOfRows: req.query.numOfRows || "100", pageNo: req.query.pageNo || "1" };
   if (VALID_PLATGB.has(platGbCd)) q.platGbCd = platGbCd;
   if (bunRaw) {
     q.bun = bunRaw.padStart(4, "0");
