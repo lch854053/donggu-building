@@ -269,7 +269,6 @@
             <th>사용승인일</th>
             <th class="num">총 주차대수</th>
             <th class="num">연면적(㎡)</th>
-            <th class="num">면적(㎡)</th>
           </tr></thead>
           <tbody id="hResultBody"></tbody>
         </table>
@@ -2173,8 +2172,7 @@ function renderHousingPage(){
       <td class="num">${grFlr}</td>
       <td>${useAprCell(d.useAprDay)}</td>
       <td class="num">${d.parking!=null?fmt(d.parking):"-"}</td>
-      <td class="num">${d.tarea!=null?fmt(Math.round(d.tarea)):"-"}</td>
-      <td class="num">${d.area!=null?fmt(Math.round(d.area)):"-"}</td>`;
+      <td class="num">${d.tarea!=null?fmt(Math.round(d.tarea)):"-"}</td>`;
     frag.appendChild(tr);
   });
   body.appendChild(frag);
