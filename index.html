@@ -2232,7 +2232,7 @@ async function openHousingDetail(kaptCode, row){
   // 상세 행을 바로 다음에 삽입
   const detailRow = document.createElement("tr");
   detailRow.className = "h-detail-row";
-  detailRow.innerHTML = `<td colspan="12"><div class="h-detail-loading">단지 상세정보 불러오는 중…</div></td>`;
+  detailRow.innerHTML = `<td colspan="13"><div class="h-detail-loading">단지 상세정보 불러오는 중…</div></td>`;
   row.after(detailRow);
 
   // 기본정보 + 상세정보 동시 조회
