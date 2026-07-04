@@ -1940,8 +1940,11 @@ async function runHousingSearch(){
     }
 
     // ── 1순위: 한국부동산원 단지목록 (메인)
-    hUpdate(0,1,"단지목록");
+    let hProgress = { done: 0, total: 1 };
+    const updateHProgress = () => hUpdate(hProgress.done, hProgress.total, "");
+    updateHProgress();
     const { complexes } = await fetchAptIdList();
+    hProgress.done++; updateHProgress();
     if(!complexes.length){
       document.getElementById("hProgWrap").classList.remove("on");
       hRunBtn.disabled = false;
@@ -1957,14 +1960,15 @@ async function runHousingSearch(){
       if(r.ok) kaptList = await r.json();
     }catch(e){}
     if(kaptList.length){
-      let kdone = 0; hUpdate(0, kaptList.length, "K-apt조인");
+      hProgress.total += kaptList.length;
+      updateHProgress();
       const kInfos = await runPool(kaptList, async (c)=>{
         const [bass, dtl] = await Promise.all([
           fetchAptBass(c.kaptCode),
           fetchAptDtl(c.kaptCode)
         ]);
         return bass ? { kaptCode:c.kaptCode, pnu:(c.pnu || pnuFromKapt(bass)), bass, dtl } : null;
-      }, 5, ()=>hUpdate(++kdone, kaptList.length, "K-apt조인"));
+      }, 5, ()=>{ hProgress.done++; updateHProgress(); });
       for(const k of kInfos){
         if(k && k.pnu) H_KAPT_BY_PNU[k.pnu] = k;
       }
@@ -2008,11 +2012,12 @@ async function runHousingSearch(){
     const hsAll = [];
     const MAX_PAGES = 50;
     if(bjdList.length){
-      let p1done = 0; hUpdate(0, bjdList.length, "오피스텔보충");
+      hProgress.total += bjdList.length;
+      updateHProgress();
       const page1 = await runPool(bjdList, async (bjd)=>{
         const {items,totalCount} = await fetchHsTpDongPage(bjd,1);
         return {bjd, items, totalCount};
-      }, 5, ()=>hUpdate(++p1done, bjdList.length, "오피스텔보충"));
+      }, 5, ()=>{ hProgress.done++; updateHProgress(); });
       const more = [];
       page1.forEach(r=>{
         hsAll.push(...r.items);
@@ -2023,11 +2028,12 @@ async function runHousingSearch(){
         }
       });
       if(more.length){
-        let tdone = 0; hUpdate(0, more.length, "오피스텔보충");
+        hProgress.total += more.length;
+        updateHProgress();
         const got = await runPool(more, async (m)=>{
           const {items} = await fetchHsTpDongPage(m.bjd, m.pg);
           return items;
-        }, 5, ()=>hUpdate(++tdone, more.length, "오피스텔보충"));
+        }, 5, ()=>{ hProgress.done++; updateHProgress(); });
         got.forEach(ts=> hsAll.push(...ts));
       }
     }
@@ -2071,7 +2077,8 @@ async function runHousingSearch(){
 
     // ── 표제부 일괄 조인: PNU → 지번 → getBrTitleInfo
     if(matched.length){
-      let tdone = 0; hUpdate(0, matched.length, "건축물대장");
+      hProgress.total += matched.length;
+      updateHProgress();
       const filled = await runPool(matched, async (m)=>{
         if(!m.pnu || m.pnu.length < 19) return m;
         const sigunguCd = m.pnu.slice(0,5);
@@ -2086,7 +2093,7 @@ async function runHousingSearch(){
           return fillMissingFromBuilding(m, data.titles);
         }
         return m;
-      }, 5, ()=>hUpdate(++tdone, matched.length, "건축물대장"));
+      }, 5, ()=>{ hProgress.done++; updateHProgress(); });
       // 복제본으로 matched 내용 교체 (원본 객체 직접 수정 회피)
       matched.length = 0;
       matched.push(...filled);
