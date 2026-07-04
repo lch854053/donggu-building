@@ -2130,9 +2130,11 @@ async function runHousingSearch(){
 function hUpdate(done,total,phase){
   const pct = total ? Math.round(done/total*100) : 0;
   document.getElementById("hProgFill").style.width = pct+"%";
-  const label = phase || "조회";
-  document.getElementById("hProgText").textContent =
-    done>=total ? `${label} 완료` : `${label} 조회 중 … ${done}/${total}`;
+  if(done>=total){
+    document.getElementById("hProgText").textContent = phase ? `${phase} 완료` : "조회 완료";
+  } else {
+    document.getElementById("hProgText").textContent = phase ? `${phase} 조회 중 … ${done}/${total}` : `조회 중 … ${done}/${total}`;
+  }
 }
 
 function renderHousingResults(scanned, dongLabel){
