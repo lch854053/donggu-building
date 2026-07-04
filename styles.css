@@ -218,25 +218,26 @@
   .table-scroll{overflow-x:auto;border:1px solid var(--line);border-radius:6px;background:var(--card)}
   table{border-collapse:collapse;width:100%;min-width:1080px;font-size:12.5px}
   #hTable{
-    min-width:1000px;   /* 공동주택 표 (13컬럼) */
+    min-width:0;        /* 가로스크롤 제거 */
     table-layout:fixed; /* 상세카드 열림 시 열 크기 고정 */
   }
-  #hTable th{padding:9px 10px}
-  #hTable td{padding:8px 10px}
+  #hTable th{padding:8px 8px;font-size:11px;white-space:normal}
+  #hTable td{padding:6px 6px;white-space:normal;word-break:break-all}
+  #hTable td.num{white-space:nowrap;word-break:normal}
   #hTable td.code{white-space:normal;word-break:break-all}
-  #hTable th:nth-child(1){width:40px}   /* # */
-  #hTable th:nth-child(2){width:160px}  /* 공동주택명 */
-  #hTable th:nth-child(3){width:70px}  /* 종류 */
-  #hTable th:nth-child(4){width:80px}  /* 행정동 */
-  #hTable th:nth-child(5){width:180px} /* 도로명주소 */
-  #hTable th:nth-child(6){width:180px} /* 지번주소 */
-  #hTable th:nth-child(7){width:65px}  /* 세대수 */
-  #hTable th:nth-child(8){width:55px}  /* 동수 */
-  #hTable th:nth-child(9){width:60px}  /* 지하 층 */
-  #hTable th:nth-child(10){width:60px} /* 지상 층 */
-  #hTable th:nth-child(11){width:85px} /* 사용승인일 */
-  #hTable th:nth-child(12){width:80px} /* 총 주차대수 */
-  #hTable th:nth-child(13){width:85px} /* 연면적(㎡) */
+  #hTable th:nth-child(1){width:4%}   /* # */
+  #hTable th:nth-child(2){width:11%}  /* 공동주택명 */
+  #hTable th:nth-child(3){width:6%}  /* 종류 */
+  #hTable th:nth-child(4){width:7%}  /* 행정동 */
+  #hTable th:nth-child(5){width:13%} /* 도로명주소 */
+  #hTable th:nth-child(6){width:13%} /* 지번주소 */
+  #hTable th:nth-child(7){width:6%}  /* 세대수 */
+  #hTable th:nth-child(8){width:5%}  /* 동수 */
+  #hTable th:nth-child(9){width:5%}  /* 지하 층 */
+  #hTable th:nth-child(10){width:5%} /* 지상 층 */
+  #hTable th:nth-child(11){width:9%} /* 사용승인일 */
+  #hTable th:nth-child(12){width:9%} /* 총 주차대수 */
+  #hTable th:nth-child(13){width:9%} /* 연면적(㎡) */
 
   .h-name{color:var(--accent);text-decoration:none;font-weight:500;cursor:pointer}
   .h-name:hover{text-decoration:underline}
