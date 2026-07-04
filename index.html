@@ -1874,6 +1874,14 @@ function mergeKaptIntoRow(row, kaptData){
   if(b.kaptTarea != null) out.tarea = Number(b.kaptTarea);
   if(parking > 0)      out.parking = parking;
   if(d && d.codeStr)   out.strct = d.codeStr;
+  if(b.codeHeatNm)     out.heat = b.codeHeatNm;
+  if(b.codeSaleNm)     out.saleType = b.codeSaleNm;
+  if(b.kaptBcompany)   out.builder = b.kaptBcompany;
+  if(b.kaptAcompany)   out.promoter = b.kaptAcompany;
+  if(b.codeMgrNm)      out.mgmt = b.codeMgrNm;
+  if(b.kaptTel)        out.officeTel = b.kaptTel;
+  if(b.kaptFax)        out.officeFax = b.kaptFax;
+  if(d && d.kaptdEcnt != null) out.elevator = Number(d.kaptdEcnt);
   out.kaptCode = kaptData.kaptCode;
   out.source = "K-apt";
   return out;
@@ -2299,19 +2307,31 @@ function renderHousingPager(total, pages, offset, shown){
 
 function exportHousingExcel(){
   const nowY = new Date().getFullYear();
-  const rows = HRESULTS.map((d,i)=>{
+  const rows = HRESULTS.map((d)=>{
     const yr = extractYear(d.useAprDay);
     return {
-      "순번":i+1,"공동주택명":d.complexNm||"","종류":d.kind||"","행정동":d.bHdong||"",
-      "도로명주소":d.doroAddr||"-","지번주소":d.adres||"-",
-      "세대수":d.hhld||0,"동수":d.dongCnt||0,
-      "지하 층":d.ugrndFlr!=null?d.ugrndFlr:"-",
-      "지상 층":d.grndFlr!=null?d.grndFlr:"-",
-      "사용승인일":d.useAprDay||"",
-      "총 주차대수":d.parking!=null?d.parking:"-",
-      "연면적(㎡)":d.tarea!=null?Math.round(d.tarea):"-",
-      "면적(㎡)":d.area||"","경과연수":yr===null?"미확인":(nowY-yr),
-      "데이터출처":d.source||""
+      "공동주택명": d.complexNm || "",
+      "종류": d.kind || "",
+      "행정동": d.bHdong || "",
+      "도로명주소": d.doroAddr || "-",
+      "지번주소": d.adres || "-",
+      "세대수": d.hhld || 0,
+      "동수": d.dongCnt || 0,
+      "지하 층": d.ugrndFlr != null ? d.ugrndFlr : "-",
+      "지상 층": d.grndFlr != null ? d.grndFlr : "-",
+      "사용승인일": d.useAprDay || "",
+      "총 주차대수": d.parking != null ? d.parking : "-",
+      "연면적(㎡)": d.tarea != null ? Math.round(d.tarea) : "-",
+      "경과연수": yr === null ? "미확인" : (nowY - yr),
+      "난방방식": d.heat || "",
+      "분양형태": d.saleType || "",
+      "시공사": d.builder || "",
+      "시행사": d.promoter || "",
+      "관리방식": d.mgmt || "",
+      "관리사무소 전화번호": d.officeTel || "",
+      "관리사무소 팩스번호": d.officeFax || "",
+      "건물구조": d.strct || "",
+      "승강기": d.elevator != null ? d.elevator : "-"
     };
   });
   const ws = XLSX.utils.json_to_sheet(rows);
