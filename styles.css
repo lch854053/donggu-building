@@ -213,6 +213,14 @@
   }
   button.export:hover{background:#dcecdf}
   button.export:disabled{opacity:.4;cursor:not-allowed}
+  .h-controls{display:flex;align-items:center;gap:10px}
+  .h-sort{
+    font-family:var(--sans);font-size:13px;
+    padding:8px 30px 8px 12px;border:1px solid var(--line-2);border-radius:5px;
+    background:var(--card) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%233a5573' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 10px center;
+    color:var(--ink);cursor:pointer;appearance:none;
+  }
+  .h-sort:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(29,94,140,.12)}
 
   /* Table */
   .table-scroll{overflow-x:auto;border:1px solid var(--line);border-radius:6px;background:var(--card)}

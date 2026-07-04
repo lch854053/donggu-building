@@ -248,10 +248,19 @@
     <div id="hResultArea" style="display:none">
       <div class="result-head">
         <div class="legend"><span>행정동 <b id="hResDong"></b> · 조건에 맞는 공동주택 단지</span></div>
-        <button class="export" id="hExportBtn" onclick="exportHousingExcel()">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg>
-          엑셀 다운로드
-        </button>
+        <div class="h-controls">
+          <select id="hSort" class="h-sort" onchange="applyHousingSort()">
+            <option value="default">정렬: 기본</option>
+            <option value="useAprAsc">사용승인일 오름차순</option>
+            <option value="useAprDesc">사용승인일 내림차순</option>
+            <option value="hhldAsc">세대수 오름차순</option>
+            <option value="hhldDesc">세대수 내림차순</option>
+          </select>
+          <button class="export" id="hExportBtn" onclick="exportHousingExcel()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg>
+            엑셀 다운로드
+          </button>
+        </div>
       </div>
       <div class="table-scroll">
         <table id="hTable">
@@ -834,6 +843,13 @@ function useAprCell(useAprDay){
   const cls = age>=40 ? " veryold" : age>=30 ? " old" : "";
   const ageTxt = age>=0 ? `<span class="age${cls}">${age}년</span>` : "";
   return `<span class="code">${esc(fmtUseApr(useAprDay))}</span>${ageTxt}`;
+}
+
+// 사용승인일 정렬용 숫자 키(YYYYMMDD). 미확인은 null
+function useAprDaySortKey(useAprDay){
+  const s = String(useAprDay || "").replace(/\D/g, "");
+  if(s.length === 8) return Number(s);
+  return null;
 }
 function clearAll(){
   document.getElementById("input").value="";
@@ -1729,6 +1745,8 @@ const H_MS = {};               // 다중선택
 const H_DUAL = {};             // 슬라이더
 let   H_FILTERS_READY = false;
 let   HRESULTS = [];           // 결과(단지 객체 배열)
+let   H_RESULTS_RAW = [];      // 정렬 전 원본 결과
+let   H_SORT = "default";      // 현재 정렬 기준
 const H_PAGE_SIZE = 100;       // 공동주택 관리 결과 페이지당 행 수
 let   H_PAGE = 1;
 const H_BASS_CACHE = {};       // kaptCode → 기본정보(lazy 캐시)
@@ -2103,7 +2121,7 @@ async function runHousingSearch(){
       matched.push(...filled);
     }
 
-    HRESULTS = matched;
+    H_RESULTS_RAW = matched.slice();
 
     const scanned = complexes.length;
     let diag = "";
@@ -2142,14 +2160,51 @@ function hUpdate(done,total,phase,isDone){
 
 function renderHousingResults(scanned, dongLabel){
   H_PAGE = 1;
-  const totHhld = HRESULTS.reduce((s,d)=>s+(d.hhld||0),0);
-  document.getElementById("hs-match").textContent = HRESULTS.length.toLocaleString("ko-KR");
+  const totHhld = H_RESULTS_RAW.reduce((s,d)=>s+(d.hhld||0),0);
+  document.getElementById("hs-match").textContent = H_RESULTS_RAW.length.toLocaleString("ko-KR");
   document.getElementById("hs-scan").textContent  = scanned.toLocaleString("ko-KR");
   document.getElementById("hs-hhld").textContent  = totHhld.toLocaleString("ko-KR");
   document.getElementById("hResDong").textContent = dongLabel;
   document.getElementById("hStats").style.display = "flex";
   document.getElementById("hResultArea").style.display = "block";
-  document.getElementById("hExportBtn").disabled = HRESULTS.length === 0;
+  document.getElementById("hExportBtn").disabled = H_RESULTS_RAW.length === 0;
+  applyHousingSort();
+}
+
+// 공동주택 관리 정렬 적용 (H_RESULTS_RAW 기준)
+function applyHousingSort(){
+  if(!H_RESULTS_RAW) return;
+  const sort = document.getElementById("hSort").value;
+  H_SORT = sort;
+  HRESULTS = H_RESULTS_RAW.slice();
+  switch(sort){
+    case "useAprAsc":
+      HRESULTS.sort((a,b)=>{
+        const av = useAprDaySortKey(a.useAprDay), bv = useAprDaySortKey(b.useAprDay);
+        if(av === null && bv === null) return 0;
+        if(av === null) return 1;
+        if(bv === null) return -1;
+        return av - bv;
+      });
+      break;
+    case "useAprDesc":
+      HRESULTS.sort((a,b)=>{
+        const av = useAprDaySortKey(a.useAprDay), bv = useAprDaySortKey(b.useAprDay);
+        if(av === null && bv === null) return 0;
+        if(av === null) return 1;
+        if(bv === null) return -1;
+        return bv - av;
+      });
+      break;
+    case "hhldAsc":
+      HRESULTS.sort((a,b)=>(a.hhld||0) - (b.hhld||0));
+      break;
+    case "hhldDesc":
+      HRESULTS.sort((a,b)=>(b.hhld||0) - (a.hhld||0));
+      break;
+  }
+  H_PAGE = 1;
+  closeHousingDetail();
   renderHousingPage();
 }
 
@@ -2359,7 +2414,8 @@ function clearHousing(){
   const cu = document.getElementById("h-yearunknown"); if(cu) cu.checked = true;
   document.getElementById("hResultArea").style.display="none";
   document.getElementById("hStats").style.display="none";
-  HRESULTS=[]; H_PAGE=1;
+  HRESULTS=[]; H_RESULTS_RAW=[]; H_PAGE=1; H_SORT="default";
+  const hSort = document.getElementById("hSort"); if(hSort) hSort.value = "default";
   const pg=document.getElementById("hPager"); if(pg) pg.innerHTML="";
   const body=document.getElementById("hResultBody"); if(body) body.innerHTML="";
   closeHousingDetail();
