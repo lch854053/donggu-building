@@ -1940,8 +1940,9 @@ async function runHousingSearch(){
     }
 
     // ── 1순위: 한국부동산원 단지목록 (메인)
+    let hSearchDone = false;
     let hProgress = { done: 0, total: 1 };
-    const updateHProgress = () => hUpdate(hProgress.done, hProgress.total, "");
+    const updateHProgress = () => hUpdate(hProgress.done, hProgress.total, "", hSearchDone);
     updateHProgress();
     const { complexes } = await fetchAptIdList();
     hProgress.done++; updateHProgress();
@@ -2110,6 +2111,8 @@ async function runHousingSearch(){
       diag = `조회 ${scanned}건 중 매칭 0건 (제외: 행정동 ${f_hdong}·종류 ${f_kind}·세대수 ${f_hhld}·연면적 ${f_area}·연도 ${f_year})`;
     }
 
+    hSearchDone = true;
+    updateHProgress();
     setTimeout(()=>{
       document.getElementById("hProgWrap").classList.remove("on");
       document.getElementById("hHint").textContent = diag;
@@ -2127,11 +2130,11 @@ async function runHousingSearch(){
   }
 }
 
-function hUpdate(done,total,phase){
+function hUpdate(done,total,phase,isDone){
   const pct = total ? Math.round(done/total*100) : 0;
   document.getElementById("hProgFill").style.width = pct+"%";
-  if(done>=total){
-    document.getElementById("hProgText").textContent = phase ? `${phase} 완료` : "조회 완료";
+  if(isDone){
+    document.getElementById("hProgText").textContent = "조회 완료";
   } else {
     document.getElementById("hProgText").textContent = phase ? `${phase} 조회 중 … ${done}/${total}` : `조회 중 … ${done}/${total}`;
   }
