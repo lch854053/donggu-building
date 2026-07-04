@@ -338,7 +338,7 @@
   .d-note{font-size:11px;color:var(--mute);font-family:var(--mono)}
   .d-empty{padding:22px;text-align:center;color:var(--mute);font-size:13px}
   .d-mini-scroll{border:1px solid var(--line);border-radius:6px}
-  table.d-mini{border-collapse:collapse;width:100%;font-size:12px}
+  table.d-mini{border-collapse:collapse;width:100%;table-layout:fixed;font-size:12px}
   table.d-mini thead th{background:var(--paper-2);color:var(--ink-soft);font-weight:600;padding:7px 9px;text-align:left;white-space:normal;font-size:11px}
   table.d-mini tbody td{padding:6px 9px;border-top:1px solid var(--line);white-space:normal;word-break:break-all}
   table.d-mini td.num,table.d-mini th.num{font-family:var(--mono);text-align:right;font-variant-numeric:tabular-nums}

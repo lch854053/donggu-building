@@ -1447,7 +1447,7 @@ async function loadSubtab(key, dongNm){
 
 function miniTable(cols, rows){
   if(!rows.length) return `<div class="d-empty">해당 정보가 없습니다</div>`;
-  const head = cols.map(c=>`<th class="${c.num?'num':''}">${esc(c.h)}</th>`).join("");
+  const head = cols.map(c=>`<th class="${c.num?'num':''}"${c.width?` style="width:${c.width}"`:''}>${esc(c.h)}</th>`).join("");
   const body = rows.map(r=>`<tr>${cols.map(c=>`<td class="${c.num?'num':''}">${c.f(r)}</td>`).join("")}</tr>`).join("");
   return `<div class="d-mini-scroll"><table class="d-mini"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
 }
@@ -2282,23 +2282,23 @@ function housingDetailHTML(b, d){
       ${d ? `
       <div class="d-sec-title">주차 · 안전 · 설비</div>
       ${miniTable([
-        {h:"총 주차대수", num:true, f:r=>{ const n=Number(r.kaptdPcnt||0)+Number(r.kaptdPcntu||0); return n>0?fmt(n):"-"; }},
-        {h:"주차(지상)", num:true, f:r=>cnt(r.kaptdPcnt)},
-        {h:"주차(지하)", num:true, f:r=>cnt(r.kaptdPcntu)},
-        {h:"건물구조", f:r=>plain(r.codeStr)},
-        {h:"승강기", num:true, f:r=>cnt(r.kaptdEcnt)},
-        {h:"CCTV", num:true, f:r=>cnt(r.kaptdCccnt)},
-        {h:"화재수신반", f:r=>plain(r.codeFalarm)},
-        {h:"급수방식", f:r=>plain(r.codeWsupply)},
+        {h:"총 주차대수", num:true, width:"12%", f:r=>{ const n=Number(r.kaptdPcnt||0)+Number(r.kaptdPcntu||0); return n>0?fmt(n):"-"; }},
+        {h:"주차(지상)", num:true, width:"12%", f:r=>cnt(r.kaptdPcnt)},
+        {h:"주차(지하)", num:true, width:"12%", f:r=>cnt(r.kaptdPcntu)},
+        {h:"건물구조", width:"28%", f:r=>plain(r.codeStr)},
+        {h:"승강기", num:true, width:"8%", f:r=>cnt(r.kaptdEcnt)},
+        {h:"CCTV", num:true, width:"8%", f:r=>cnt(r.kaptdCccnt)},
+        {h:"화재수신반", width:"10%", f:r=>plain(r.codeFalarm)},
+        {h:"급수방식", width:"10%", f:r=>plain(r.codeWsupply)},
       ], [d])}
 
       <div class="d-sec-title">관리 · 편의</div>
       ${miniTable([
-        {h:"일반관리", f:r=>plain(r.codeMgr)},
-        {h:"경비관리", f:r=>plain(r.codeSec)},
-        {h:"청소관리", f:r=>plain(r.codeClean)},
-        {h:"소독관리", f:r=>plain(r.codeDisinf)},
-        {h:"복리시설", f:r=>plain(r.welfareFacility)},
+        {h:"일반관리", width:"15%", f:r=>plain(r.codeMgr)},
+        {h:"경비관리", width:"15%", f:r=>plain(r.codeSec)},
+        {h:"청소관리", width:"15%", f:r=>plain(r.codeClean)},
+        {h:"소독관리", width:"15%", f:r=>plain(r.codeDisinf)},
+        {h:"복리시설", width:"40%", f:r=>plain(r.welfareFacility)},
       ], [d])}
       ` : '<div class="d-sec-title">상세</div><div class="d-empty">K-apt 상세정보(주차·건물구조·관리방식 등)가 없습니다.</div>'}
     </div>
