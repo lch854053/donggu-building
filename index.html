@@ -1963,10 +1963,13 @@ async function runHousingSearch(){
       hProgress.total += kaptList.length;
       updateHProgress();
       const kInfos = await runPool(kaptList, async (c)=>{
-        const [bass, dtl] = await Promise.all([
-          fetchAptBass(c.kaptCode),
-          fetchAptDtl(c.kaptCode)
-        ]);
+        // JSON에 사전 병합된 bass/dtl이 있으면 API 호출 생략
+        let bass = c.bass;
+        let dtl = c.dtl;
+        if(!bass) bass = await fetchAptBass(c.kaptCode);
+        if(!dtl) dtl = await fetchAptDtl(c.kaptCode);
+        if(bass) H_BASS_CACHE[c.kaptCode] = bass;
+        if(dtl) H_DTL_CACHE[c.kaptCode] = dtl;
         return bass ? { kaptCode:c.kaptCode, pnu:(c.pnu || pnuFromKapt(bass)), bass, dtl } : null;
       }, 5, ()=>{ hProgress.done++; updateHProgress(); });
       for(const k of kInfos){
