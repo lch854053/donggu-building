@@ -251,6 +251,7 @@
   .h-name:hover{text-decoration:underline}
   .h-name.active{color:var(--accent-deep);font-weight:600}
   .h-name-nolink{color:var(--ink-soft)}
+  .h-name-detail{color:var(--accent-deep);font-weight:700}
   /* 공동주택 관리 인라인 상세 카드 */
   tr.h-detail-row td{
     background:#f7f9fb;

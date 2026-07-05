@@ -2234,7 +2234,7 @@ function renderHousingPage(){
     tr.dataset.kapt = d.kaptCode || "";
     const clickable = d.kaptCode ? "clickable" : "";
     const nmCell = d.kaptCode
-      ? `<a href="#" class="h-name ${clickable}" data-dtl="${esc(d.kaptCode)}">${esc(d.complexNm)}</a>`
+      ? `<a href="#" class="h-name h-name-detail ${clickable}" data-dtl="${esc(d.kaptCode)}">${esc(d.complexNm)}</a>`
       : `<span class="h-name-nolink">${esc(d.complexNm)}</span>`;
     const ugFlr = d.ugrndFlr!=null ? d.ugrndFlr : "-";
     const grFlr = d.grndFlr!=null ? d.grndFlr : "-";
