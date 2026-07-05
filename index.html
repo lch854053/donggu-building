@@ -2098,6 +2098,7 @@ async function runHousingSearch(){
     }
 
     // ── 표제부 일괄 조인: PNU → 지번 → getBrTitleInfo
+    // 건축물대장에 등록되지 않은 단지는 결과에서 제외
     if(matched.length){
       hProgress.total += matched.length;
       updateHProgress();
@@ -2114,11 +2115,13 @@ async function runHousingSearch(){
         if(ok && Array.isArray(data.titles) && data.titles.length){
           return fillMissingFromBuilding(m, data.titles);
         }
-        return m;
+        // 조회 실패는 데이터 불확실 → 일단 유지, 대장 없음 확인 시만 제외
+        if(!ok) return m;
+        return { ...m, _exclude: true };
       }, 5, ()=>{ hProgress.done++; updateHProgress(); });
       // 복제본으로 matched 내용 교체 (원본 객체 직접 수정 회피)
       matched.length = 0;
-      matched.push(...filled);
+      matched.push(...filled.filter(m => !m._exclude));
     }
 
     H_RESULTS_RAW = matched.slice();
