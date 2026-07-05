@@ -1874,6 +1874,47 @@ function isGoodKakaoCategory(categoryName){
   return s.includes("주거시설") || s.includes("업무시설") || s.includes("사무실");
 }
 
+// 도로명주소에서 시·구 접두 제거 (예: '광주광역시 동구 중흥로 241' → '중흥로 241')
+function extractRoadCore(addr){
+  const s = stripParens(String(addr || "")).trim();
+  return s.replace(/^전남광주통합특별시\s+\S+\s+/, "")
+          .replace(/^광주광역시\s+\S+\s+/, "")
+          .replace(/^광주\s+\S+\s+/, "")
+          .trim();
+}
+
+// 종류 축약형을 표시용 종류명으로 변환
+// kind가 없으면 bad name에서 용도 키워드(오피스텔/업무시설/다세대 등)를 추출
+function displayKind(kind, complexNm){
+  const k = String(kind || "").trim();
+  if(k){
+    if(k === "다세대") return "다세대주택";
+    if(k === "연립") return "연립주택";
+    if(k === "아파트") return "아파트";
+    if(k === "오피스텔") return "오피스텔";
+    if(k === "도시형생활주택") return "도시형생활주택";
+    return k;
+  }
+  const name = String(complexNm || "");
+  if(name.includes("오피스텔")) return "오피스텔";
+  if(name.includes("업무시설")) return "업무시설";
+  if(name.includes("공동주택")) return "공동주택";
+  if(name.includes("다세대")) return "다세대주택";
+  if(name.includes("연립")) return "연립주택";
+  if(name.includes("아파트")) return "아파트";
+  return "주택";
+}
+
+// 실제 건물명을 찾지 못한 경우 '도로명 + 종류'로 표시 (예: 중흥로 241 다세대주택)
+function fallbackDisplayName(row){
+  if(!isBadComplexName(row.complexNm)) return row;
+  const road = extractRoadCore(row.doroAddr);
+  const kind = displayKind(row.kind, row.complexNm);
+  if(road && kind) return { ...row, complexNm: `${road} ${kind}` };
+  if(road) return { ...row, complexNm: road };
+  return row;
+}
+
 // K-apt 기본정보 → PNU(19자리) 추출. bjdCode(10)+대지'1'+번(4)+지(4)
 function pnuFromKapt(info){
   const bjd = String(info.bjdCode || "").padEnd(10,"0");
@@ -2075,7 +2116,7 @@ async function runHousingSearch(){
     }
 
     // ── 한국부동산원 단지 → 표시 객체로 변환 + K-apt 우선 병합 + 필터
-    const matched = [];
+    let matched = [];
     let f_hdong=0, f_kind=0, f_hhld=0, f_area=0, f_year=0;
     for(const c of complexes){
       const bHdong = hdongFromPnu(c.pnu, bjd2hd);
@@ -2231,6 +2272,9 @@ async function runHousingSearch(){
         if(fixedMap.has(matched[i].pnu)) matched[i] = fixedMap.get(matched[i].pnu);
       }
     }
+
+    // ── 실제 건물명을 찾지 못한 경우 '도로명 + 종류'로 표시
+    matched = matched.map(fallbackDisplayName);
 
     H_RESULTS_RAW = matched.slice();
 
