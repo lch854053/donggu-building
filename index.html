@@ -1792,6 +1792,19 @@ async function fetchAptIdList(){
   return { complexes:Array.isArray(data.complexes)?data.complexes:[], totalCount:Number(data.totalCount||0) };
 }
 
+// K-APT에 미등록된 단지를 수동으로 추가하기 위한 파일 로드
+// aptlist_extra_donggu.json 형식: [{ pnu, complexNm, doroAddr, adres, kind, hhld, dongCnt, grndFlr, ugrndFlr, useAprDay, tarea, parking }]
+async function fetchExtraAptList(){
+  try{
+    const r = await fetch("/aptlist_extra_donggu.json");
+    if(!r.ok) return [];
+    const list = await r.json();
+    return Array.isArray(list) ? list : [];
+  }catch(e){
+    return [];
+  }
+}
+
 // 2순위: K-apt 단지 기본정보 (PNU→kaptCode 사전 구축용)
 async function fetchAptBass(kaptCode){
   if(H_BASS_CACHE[kaptCode] !== undefined) return H_BASS_CACHE[kaptCode];
@@ -2275,6 +2288,42 @@ async function runHousingSearch(){
 
     // ── 실제 건물명을 찾지 못한 경우 '도로명 + 종류'로 표시
     matched = matched.map(fallbackDisplayName);
+
+    // ── K-APT에 미등록된 수동 추가 단지 병합
+    const extraList = await fetchExtraAptList();
+    const existingPnus = new Set(matched.map(m => m.pnu));
+    for(const e of extraList){
+      if(existingPnus.has(e.pnu)) continue;
+      const bHdong = hdongFromPnu(e.pnu, bjd2hd);
+      if(!isAll && bHdong !== hdong) continue;
+      const row = {
+        source: "수동추가",
+        pnu: e.pnu,
+        kaptCode: "",
+        complexNm: e.complexNm,
+        kind: e.kind || "",
+        bHdong,
+        adres: e.adres || "-",
+        doroAddr: e.doroAddr || "-",
+        hhld: Number(e.hhld || 0),
+        dongCnt: Number(e.dongCnt || 0),
+        area: e.area != null ? Number(e.area) : null,
+        tarea: e.tarea != null ? Number(e.tarea) : null,
+        grndFlr: e.grndFlr != null ? Number(e.grndFlr) : null,
+        ugrndFlr: e.ugrndFlr != null ? Number(e.ugrndFlr) : null,
+        parking: e.parking != null ? Number(e.parking) : null,
+        useAprDay: e.useAprDay || "-",
+        strct: "-"
+      };
+      if(selKind.length && !selKind.includes(row.kind)) continue;
+      if(row.hhld < hhldMin || row.hhld > hhldMax) continue;
+      if(row.tarea != null && (row.tarea < areaMin || row.tarea > areaMax)) continue;
+      const yr = extractYear(row.useAprDay);
+      if(yr === null){ if(!incUnknown) continue; }
+      else if(yearActive && (yr < yearMin || yr > yearMax)) continue;
+      matched.push(row);
+      existingPnus.add(e.pnu);
+    }
 
     H_RESULTS_RAW = matched.slice();
 
