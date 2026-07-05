@@ -1903,11 +1903,35 @@ function mergeKaptIntoRow(row, kaptData){
   return out;
 }
 
+// 부동산원 단지명이 행정동·지번·용도 문자열로 내려오는 경우를 감지
+function isBadComplexName(nm){
+  const s = String(nm || "").trim();
+  if(!s || s === "-") return true;
+  // 용도 문자열이 포함된 이름 (예: "불로동 1350000 제2종근린생활시설")
+  if(/제\d종근린생활시설|근린생활시설|판매시설|업무시설|공동주택/.test(s)) return true;
+  // "불로동 1350000" 형태
+  if(/^[가-힣]+동\s+\d+/.test(s)) return true;
+  // 지번 형태: (584-12), 584-12
+  if(/^\(\d+(?:-\d+)?\)$/.test(s) || /^\d+(?:-\d+)?$/.test(s)) return true;
+  return false;
+}
+
+function isGoodBuildingName(nm){
+  const s = String(nm || "").trim();
+  return s && s !== "-" && !isBadComplexName(s);
+}
+
 // 건축물대장 표제부로 K-apt가 채우지 못한 필드만 보강. 원본은 건드리지 않고 복제본 반환.
 function fillMissingFromBuilding(row, titles){
   if(!titles || !titles.length) return row;
   const out = { ...row };
   const rep = titles.find(t=>String(t.mainAtchGbCdNm||"").trim()==="주건축물") || titles[0];
+
+  // 부동산원/K-apt 단지명이 행정동·지번·용도 형태면 건축물대장 건물명으로 교정
+  if(isBadComplexName(out.complexNm) && isGoodBuildingName(rep.bldNm)){
+    out.complexNm = stripParens(rep.bldNm);
+  }
+
   if((out.doroAddr||"-") === "-" && rep.newPlatPlc)
     out.doroAddr = stripParens(rep.newPlatPlc);
   if(out.grndFlr == null && rep.grndFlrCnt != null)
