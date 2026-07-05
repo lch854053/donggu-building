@@ -168,6 +168,11 @@ function stripParens(s){
   return String(s||"").replace(/\s*\([^)]*\)\s*$/,"").replace(/\s*\([^)]*\)/g,"").trim();
 }
 
+// HTML 태그 제거 (네이버 Local Search API 결과 title에 <b> 등 포함될 수 있음)
+function stripHtml(s){
+  return String(s||"").replace(/<[^>]+>/g,"").trim();
+}
+
 // 표제부(동 1개) 정보 정리
 // 표제부 → 총주차 대수. totPkngCnt 가 비었으면 옥내/옥외 × 자주식/기계식 합산(폴백).
 // 지자체가 합계칸은 비우고 항목별만 입력하는 경우가 흔해 합산이 필요함. 0이면 0 반환.
