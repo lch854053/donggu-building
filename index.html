@@ -278,6 +278,7 @@
             <th>사용승인일</th>
             <th class="num">총 주차대수</th>
             <th class="num">연면적(㎡)</th>
+            <th>상태</th>
           </tr></thead>
           <tbody id="hResultBody"></tbody>
         </table>
@@ -2114,7 +2115,7 @@ async function runHousingSearch(){
         if(ok && Array.isArray(data.titles) && data.titles.length){
           return fillMissingFromBuilding(m, data.titles);
         }
-        return m;
+        return { ...m, regStatus: ok ? "no_registry" : "registry_error" };
       }, 5, ()=>{ hProgress.done++; updateHProgress(); });
       // 복제본으로 matched 내용 교체 (원본 객체 직접 수정 회피)
       matched.length = 0;
@@ -2235,6 +2236,11 @@ function renderHousingPage(){
       : `<span class="h-name-nolink">${esc(d.complexNm)}</span>`;
     const ugFlr = d.ugrndFlr!=null ? d.ugrndFlr : "-";
     const grFlr = d.grndFlr!=null ? d.grndFlr : "-";
+    const regBadge = d.regStatus === "no_registry"
+      ? '<span class="badge warn">대장 없음</span>'
+      : d.regStatus === "registry_error"
+        ? '<span class="badge err">조회 실패</span>'
+        : '<span class="badge ok">정상</span>';
     tr.innerHTML = `
       <td class="num">${offset + i + 1}</td>
       <td class="addr">${nmCell}</td>
@@ -2248,7 +2254,8 @@ function renderHousingPage(){
       <td class="num">${grFlr}</td>
       <td>${useAprCell(d.useAprDay)}</td>
       <td class="num">${d.parking!=null?fmt(d.parking):"-"}</td>
-      <td class="num">${d.tarea!=null?fmt(Math.round(d.tarea)):"-"}</td>`;
+      <td class="num">${d.tarea!=null?fmt(Math.round(d.tarea)):"-"}</td>
+      <td>${regBadge}</td>`;
     frag.appendChild(tr);
   });
   body.appendChild(frag);
@@ -2287,7 +2294,7 @@ async function openHousingDetail(kaptCode, row){
   // 상세 행을 바로 다음에 삽입
   const detailRow = document.createElement("tr");
   detailRow.className = "h-detail-row";
-  detailRow.innerHTML = `<td colspan="13"><div class="h-detail-loading">단지 상세정보 불러오는 중…</div></td>`;
+  detailRow.innerHTML = `<td colspan="14"><div class="h-detail-loading">단지 상세정보 불러오는 중…</div></td>`;
   row.after(detailRow);
 
   // 기본정보 + 상세정보 동시 조회
@@ -2375,6 +2382,11 @@ function renderHousingPager(total, pages, offset, shown){
 
 function exportHousingExcel(){
   const nowY = new Date().getFullYear();
+  const statusText = (s) => {
+    if(s === "no_registry") return "대장 없음";
+    if(s === "registry_error") return "조회 실패";
+    return "정상";
+  };
   const rows = HRESULTS.map((d)=>{
     const yr = extractYear(d.useAprDay);
     return {
@@ -2391,6 +2403,7 @@ function exportHousingExcel(){
       "총 주차대수": d.parking != null ? d.parking : "-",
       "연면적(㎡)": d.tarea != null ? Math.round(d.tarea) : "-",
       "경과연수": yr === null ? "미확인" : (nowY - yr),
+      "상태": statusText(d.regStatus),
       "난방방식": d.heat || "",
       "분양형태": d.saleType || "",
       "시공사": d.builder || "",
