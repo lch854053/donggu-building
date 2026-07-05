@@ -2232,6 +2232,7 @@ function renderHousingPage(){
     const tr = document.createElement("tr");
     tr.style.animationDelay = (Math.min(i,40)*0.01)+"s";
     tr.dataset.kapt = d.kaptCode || "";
+    if(d.kaptCode) tr.classList.add("h-has-detail");
     const clickable = d.kaptCode ? "clickable" : "";
     const nmCell = d.kaptCode
       ? `<a href="#" class="h-name ${clickable}" data-dtl="${esc(d.kaptCode)}">${esc(d.complexNm)}</a>`
