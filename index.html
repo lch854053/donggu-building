@@ -1851,17 +1851,27 @@ async function fetchKakaoComplexNm(pnu, doroAddr, adres){
   const { ok, data } = await api("kakao-local", { query });
   if(!ok || !Array.isArray(data.items) || !data.items.length) return null;
 
+  // 건물/주거/업무 시설 카테고리만 사용 (1층 상점·사무소 등 제외)
+  const goodItems = data.items.filter(i => isGoodKakaoCategory(i.categoryName));
+  if(!goodItems.length) return null;
+
   // 주소의 마지막 토큰(번지/건물번호)으로 일치 항목 우선, 없으면 첫 결과
   const tail = query.split(" ").filter(Boolean).pop();
-  const item = data.items.find(i => {
+  const item = goodItems.find(i => {
     const road = String(i.roadAddressName || "").trim();
     const jibun = String(i.addressName || "").trim();
     return (road && (road === raw || road.includes(tail))) ||
            (jibun && (jibun === raw || jibun.includes(tail)));
-  }) || data.items[0];
+  }) || goodItems[0];
 
   const placeName = stripHtml(item.placeName || "").trim();
   return isGoodBuildingName(placeName) ? placeName : null;
+}
+
+// 카카오 카테고리 중 건물/주거/업무 시설로 볼 수 있는 항목만 선별
+function isGoodKakaoCategory(categoryName){
+  const s = String(categoryName || "");
+  return s.includes("주거시설") || s.includes("업무시설") || s.includes("사무실");
 }
 
 // K-apt 기본정보 → PNU(19자리) 추출. bjdCode(10)+대지'1'+번(4)+지(4)
