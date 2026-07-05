@@ -1820,6 +1820,24 @@ async function fetchHsTpDongPage(bjd, pageNo){
   return {items:Array.isArray(data.items)?data.items:[], totalCount:Number(data.totalCount||0)};
 }
 
+// 특정 PNU의 건축인허가정보(getApHsTpInfo)에서 건물명(bldNm) 추출
+async function fetchArchpmsBldNm(pnu){
+  if(!pnu || pnu.length < 19) return null;
+  const sigunguCd = pnu.slice(0,5);
+  const bjdongCd  = pnu.slice(5,10);
+  const platGbCd  = pnu.slice(10,11) === "2" ? "1" : "0";
+  const bun       = pnu.slice(11,15);
+  const ji        = pnu.slice(15,19);
+  const { ok, data } = await api("archpms", {
+    op:"getApHsTpInfo",
+    sigunguCd, bjdongCd, platGbCd, bun, ji
+  });
+  if(!ok || !Array.isArray(data.items) || !data.items.length) return null;
+  const item = data.items.find(t => isGoodBuildingName(t.bldNm)) || data.items[0];
+  const bldNm = stripParens(item.bldNm || "");
+  return bldNm || null;
+}
+
 // K-apt 기본정보 → PNU(19자리) 추출. bjdCode(10)+대지'1'+번(4)+지(4)
 function pnuFromKapt(info){
   const bjd = String(info.bjdCode || "").padEnd(10,"0");
@@ -2146,6 +2164,21 @@ async function runHousingSearch(){
       // 복제본으로 matched 내용 교체 (원본 객체 직접 수정 회피)
       matched.length = 0;
       matched.push(...filled.filter(m => !m._exclude));
+    }
+
+    // ── 건축물대장에서 건물명을 찾지 못한 bad name 단지에 대해
+    //     건축인허가정보에서 bldNm을 추가로 조회
+    const badRows = matched.filter(m => isBadComplexName(m.complexNm));
+    if(badRows.length){
+      const fixed = await runPool(badRows, async (m)=>{
+        const bldNm = await fetchArchpmsBldNm(m.pnu);
+        if(bldNm) return { ...m, complexNm: bldNm };
+        return m;
+      }, 5, ()=>{});
+      const fixedMap = new Map(fixed.map(m => [m.pnu, m]));
+      for(let i=0; i<matched.length; i++){
+        if(fixedMap.has(matched[i].pnu)) matched[i] = fixedMap.get(matched[i].pnu);
+      }
     }
 
     H_RESULTS_RAW = matched.slice();
