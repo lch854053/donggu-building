@@ -83,6 +83,34 @@ K-APT에 등록되지 않은 오피스텔·다세대 등은 `aptlist_extra_dongg
 필수 항목: `pnu`, `complexNm`, `doroAddr`, `adres`, `kind`
 선택 항목: `hhld`, `dongCnt`, `grndFlr`, `ugrndFlr`, `useAprDay`, `tarea`, `parking`, `area`
 
+## 오피스텔 자동 발견
+
+오피스텔은 K-APT와 주택유형정보(`getApHsTpInfo`)에 등록되지 않는 경우가 많아(예: 금남로 유탑유블레스 원시티) 수동 등록에 의존했습니다. `scripts/update-officetel.mjs`는 건축인허가정보 기반으로 오피스텔을 자동 식별해 `aptlist_extra_donggu.json`을 갱신합니다.
+
+### 판별 로직 (엄격 임계값)
+
+순수 업무시설(사옥)과 오피스텔(주거용 업무시설)을 구분하기 위해 2단계 신호 조합을 사용합니다.
+
+1. **1차 후보**: 건축인허가 기본개요(`getApBasisOulnInfo`)에서 `mainPurpsCdNm="업무시설"` AND `hoCnt ≥ 50`
+2. **2차 확정**: 층별개요(`getApFlrOulnInfo`)의 오피스텔 용도코드(`mainPurpsCd="14202"`) 비중 `≥ 50%`
+3. 확정 단지는 표제부(`getBrTitleInfo`)에서 도로명주소·층수·주차대수 보강
+
+### 보존 병합
+
+수동으로 등록한 기존 항목은 PNU가 같으면 **기존 값을 우선**합니다. 스크립트는 신규 오피스텔 추가와 기존 항목의 빈 필드 채우기만 수행하므로, 직접 입력한 정확한 값이 덮어씌워지지 않습니다.
+
+### 실행
+
+```bash
+# 직접 호출 (공공데이터포털 키)
+ARCH_SERVICE_KEY=YOUR_KEY npm run update-officetel
+
+# 프록시 모드 (로컬 서버)
+BASE_URL=http://localhost:3000 npm run update-officetel
+```
+
+GitHub Actions(`update-kapt.yml`)가 매주 일요일 K-APT 갱신 후 자동 실행하며, 변경 시 `aptlist_extra_donggu.json`을 커밋합니다. 실행 로그에 각 후보의 오피스텔 비중·탈락 사유가 표시돼 오탐 여부를 검증할 수 있습니다.
+
 ## 시군구코드 시차 대응 (동계로 68 등)
 
 2024년 전남광주통합특별시 출범으로 동구의 시군구코드가 두 체계로 나뉘었습니다.
