@@ -1902,6 +1902,81 @@ async function fetchKakaoComplexNm(pnu, doroAddr, adres){
   return isGoodBuildingName(placeName) ? placeName : null;
 }
 
+// 주택인허가정보로 공동주택 상세카드 보강 (2단계)
+// K-APT(bass/dtl)가 채우지 못한 필드를 HsPms 관리공동형별개요·주차장으로 채운다.
+//   - 관리공동형별개요(getHpMgmCoopTpOulnInfo): 사업주체·난방·관리방식·층수·승강기·연면적 등
+//   - 주차장(getHpPklotInfo): 옥내/옥외 × 자주/기계식 주차대수
+// 단지 단위 합산을 위해 동별·형별 여러 행을 모두 더한다(동이 여럿이어도 단지명/사업주체는 동일).
+const H_HSPMS_CACHE = {};   // pnu → { mgm, pklot } (lazy 캐시)
+async function fetchHspmsComplex(pnu){
+  if(!pnu || pnu.length < 19) return null;
+  if(H_HSPMS_CACHE[pnu] !== undefined) return H_HSPMS_CACHE[pnu];
+  const sigunguCd = pnu.slice(0,5);
+  const bjdongCd  = pnu.slice(5,10);
+  const platGbCd  = pnu.slice(10,11) === "2" ? "1" : "0";
+  const bun       = pnu.slice(11,15);
+  const ji        = pnu.slice(15,19);
+  const base = { sigunguCd, bjdongCd, platGbCd, bun, ji };
+  // 동일 단지의 여러 형별·동을 합산하기 위해 전 페이지 수집
+  async function fetchAll(op){
+    const all=[]; let page=1; const MAXP=10;
+    while(page<=MAXP){
+      const { ok, data } = await api("hspms", { op, ...base, pageNo:String(page), numOfRows:"100" });
+      if(!ok) return { items:[], error:true };
+      const items = Array.isArray(data.items) ? data.items : [];
+      all.push(...items);
+      const tc = Number(data.totalCount||0);
+      if(items.length<100 || all.length>=tc) break;
+      page++;
+    }
+    return { items: all };
+  }
+  const [mgmRes, pklotRes] = await Promise.all([
+    fetchAll("getHpMgmCoopTpOulnInfo"),
+    fetchAll("getHpPklotInfo"),
+  ]);
+  const out = { mgm: null, pklot: null };
+  if(mgmRes.items.length){
+    // 단지 대표값: 대부분 단지 단위 값이 형별(평형) 행마다 동일하게 반복 → 첫 유효 행(대표값) 사용.
+    // 단 세대수(hhldCnt)만 형별 평형으로 분할돼 들어오므로 합산. 최고층수는 최대값.
+    const rows = mgmRes.items;
+    const rep = rows.find(r => String(r.cmplxNm||"").trim()) || rows[0];
+    const sumNum = (sel) => rows.reduce((s,r)=>s + (Number(sel(r))||0), 0);
+    out.mgm = {
+      cmplxNm:     String(rep?.cmplxNm||"").trim(),
+      bizBodyNm:   String(rep?.bizBodyNm||"").trim(),      // 사업주체(시공사)
+      heatMthdCdNm:String(rep?.heatMthdCdNm||"").trim(),   // 난방방식
+      useFuel:     String(rep?.useFuel||"").trim(),         // 사용연료
+      mgmMthdCdNm: String(rep?.mgmMthdCdNm||"").trim(),     // 관리방식
+      hwayModeCdNm:String(rep?.hwayModeCdNm||"").trim(),    // 복도형식
+      hsStyleGbCdNm:String(rep?.hsStyleGbCdNm||"").trim(),  // 주택형태
+      strctCdNm:   String(rep?.strctCdNm||"").trim(),       // 구조
+      maxFlrCnt:   Math.max(0, ...rows.map(r=>Number(r.maxFlrCnt)||0)),   // 최고층수(형별 행마다 동일 → 최대)
+      mainBldCnt:  Number(rep?.mainBldCnt||0),                            // 동수(형별 행마다 동일 → 대표값)
+      hhldCnt:     sumNum(r=>r.hhldCnt),                    // 세대수(형별 평형 분할 → 합산)
+      elvtRideUse: Number(rep?.elvtRideUse||0),              // 승용승강기(형별 행마다 동일 → 대표값)
+      elvtEmgen:   Number(rep?.elvtEmgen||0),                // 비상승강기(형별 행마다 동일 → 대표값)
+      platArea:    Number(rep?.platArea||0),                 // 대지면적(형별 행마다 동일 → 대표값)
+      archArea:    Number(rep?.archArea||0),                 // 건축면적(형별 행마다 동일 → 대표값)
+      totArea:     Number(rep?.totArea||0),                  // 연면적(형별 행마다 동일 → 대표값)
+    };
+  }
+  if(pklotRes.items.length){
+    const rows = pklotRes.items;
+    const sumNum = (sel) => rows.reduce((s,r)=>s + (Number(sel(r))||0), 0);
+    out.pklot = {
+      indrAutoUtcnt:  sumNum(r=>r.indrAutoUtcnt),   // 옥내 자주식
+      oudrAutoUtcnt:  sumNum(r=>r.oudrAutoUtcnt),   // 옥외 자주식
+      indrMechUtcnt:  sumNum(r=>r.indrMechUtcnt),   // 옥내 기계식
+      oudrMechUtcnt:  sumNum(r=>r.oudrMechUtcnt),   // 옥외 기계식
+      neigAutoUtcnt:  sumNum(r=>r.neigAutoUtcnt),   // 인근 자주식
+      neigMechUtcnt:  sumNum(r=>r.neigMechUtcnt),   // 인근 기계식
+    };
+  }
+  H_HSPMS_CACHE[pnu] = out.mgm || out.pklot ? out : null;
+  return H_HSPMS_CACHE[pnu];
+}
+
 // 카카오 카테고리 중 건물/주거/업무 시설로 볼 수 있는 항목만 선별
 function isGoodKakaoCategory(categoryName){
   const s = String(categoryName || "");
@@ -2471,7 +2546,7 @@ function renderHousingPage(){
     tr.dataset.kapt = d.kaptCode || "";
     const clickable = d.kaptCode ? "clickable" : "";
     const nmCell = d.kaptCode
-      ? `<a href="#" class="h-name h-name-detail ${clickable}" data-dtl="${esc(d.kaptCode)}">${esc(d.complexNm)}</a>`
+      ? `<a href="#" class="h-name h-name-detail ${clickable}" data-dtl="${esc(d.kaptCode)}" data-pnu="${esc(d.pnu||"")}">${esc(d.complexNm)}</a>`
       : `<span class="h-name-nolink">${esc(d.complexNm)}</span>`;
     const ugFlr = d.ugrndFlr!=null ? d.ugrndFlr : "-";
     const grFlr = d.grndFlr!=null ? d.grndFlr : "-";
@@ -2494,7 +2569,7 @@ function renderHousingPage(){
   body.appendChild(frag);
   // 공동주택명 클릭 → 같은 행 바로 아래에 인라인 상세 카드 펼치기
   body.querySelectorAll("[data-dtl]").forEach(a=>{
-    a.addEventListener("click", e=>{ e.preventDefault(); openHousingDetail(a.dataset.dtl, a.closest("tr")); });
+    a.addEventListener("click", e=>{ e.preventDefault(); openHousingDetail(a.dataset.dtl, a.dataset.pnu, a.closest("tr")); });
   });
   renderHousingPager(total, pages, offset, slice.length);
 }
@@ -2506,7 +2581,7 @@ function closeHousingDetail(){
 }
 
 // 공동주택명 클릭 → 같은 행 바로 아래에 인라인 상세 카드 표시
-async function openHousingDetail(kaptCode, row){
+async function openHousingDetail(kaptCode, pnu, row){
   if(!row) return;
 
   // 같은 단지 재클릭 시 토글 닫기
@@ -2530,62 +2605,94 @@ async function openHousingDetail(kaptCode, row){
   detailRow.innerHTML = `<td colspan="13"><div class="h-detail-loading">단지 상세정보 불러오는 중…</div></td>`;
   row.after(detailRow);
 
-  // 기본정보 + 상세정보 동시 조회
-  const [bass, dtl] = await Promise.all([ fetchAptBass(kaptCode), fetchAptDtl(kaptCode) ]);
+  // 기본정보 + 상세정보 + 주택인허가 보강 동시 조회
+  const [bass, dtl, hsp] = await Promise.all([
+    fetchAptBass(kaptCode),
+    fetchAptDtl(kaptCode),
+    fetchHspmsComplex(pnu),     // 2단계: K-APT 빈값 보강
+  ]);
   const cell = detailRow.querySelector("td");
-  if(!bass){ cell.innerHTML = '<div class="d-empty">상세정보를 불러오지 못했습니다.</div>'; detailRow.scrollIntoView({ block:"nearest", behavior:"smooth" }); return; }
-  cell.innerHTML = housingDetailHTML(bass, dtl);
+  if(!bass && !hsp){ cell.innerHTML = '<div class="d-empty">상세정보를 불러오지 못했습니다.</div>'; detailRow.scrollIntoView({ block:"nearest", behavior:"smooth" }); return; }
+  cell.innerHTML = housingDetailHTML(bass, dtl, hsp);
   detailRow.scrollIntoView({ block:"nearest", behavior:"smooth" });
 }
 
-function housingDetailHTML(b, d){
+function housingDetailHTML(b, d, h){
   const cnt = v => { const n = Number(v||0); return n>0 ? fmt(n) : "-"; };
   const plain = v => { const s = String(v||"").trim(); return s ? esc(s) : "-"; };
-  const parking = d ? (Number(d.kaptdPcnt||0) + Number(d.kaptdPcntu||0)) : 0;
-  const flr = b.kaptTopFloor!=null ? `지하 ${b.kaptBaseFloor||0} / 지상 ${b.kaptTopFloor}층` : "-";
-  const structure = d ? plain(d.codeStr) : "-";
+  // 빈값 우선 선택: 첫 인자(비어있으면) 두 번째 인자 사용. K-APT 우선, 빈값 시 HsPms 보강.
+  const pick = (kap, hp) => { const s = String(kap ?? "").trim(); return s && s!=="-" && s!=="0" ? esc(s) : plain(hp); };
+  const mgm = h?.mgm || null;
+  const pk  = h?.pklot || null;
+  // K-APT 주차(지상 kaptdPcnt/지하 kaptdPcntu)가 비어있으면 HsPms 합산으로 폴백
+  const kaptParkGround = Number(d?.kaptdPcnt||0);
+  const kaptParkUnder  = Number(d?.kaptdPcntu||0);
+  const parkGround = kaptParkGround || pk?.indrAutoUtcnt || 0;   // 옥내 자주식을 '지하(옥내)'로 표현
+  const parkUnder  = kaptParkUnder  || pk?.oudrAutoUtcnt || 0;   // 옥외 자주식을 '지상(옥외)'로 표현
+  const kaptParkTot = kaptParkGround + kaptParkUnder;
+  // HsPms 주차 총합(자주식+기계식 전부)
+  const hspParkTot = pk ? (pk.indrAutoUtcnt + pk.oudrAutoUtcnt + pk.indrMechUtcnt + pk.oudrMechUtcnt) : 0;
+  // K-APT 주차가 비어있으면(0) HsPms 합산으로 폴백
+  const parking = kaptParkTot || hspParkTot || 0;
+  const kaptFlrOk = b?.kaptTopFloor != null;
+  const flr = kaptFlrOk ? `지하 ${b.kaptBaseFloor||0} / 지상 ${b.kaptTopFloor}층`
+           : (mgm?.maxFlrCnt ? `지상 ${mgm.maxFlrCnt}층 (주택인허가)` : "-");
+  const structure = d ? pick(d.codeStr, mgm?.strctCdNm) : (mgm ? plain(mgm.strctCdNm) : "-");
+  const heat = pick(b?.codeHeatNm, mgm?.heatMthdCdNm);
+  const builder = pick(b?.kaptBcompany, mgm?.bizBodyNm);
+  const mgr = pick(b?.codeMgrNm, mgm?.mgmMthdCdNm);
+  // 승강기: K-APT kaptdEcnt(총 승강기) 우선, 없으면 HsPms 승용+비상
+  const kaptElvt = d ? Number(d.kaptdEcnt||0) : 0;
+  const hspElvt = mgm ? (Number(mgm.elvtRideUse||0) + Number(mgm.elvtEmgen||0)) : 0;
+  const elvt = kaptElvt || hspElvt;
   return `
   <div class="card d-card">
     <div class="card-head">
-      <h2><span class="num-tag">단지</span>${esc(b.kaptName)} <span class="badge ok">${esc(b.codeAptNm||"")}</span></h2>
+      <h2><span class="num-tag">단지</span>${esc(b?.kaptName || mgm?.cmplxNm || "-")} <span class="badge ok">${esc(b?.codeAptNm||"")}</span></h2>
       <button class="ghost" onclick="closeHousingDetail()">닫기</button>
     </div>
     <div class="card-body">
-      <div class="d-addr">${esc(b.doroJuso||b.kaptAddr||"-")}</div>
-      <div class="d-addr sub">${esc(b.kaptAddr||"-")}</div>
+      <div class="d-addr">${esc(b?.doroJuso||b?.kaptAddr||"-")}</div>
+      <div class="d-addr sub">${esc(b?.kaptAddr||"-")}</div>
 
       <div class="d-sec-title">규모 · 시공</div>
       <div class="d-kv">
-        <div class="k">세대수</div><div class="v">${fmt(b.hoCnt||b.kaptdaCnt)} 세대</div>
-        <div class="k">동수</div><div class="v">${fmt(b.kaptDongCnt)} 동</div>
+        <div class="k">세대수</div><div class="v">${fmt(b?.hoCnt||b?.kaptdaCnt||mgm?.hhldCnt)} 세대</div>
+        <div class="k">동수</div><div class="v">${fmt(b?.kaptDongCnt||mgm?.mainBldCnt)} 동</div>
         <div class="k">층수</div><div class="v">${flr}</div>
-        <div class="k">연면적</div><div class="v">${fmt(b.kaptTarea)} ㎡</div>
-        <div class="k">난방방식</div><div class="v">${plain(b.codeHeatNm)}</div>
-        <div class="k">분양형태</div><div class="v">${plain(b.codeSaleNm)}</div>
-        <div class="k">시공사</div><div class="v">${plain(b.kaptBcompany)}</div>
-        <div class="k">시행사</div><div class="v">${plain(b.kaptAcompany)}</div>
-        <div class="k">사용승인일</div><div class="v">${useAprCell(b.kaptUsedate)}</div>
-        <div class="k">관리방식</div><div class="v">${plain(b.codeMgrNm)}</div>
+        <div class="k">연면적</div><div class="v">${fmt(b?.kaptTarea||mgm?.totArea)} ㎡</div>
+        <div class="k">난방방식</div><div class="v">${heat}</div>
+        <div class="k">분양형태</div><div class="v">${plain(b?.codeSaleNm)}</div>
+        <div class="k">시공사</div><div class="v">${builder}</div>
+        <div class="k">시행사</div><div class="v">${plain(b?.kaptAcompany)}</div>
+        <div class="k">사용승인일</div><div class="v">${useAprCell(b?.kaptUsedate)}</div>
+        <div class="k">관리방식</div><div class="v">${mgr}</div>
+        ${mgm?.hwayModeCdNm ? `<div class="k">복도형식</div><div class="v">${plain(mgm.hwayModeCdNm)}</div>` : ""}
+        ${mgm?.useFuel ? `<div class="k">사용연료</div><div class="v">${plain(mgm.useFuel)}</div>` : ""}
       </div>
 
       <div class="d-sec-title">관리사무소</div>
       <div class="d-kv">
-        <div class="k">전화</div><div class="v">${plain(b.kaptTel)}</div>
-        <div class="k">팩스</div><div class="v">${plain(b.kaptFax)}</div>
+        <div class="k">전화</div><div class="v">${plain(b?.kaptTel)}</div>
+        <div class="k">팩스</div><div class="v">${plain(b?.kaptFax)}</div>
       </div>
 
-      ${d ? `
+      ${(d || pk) ? `
       <div class="d-sec-title">주차 · 안전 · 설비</div>
       ${miniTable([
-        {h:"총 주차대수", num:true, width:"12%", f:r=>{ const n=Number(r.kaptdPcnt||0)+Number(r.kaptdPcntu||0); return n>0?fmt(n):"-"; }},
-        {h:"주차(지상)", num:true, width:"12%", f:r=>cnt(r.kaptdPcnt)},
-        {h:"주차(지하)", num:true, width:"12%", f:r=>cnt(r.kaptdPcntu)},
-        {h:"건물구조", width:"28%", f:r=>plain(r.codeStr)},
-        {h:"승강기", num:true, width:"8%", f:r=>cnt(r.kaptdEcnt)},
-        {h:"CCTV", num:true, width:"8%", f:r=>cnt(r.kaptdCccnt)},
-        {h:"화재수신반", width:"10%", f:r=>plain(r.codeFalarm)},
-        {h:"급수방식", width:"10%", f:r=>plain(r.codeWsupply)},
-      ], [d])}
+        {h:"총 주차대수", num:true, width:"12%", f:r=>{ const n=Number(r.ptot); return n>0?fmt(n):"-"; }},
+        {h:"주차(지상)", num:true, width:"12%", f:r=>cnt(r.pgrnd)},
+        {h:"주차(지하)", num:true, width:"12%", f:r=>cnt(r.pund)},
+        {h:"건물구조", width:"28%", f:r=>plain(r.strct)},
+        {h:"승강기", num:true, width:"8%", f:r=>cnt(r.elvt)},
+        {h:"CCTV", num:true, width:"8%", f:r=>cnt(r.cctv)},
+        {h:"화재수신반", width:"10%", f:r=>plain(r.falarm)},
+        {h:"급수방식", width:"10%", f:r=>plain(r.wsup)},
+      ], [{
+        ptot: parking, pgrnd: parkGround, pund: parkUnder,
+        strct: structure, elvt, cctv: d?.kaptdCccnt, falarm: d?.codeFalarm, wsup: d?.codeWsupply,
+      }])}
+      ${pk && pk.indrMechUtcnt+pk.oudrMechUtcnt > 0 ? `<div class="d-map-cap">기계식 주차: 옥내 ${cnt(pk.indrMechUtcnt)} · 옥외 ${cnt(pk.oudrMechUtcnt)} (주택인허가)</div>` : ""}
 
       <div class="d-sec-title">관리 · 편의</div>
       ${miniTable([
@@ -2594,8 +2701,8 @@ function housingDetailHTML(b, d){
         {h:"청소관리", width:"10%", f:r=>plain(r.codeClean)},
         {h:"소독관리", width:"10%", f:r=>plain(r.codeDisinf)},
         {h:"복리시설", width:"60%", f:r=>plain(r.welfareFacility)},
-      ], [d])}
-      ` : '<div class="d-sec-title">상세</div><div class="d-empty">K-apt 상세정보(주차·건물구조·관리방식 등)가 없습니다.</div>'}
+      ], [d || {}])}
+      ` : '<div class="d-sec-title">상세</div><div class="d-empty">상세정보(주차·건물구조·관리방식 등)가 없습니다.</div>'}
     </div>
   </div>`;
 }
@@ -2661,6 +2768,7 @@ function clearHousing(){
   closeHousingDetail();
   Object.keys(H_BASS_CACHE).forEach(k=>delete H_BASS_CACHE[k]);
   Object.keys(H_DTL_CACHE).forEach(k=>delete H_DTL_CACHE[k]);
+  Object.keys(H_HSPMS_CACHE).forEach(k=>delete H_HSPMS_CACHE[k]);
 }
 
 
