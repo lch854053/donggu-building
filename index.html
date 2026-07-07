@@ -1851,8 +1851,29 @@ async function fetchArchpmsBldNm(pnu){
   return bldNm || null;
 }
 
+// 특정 PNU의 주택인허가정보(getHpDongOulnInfo 동별개요)에서 건물명(bldNm) 추출
+// 건축인허가(getApHsTpInfo)로 해결되지 않은 bad name에 대한 3차 보정.
+// 동별개요는 동 단위라 단지명(bldNm)이 가장 일관되게 채워짐(동별개요를 2차로 쓰는 이유).
+async function fetchHspmsBldNm(pnu){
+  if(!pnu || pnu.length < 19) return null;
+  const sigunguCd = pnu.slice(0,5);
+  const bjdongCd  = pnu.slice(5,10);
+  const platGbCd  = pnu.slice(10,11) === "2" ? "1" : "0";
+  const bun       = pnu.slice(11,15);
+  const ji        = pnu.slice(15,19);
+  const { ok, data } = await api("hspms", {
+    op:"getHpDongOulnInfo",
+    sigunguCd, bjdongCd, platGbCd, bun, ji
+  });
+  if(!ok || !Array.isArray(data.items) || !data.items.length) return null;
+  // isGoodBuildingName 통과 항목 우선, 없으면 첫 항목. 단 공백은 제외.
+  const item = data.items.find(t => isGoodBuildingName(t.bldNm)) || data.items[0];
+  const bldNm = stripParens(item.bldNm || "");
+  return isGoodBuildingName(bldNm) ? bldNm : null;
+}
+
 // 카카오 로컬 키워드 검색 API로 실제 상호/건물명 조회
-// 1, 2차 보정(건축물대장/건축인허가)으로도 해결되지 않은 bad name에 대해 3차 폴백으로 사용
+// 1~3차 보정(건축물대장/건축인허가/주택인허가)으로도 해결되지 않은 bad name에 대해 4차 폴백으로 사용
 async function fetchKakaoComplexNm(pnu, doroAddr, adres){
   if(!pnu || pnu.length < 19) return null;
   const raw = String(doroAddr || adres || "").trim();
@@ -2272,6 +2293,21 @@ async function runHousingSearch(){
     }
 
     // ── 건축인허가정보에서도 건물명을 찾지 못한 bad name 단지에 대해
+    //     주택인허가정보(getHpDongOulnInfo 동별개요)에서 bldNm을 추가로 조회
+    const stillBadAfterArch = matched.filter(m => isBadComplexName(m.complexNm));
+    if(stillBadAfterArch.length){
+      const fixed = await runPool(stillBadAfterArch, async (m)=>{
+        const bldNm = await fetchHspmsBldNm(m.pnu);
+        if(bldNm) return { ...m, complexNm: bldNm };
+        return m;
+      }, 5, ()=>{});
+      const fixedMap = new Map(fixed.map(m => [m.pnu, m]));
+      for(let i=0; i<matched.length; i++){
+        if(fixedMap.has(matched[i].pnu)) matched[i] = fixedMap.get(matched[i].pnu);
+      }
+    }
+
+    // ── 주택인허가정보에서도 건물명을 찾지 못한 bad name 단지에 대해
     //     카카오 로컬 키워드 검색 API로 실제 상호/건물명 추가 조회
     const stillBadRows = matched.filter(m => isBadComplexName(m.complexNm));
     if(stillBadRows.length){
