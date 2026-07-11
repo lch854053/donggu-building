@@ -6,13 +6,9 @@
   "description": "광주광역시 동구 건축물대장 일괄조회 (juso 변환 + 건축HUB)",
   "scripts": {
     "update-kapt": "node scripts/update-kapt-data.mjs",
-    "update-odcloud": "node scripts/update-odcloud-apt.mjs",
-    "update-vacant": "node scripts/update-vacant.mjs"
+    "update-odcloud": "node scripts/update-odcloud-apt.mjs"
   },
   "engines": {
     "node": ">=18"
-  },
-  "dependencies": {
-    "proj4": "^2.20.9"
   }
 }
