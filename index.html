@@ -1870,6 +1870,19 @@ async function fetchExtraAptList(){
   }
 }
 
+// odcloud 공동주택현황 파일 로드 (PNU 보강된 오래된 소형 단지/맨션 보충)
+// aptlist_odcloud_donggu.json 형식: [{ pnu, complexNm, doroAddr, adres, kind, hhld, useAprDay, officeTel }]
+async function fetchOdcloudAptList(){
+  try{
+    const r = await fetch("/aptlist_odcloud_donggu.json");
+    if(!r.ok) return [];
+    const list = await r.json();
+    return Array.isArray(list) ? list : [];
+  }catch(e){
+    return [];
+  }
+}
+
 // 2순위: K-apt 단지 기본정보 (PNU→kaptCode 사전 구축용)
 async function fetchAptBass(kaptCode){
   if(H_BASS_CACHE[kaptCode] !== undefined) return H_BASS_CACHE[kaptCode];
@@ -2527,6 +2540,41 @@ async function runHousingSearch(){
       if(selKind.length && !selKind.includes(row.kind)) continue;
       if(row.hhld < hhldMin || row.hhld > hhldMax) continue;
       if(row.tarea != null && (row.tarea < areaMin || row.tarea > areaMax)) continue;
+      const yr = extractYear(row.useAprDay);
+      if(yr === null){ if(!incUnknown) continue; }
+      else if(yearActive && (yr < yearMin || yr > yearMax)) continue;
+      matched.push(row);
+      existingPnus.add(e.pnu);
+    }
+
+    // ── odcloud 공동주택현황 데이터 병합
+    const odcloudList = await fetchOdcloudAptList();
+    for(const e of odcloudList){
+      if(existingPnus.has(e.pnu)) continue;
+      const bHdong = hdongFromPnu(e.pnu, bjd2hd);
+      if(!isAll && bHdong !== hdong) continue;
+      const row = {
+        source: "odcloud",
+        pnu: e.pnu,
+        kaptCode: "",
+        complexNm: e.complexNm,
+        kind: e.kind || "아파트",
+        bHdong,
+        adres: e.adres || "-",
+        doroAddr: e.doroAddr || "-",
+        hhld: Number(e.hhld || 0),
+        dongCnt: 0,
+        area: null,
+        tarea: null,
+        grndFlr: null,
+        ugrndFlr: null,
+        parking: null,
+        useAprDay: e.useAprDay || "-",
+        officeTel: e.officeTel || "",
+        strct: "-"
+      };
+      if(selKind.length && !selKind.includes(row.kind)) continue;
+      if(row.hhld < hhldMin || row.hhld > hhldMax) continue;
       const yr = extractYear(row.useAprDay);
       if(yr === null){ if(!incUnknown) continue; }
       else if(yearActive && (yr < yearMin || yr > yearMax)) continue;

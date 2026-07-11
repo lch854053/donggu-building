@@ -1,0 +1,38 @@
+name: Update Odcloud Apartment Data
+
+on:
+  schedule:
+    - cron: '0 0 1 * *'  # 매월 1일 00:00 UTC
+  workflow_dispatch:      # 수동 실행도 가능
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Update odcloud apartment data
+        run: npm run update-odcloud
+        env:
+          ODCLOUD_SERVICE_KEY: ${{ secrets.ODCLOUD_SERVICE_KEY }}
+          JUSO_CONFM_KEY: ${{ secrets.JUSO_CONFM_KEY }}
+
+      - name: Commit and push if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if [ -n "$(git status --porcelain)" ]; then
+            git add aptlist_odcloud_donggu.json
+            git commit -m "chore: monthly odcloud apartment data update"
+            git push
+          else
+            echo "No changes to commit"
+          fi
