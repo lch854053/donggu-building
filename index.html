@@ -378,7 +378,7 @@
       &ensp;· 행정안전부 : 도로명주소 API (실시간)<br>
       &ensp;· 국토교통부 : 건축물대장 API (매월), 건축인허가정보 API (매월), V-World API (실시간), 공동주택 API (실시간)<br>
       &ensp;· 한국부동산원 : 공동주택 식별정보 API (실시간)<br>
-    - 마지막 업데이트 : 2026. 7. 3.<br>
+    - 마지막 업데이트 : 2026. 7. 11.<br>
     - 오류 제보 및 기능 추가 문의 : ch4834@korea.kr
   </div>
 </div>
@@ -389,9 +389,13 @@
    1. 공통 상수 + 데이터 레이어 (순수 변환 로직은 transform.js)
    ============================================================ */
 
-// 동구 시군구코드 — 전 탭의 building 호출·필터에서 공유
+// 동구 시군구코드 — 전 탭의 building 호출·필터에서 공유.
+// 건축HUB(국토부)는 아직 구 코드 "29110"(광주광역시 동구)만 쓰지만,
+// VWorld 연속지적도는 2024년 출범한 "12210"(전남광주통합특별시 동구)을 반환한다.
+// 두 코드는 같은 동구이므로 둘 다 동구로 인식한다.
 const SIGUNGU = "29110";
-function isDonggu(p){ return p && p.sigunguCd === SIGUNGU; }
+const SIGUNGU_NEW = "12210";   // VWorld(연속지적도) 기준 전남광주통합특별시 동구
+function isDonggu(p){ return p && (p.sigunguCd === SIGUNGU || p.sigunguCd === SIGUNGU_NEW); }
 
 // 모든 /api 프록시 호출 공통 래퍼.
 //   성공        : { ok:true,  status, data }
@@ -488,13 +492,17 @@ async function parcelGeomFromPNU(pnu){
 }
 
 // 주소 → (좌표 → PNU) → 건축HUB 파라미터  [juso 실패 시 폴백 경로]
+// VWorld(연속지적도)는 시군구코드로 "12210"(전남광주통합특별시 동구)을 주지만,
+// 건축HUB(국토부)는 오직 구 코드 "29110"만 인식한다. 두 코드는 같은 동구이므로
+// 지번(bjdongCd/bun/ji)은 그대로 쓰되 sigunguCd 는 건축HUB용 29110으로 정규화한다.
+// (이 시차 문제로 juso 지번이 달라진 동계로 68 = 계림동 1842 가 폴백에서 걸러지던 버그 수정)
 async function paramsViaVworld(address){
   const pt = await geocodeAddr(address);
   if(!pt) return null;
   const parcel = await parcelFromCoord(pt.x, pt.y);
   if(!parcel) return null;
   return {
-    sigunguCd: parcel.sigunguCd,
+    sigunguCd: SIGUNGU,             // 건축HUB는 구 코드만 인식 → 정규화
     bjdongCd:  parcel.bjdongCd,
     platGbCd:  parcel.platGbCd,
     bun:       parcel.bun,
