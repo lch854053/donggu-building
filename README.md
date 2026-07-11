@@ -83,6 +83,32 @@ K-APT에 등록되지 않은 오피스텔·다세대 등은 `aptlist_extra_dongg
 필수 항목: `pnu`, `complexNm`, `doroAddr`, `adres`, `kind`  
 선택 항목: `hhld`, `dongCnt`, `grndFlr`, `ugrndFlr`, `useAprDay`, `tarea`, `parking`, `area`
 
+## 건축인허가정보 폴백 (건축물대장 미등록 신축 건물)
+
+건축물대장(`getBrTitleInfo`)은 매월 갱신되어 사용승인 직후의 신축 건물이 누락되는 경우가 있습니다. 일괄조회·단건 상세조회는 건축물대장이 0건일 때 **건축인허가정보(`getApBasisOulnInfo`)로 폴백**해 최소한의 건물 정보를 보여줍니다.
+
+폴백 순서 (일괄조회 `processOne` / 단건조회 `runDetail` 공통):
+
+1. juso 도로명주소 → 지번 → 건축물대장 표제부
+2. (0건) VWorld 좌표·PNU로 지번 재확인 → 건축물대장 표제부
+3. **(0건) 건축인허가 기본개요 → 대표 행으로 정보 표시** ⭐
+
+인허가 기준 행은 건축물대장과 동일한 지번(`sigunguCd`·`bjdongCd`·`platGbCd`·`bun`·`ji`)으로 조회하며, 대표 행은 `pickArchMain`(건물명+건축구분 있는 본건물 우선)으로 선택합니다.
+
+표시 규칙:
+
+- **상태 = 정상**, 비고 = "건축물대장 미반영 — 건축인허가정보 기준 표시" 안내
+- 도로명주소는 juso가 준 값으로 채움 (인허가에는 도로명이 없음)
+- 인허가에 없는 필드(구조·층수·동명)는 "-"로 표시되며, 단건 상세카드의 부가 탭(층별개요 등)은 "정보 없음"으로 표시됩니다
+
+대표 사례: 동계로 68 = 계림동 196-3 = 계림2동행정복합센터 (사용승인 2023-04-17)
+
+관련 파일:
+
+- `index.html` — `fetchArchBuilding` 헬퍼 + `processOne`/`runDetail`의 인허가 폴백 단계
+- `transform.js` — `archRowToBuilding`/`pickArchMain` 순수 변환 함수
+- `api/archpms.js` — 건축인허가 프록시 엔드포인트
+
 ## 로컬 실행
 
 Vercel CLI가 설치되어 있어야 합니다.

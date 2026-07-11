@@ -356,3 +356,60 @@ test("dedupeBy: 키 기준 중복 제거, 순서 유지", () => {
   const out = f.dedupeBy([1,2,2,3,1], x=>x);
   assert.deepEqual(out, [1,2,3]);
 });
+
+/* ============================================================
+   archRowToBuilding / pickArchMain
+   건축인허가(getApBasisOulnInfo) 폴백 — 대장 미등록 신축 건물 대응
+   실제 데이터: 동계로 68 = 계림동 196-3 = 계림2동행정복합센터 (사용승인 2023-04-17)
+   ============================================================ */
+test("archRowToBuilding: 인허가 행 → mergeBuilding 호환 객체 (계림2동행정복합센터)", () => {
+  // 실제 getApBasisOulnInfo 응답(요약)의 본건물 행
+  const item = {
+    platPlc: "광주광역시 동구 계림동 196-3번지",
+    bldNm: "계림2동행정복합센터",
+    mainPurpsCdNm: "제1종근린생활시설",
+    platArea: 782.1, archArea: 389.61, totArea: 1459.69,
+    bcRat: 49.81, vlRat: 176.82, totPkngCnt: 0, useAprDay: "20230417",
+  };
+  const b = f.archRowToBuilding(item);
+  assert.equal(b.bldNm, "계림2동행정복합센터");
+  assert.equal(b.mainPurps, "제1종근린생활시설");
+  assert.equal(b.platArea, 782.1);
+  assert.equal(b.totArea, 1459.69);
+  assert.equal(b.useAprDay, "20230417");
+  assert.equal(b.atchGb, "주건축물");
+  // 인허가에 없는 필드는 기본값
+  assert.equal(b.dongNm, "");
+  assert.equal(b.strct, "-");
+  assert.equal(b.newPlatPlc, "-");   // 호출측에서 juso 도로명으로 보정
+  assert.equal(b.grndFlr, null);
+});
+
+test("archRowToBuilding: null/빈 입력은 안전하게 빈 building", () => {
+  const b = f.archRowToBuilding(null);
+  assert.equal(b.bldNm, "-");
+  assert.equal(b.mainPurps, "-");
+});
+
+test("pickArchMain: 건물명+건축구분 있는 본건물 행을 우선 선택", () => {
+  // 196-3 인허가: 본건물(신축, 계림2동행정복합센터) + 가설/부대 행(bldNm 공백)
+  const items = [
+    { platPlc:"계림동 196-3번지", bldNm:"계림2동행정복합센터", archGbCdNm:"신축", mainPurpsCdNm:"제1종근린생활시설", useAprDay:"20230417" },
+    { platPlc:"계림동 196-3번지", bldNm:" ", archGbCdNm:" ", mainPurpsCdNm:" ", useAprDay:" " },
+  ];
+  const main = f.pickArchMain(items);
+  assert.equal(main.bldNm, "계림2동행정복합센터");
+  assert.equal(main.archGbCdNm, "신축");
+});
+
+test("pickArchMain: 건축구분 없으면 건물명 있는 첫 행, 그것도 없으면 첫 행", () => {
+  assert.equal(f.pickArchMain([{bldNm:"A"}, {bldNm:" "}, {bldNm:"B"}]).bldNm, "A");
+  assert.equal(f.pickArchMain([{bldNm:" "}, {bldNm:" "}, {archGbCdNm:"신축"}]).bldNm, " ");
+  // 전부 이름 없으면 첫 행
+  assert.equal(f.pickArchMain([{x:1},{x:2}]).x, 1);
+});
+
+test("pickArchMain: 빈 배열은 null", () => {
+  assert.equal(f.pickArchMain([]), null);
+  assert.equal(f.pickArchMain(null), null);
+});

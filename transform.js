@@ -205,6 +205,45 @@ function mergeBuilding(title){
   };
 }
 
+// 건축인허가정보(getApBasisOulnInfo) 행 → mergeBuilding 과 호환되는 building 객체.
+// 건축물대장(getBrTitleInfo)에 아직 등록되지 않은 신축 건물(예: 동계로 68 = 계림2동행정복합센터,
+// 사용승인 2023) 폴백용. 인허가에는 구조·층수·동명·도로명주소가 없으므로 그 필드는 null/"-"로 두고,
+// 도로명(newPlatPlc)은 호출측에서 juso 도로명으로 보정한다.
+// 허가응답 행 → 변환. 단일 행을 받아 mergeBuilding 출력과 동일 키 구조를 반환.
+function archRowToBuilding(item){
+  if(!item) return mergeBuilding({});
+  return {
+    dongNm:      "",                                 // 인허가에 동 개념 없음
+    atchGb:      "주건축물",
+    bldNm:       stripParens(item.bldNm) || "-",
+    platPlc:     stripParens(item.platPlc) || "-",
+    newPlatPlc:  "-",                                // 호출측에서 juso 도로명으로 보정
+    mainPurps:   item.mainPurpsCdNm || "-",
+    strct:       "-",                                // 인허가 기본개요에 구조 없음
+    platArea:    item.platArea ?? null,
+    archArea:    item.archArea ?? null,
+    totArea:     item.totArea ?? null,
+    bcRat:       item.bcRat ?? null,
+    vlRat:       item.vlRat ?? null,
+    grndFlr:     null,                               // 층수는 인허가 기본개요에 없음
+    ugrndFlr:    null,
+    useAprDay:   item.useAprDay || "-",
+    totPkng:     Number(item.totPkngCnt || 0),
+  };
+}
+
+// 건축인허가 응답 행이 여럿(신축 본건물 + 가설/부대 등)일 때 대표 1건을 고른다.
+// 우선순위: (1) 건물명(bldNm) 있고 건축구분(archGbCdNm) 있는 행 (2) 건물명 있는 행 (3) 첫 행.
+// 빈 배열이면 null 반환.
+function pickArchMain(items){
+  if(!items || !items.length) return null;
+  const named = items.filter(i => String(i.bldNm||"").trim() && String(i.bldNm||"").trim() !== "-");
+  const life = named.filter(i => String(i.archGbCdNm||"").trim());
+  if(life.length) return life[0];
+  if(named.length) return named[0];
+  return items[0];
+}
+
 // 필지 파라미터 → PNU 19자리 (vworld-parcel.js 의 platGbCd 역변환과 일치)
 function toPNU(p){
   const san = p.platGbCd === "1" ? "2" : "1";   // 1=산, 0/일반=대지
