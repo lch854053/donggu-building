@@ -10,6 +10,10 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" crossorigin="anonymous" referrerpolicy="no-referrer">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.css" crossorigin="anonymous" referrerpolicy="no-referrer">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.Default.css" crossorigin="anonymous" referrerpolicy="no-referrer">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -32,6 +36,8 @@
     <button class="tab" id="tab-btn-detail" onclick="switchTab('detail')">단건 상세조회</button>
     <button class="tab" id="tab-btn-housing" onclick="switchTab('housing')">공동주택 관리</button>
     <button class="tab" id="tab-btn-demol" onclick="switchTab('demol')">철거멸실대장</button>
+    <button class="tab" id="tab-btn-vacant" onclick="switchTab('vacant')">빈집현황</button>
+    <button class="tab" id="tab-btn-map" onclick="switchTab('map')">지도</button>
   </div>
 
   <!-- ===== TAB 1: 일괄조회 ===== -->
@@ -370,6 +376,80 @@
       <div id="mPager" class="cpager"></div>
     </div>
   </div><!-- /tab-demol -->
+
+  <!-- ===== TAB 6: 빈집현황 ===== -->
+  <div id="tab-vacant" style="display:none">
+    <div class="card">
+      <div class="card-head"><h2><span class="num-tag">빈</span>동구 빈집 현황</h2></div>
+      <div class="card-body">
+        <div class="form-grid">
+          <div class="field">
+            <label>행정동</label>
+            <select id="v-hdong"><option value="__ALL__">전체</option></select>
+          </div>
+          <div class="field">
+            <label>주택유형 <span class="sel-hint">(미선택 = 전체)</span></label>
+            <div class="ms" id="vms-kind"></div>
+          </div>
+          <div class="field">
+            <label>등급판정 <span class="sel-hint">(미선택 = 전체)</span></label>
+            <div class="ms" id="vms-grade"></div>
+          </div>
+        </div>
+        <div class="controls">
+          <button class="run" id="vRunBtn" onclick="runVacantSearch()">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+            조회
+          </button>
+          <button class="ghost" onclick="clearVacant()">초기화</button>
+          <span class="cond-hint" id="vHint"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="stats" id="vStats" style="display:none">
+      <div class="stat total"><div class="k">조건 일치</div><div class="v" id="vs-match">0</div></div>
+      <div class="stat"><div class="k">총 빈집</div><div class="v" id="vs-total">0</div></div>
+      <div class="stat"><div class="k">1등급</div><div class="v" id="vs-grade1">0</div></div>
+      <div class="stat"><div class="k">2등급</div><div class="v" id="vs-grade2">0</div></div>
+    </div>
+
+    <div id="vResultArea" style="display:none">
+      <div class="result-head">
+        <div class="legend"><span>행정동 <b id="vResDong"></b></span></div>
+        <button class="export" id="vExportBtn" onclick="exportVacantExcel()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg>
+          엑셀 다운로드
+        </button>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead><tr>
+            <th class="num">#</th>
+            <th>행정동</th>
+            <th>주택유형</th>
+            <th>건축년도</th>
+            <th>주구조</th>
+            <th class="num">연면적(㎡)</th>
+            <th>등급</th>
+            <th>기준일자</th>
+          </tr></thead>
+          <tbody id="vResultBody"></tbody>
+        </table>
+      </div>
+      <div id="vPager" class="cpager"></div>
+    </div>
+  </div><!-- /tab-vacant -->
+
+  <!-- ===== TAB 7: 지도 ===== -->
+  <div id="tab-map" style="display:none">
+    <div class="map-controls">
+      <label class="layer-toggle"><input type="checkbox" id="layer-vacant" checked onchange="toggleMapLayer('vacant')"><span>빈집</span></label>
+      <label class="layer-toggle"><input type="checkbox" id="layer-housing" onchange="toggleMapLayer('housing')"><span>공동주택</span></label>
+      <label class="layer-toggle"><input type="checkbox" id="layer-building" onchange="toggleMapLayer('building')"><span>건축대장</span></label>
+    </div>
+    <div id="mapTab" class="map-tab"></div>
+  </div><!-- /tab-map -->
 
   <div class="footnote">
     - 조회 범위는 전남광주통합특별시 동구이며, 지번·도로명주소로 모두 검색 가능합니다<br>
@@ -1784,7 +1864,7 @@ document.getElementById("dInput")?.addEventListener("keydown", e=>{
 
 /* ---- 탭 전환 (bulk / cond / detail / demol / housing) ---- */
 function switchTab(which){
-  const tabs = ["bulk","cond","detail","demol","housing"];
+  const tabs = ["bulk","cond","detail","demol","housing","vacant","map"];
   if(!tabs.includes(which)) which="bulk";
   for(const t of tabs){
     document.getElementById("tab-"+t).style.display = (t===which)?"block":"none";
@@ -1793,6 +1873,8 @@ function switchTab(which){
   if(which==="cond") loadHaengjeong();
   if(which==="demol"){ loadHaengjeong(); initDemolFilters(); }
   if(which==="housing") loadHousing();
+  if(which==="vacant") initVacantTab();
+  if(which==="map") initMapTab();
 }
 
 /* ============================================================
@@ -3214,6 +3296,203 @@ function exportDemolExcel(){
   XLSX.utils.book_append_sheet(wb, ws, "철거멸실대장");
   const dongLabel = document.getElementById("mResDong").textContent || "전체";
   XLSX.writeFile(wb, `철거멸실대장_${dongLabel}_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
+
+/* ============================================================
+   빈집 현황
+   ============================================================ */
+let V_DATA = [];
+let V_RESULTS = [];
+let V_MS_KIND = null;
+let V_MS_GRADE = null;
+let V_PAGE = 1;
+const V_PAGE_SIZE = 50;
+
+async function initVacantTab(){
+  if(V_DATA.length === 0) await loadVacantData();
+  const hdong = document.getElementById("v-hdong");
+  if(hdong.options.length <= 1){
+    const { hdong2bjd } = await loadHaengjeong();
+    const dongs = Object.keys(hdong2bjd || {}).sort();
+    for(const d of dongs){
+      const opt = document.createElement("option");
+      opt.value = d; opt.textContent = d;
+      hdong.appendChild(opt);
+    }
+  }
+  if(!V_MS_KIND){
+    const kinds = [...new Set(V_DATA.map(d => d.kind).filter(Boolean))].sort();
+    V_MS_KIND = buildMultiselect("vms-kind", kinds, false);
+  }
+  if(!V_MS_GRADE){
+    const grades = [...new Set(V_DATA.map(d => d.grade).filter(Boolean))].sort();
+    V_MS_GRADE = buildMultiselect("vms-grade", grades, false);
+  }
+}
+
+async function loadVacantData(){
+  try{
+    const r = await fetch("/vacantlist_donggu.json");
+    if(!r.ok) throw new Error(`HTTP ${r.status}`);
+    V_DATA = await r.json();
+  }catch(e){
+    console.error("[loadVacantData]", e);
+    V_DATA = [];
+  }
+}
+
+async function runVacantSearch(){
+  await initVacantTab();
+  const hdong = document.getElementById("v-hdong").value;
+  const isAll = hdong === "__ALL__";
+  const selKind = V_MS_KIND.selected();
+  const selGrade = V_MS_GRADE.selected();
+
+  V_RESULTS = V_DATA.filter(d => {
+    if(!isAll && d.dong !== hdong) return false;
+    if(selKind.length && !selKind.includes(d.kind)) return false;
+    if(selGrade.length && !selGrade.includes(d.grade)) return false;
+    return true;
+  });
+
+  const total = V_DATA.length;
+  const grade1 = V_DATA.filter(d => d.grade === "1등급").length;
+  const grade2 = V_DATA.filter(d => d.grade === "2등급").length;
+
+  document.getElementById("vs-match").textContent = V_RESULTS.length.toLocaleString("ko-KR");
+  document.getElementById("vs-total").textContent = total.toLocaleString("ko-KR");
+  document.getElementById("vs-grade1").textContent = grade1.toLocaleString("ko-KR");
+  document.getElementById("vs-grade2").textContent = grade2.toLocaleString("ko-KR");
+  document.getElementById("vStats").style.display = "flex";
+  document.getElementById("vResDong").textContent = isAll ? "전체" : hdong;
+
+  V_PAGE = 1;
+  renderVacantPage();
+  renderVacantPager();
+  document.getElementById("vResultArea").style.display = "block";
+  document.getElementById("vHint").textContent = V_RESULTS.length ? "" : "조건에 맞는 빈집이 없습니다.";
+}
+
+function clearVacant(){
+  document.getElementById("v-hdong").value = "__ALL__";
+  if(V_MS_KIND) V_MS_KIND.reset();
+  if(V_MS_GRADE) V_MS_GRADE.reset();
+  document.getElementById("vStats").style.display = "none";
+  document.getElementById("vResultArea").style.display = "none";
+  document.getElementById("vHint").textContent = "";
+  V_RESULTS = [];
+}
+
+function renderVacantPage(){
+  const tbody = document.getElementById("vResultBody");
+  tbody.innerHTML = "";
+  const start = (V_PAGE - 1) * V_PAGE_SIZE;
+  const pageRows = V_RESULTS.slice(start, start + V_PAGE_SIZE);
+  const frag = document.createDocumentFragment();
+  for(let i = 0; i < pageRows.length; i++){
+    const d = pageRows[i];
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td class="num">${start + i + 1}</td>
+      <td>${esc(d.dong)}</td>
+      <td>${esc(d.kind || "-")}</td>
+      <td>${d.year || "-"}</td>
+      <td>${esc(d.struct || "-")}</td>
+      <td class="num">${fmt(d.tarea)}</td>
+      <td>${esc(d.grade || "-")}</td>
+      <td>${esc(d.baseDate || "-")}</td>
+    `;
+    frag.appendChild(tr);
+  }
+  tbody.appendChild(frag);
+}
+
+function renderVacantPager(){
+  const total = V_RESULTS.length;
+  const pages = Math.ceil(total / V_PAGE_SIZE) || 1;
+  const pager = document.getElementById("vPager");
+  pager.innerHTML = "";
+  if(pages <= 1) return;
+
+  const addBtn = (label, page, disabled) => {
+    const btn = document.createElement("button");
+    btn.textContent = label;
+    btn.className = "page";
+    if(disabled) btn.classList.add("disabled");
+    else btn.onclick = () => { V_PAGE = page; renderVacantPage(); renderVacantPager(); };
+    pager.appendChild(btn);
+  };
+
+  addBtn("처음", 1, V_PAGE === 1);
+  addBtn("이전", V_PAGE - 1, V_PAGE === 1);
+  const span = document.createElement("span");
+  span.className = "page-info";
+  span.textContent = `${V_PAGE} / ${pages}`;
+  pager.appendChild(span);
+  addBtn("다음", V_PAGE + 1, V_PAGE === pages);
+  addBtn("마지막", pages, V_PAGE === pages);
+}
+
+function exportVacantExcel(){
+  if(!V_RESULTS.length) return;
+  const rows = V_RESULTS.map(d => ({
+    "행정동": d.dong,
+    "주택유형": d.kind || "",
+    "건축년도": d.year || "",
+    "주구조": d.struct || "",
+    "연면적(㎡)": d.tarea,
+    "등급": d.grade || "",
+    "기준일자": d.baseDate || "",
+  }));
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "빈집현황");
+  const dongLabel = document.getElementById("vResDong").textContent || "전체";
+  XLSX.writeFile(wb, `빈집현황_${dongLabel}_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
+
+/* ============================================================
+   지도 탭
+   ============================================================ */
+let MAP_TAB = null;
+let MAP_CLUSTERS = null;
+let MAP_VACANT_LAYER = null;
+
+async function initMapTab(){
+  if(!MAP_TAB){
+    const mapDiv = document.getElementById("mapTab");
+    if(!mapDiv) return;
+    MAP_TAB = L.map("mapTab", { zoomControl: true, attributionControl: false });
+    L.tileLayer('/api/vworld-tile?layer=Base&z={z}&y={y}&x={x}', { maxZoom: 19 }).addTo(MAP_TAB);
+    MAP_CLUSTERS = L.markerClusterGroup({ disableClusteringAtZoom: 17 });
+    MAP_TAB.addLayer(MAP_CLUSTERS);
+  }
+  MAP_TAB.setView([35.145, 126.92], 13);
+  await loadVacantMarkers();
+}
+
+async function loadVacantMarkers(){
+  if(!MAP_CLUSTERS) return;
+  MAP_CLUSTERS.clearLayers();
+  if(!V_DATA.length) await loadVacantData();
+  const checked = document.getElementById("layer-vacant")?.checked;
+  if(!checked) return;
+
+  const markers = V_DATA.map(d => {
+    const m = L.marker([d.lat, d.lon]);
+    m.bindPopup(`<b>${esc(d.dong)}</b><br>유형: ${esc(d.kind || "-")}<br>등급: ${esc(d.grade || "-")}<br>연면적: ${fmt(d.tarea)}㎡<br>주구조: ${esc(d.struct || "-")}`);
+    return m;
+  });
+  MAP_CLUSTERS.addLayers(markers);
+}
+
+function toggleMapLayer(layer){
+  if(layer === "vacant"){
+    loadVacantMarkers();
+  }
+  // housing, building 레이어는 2~3단계에서 구현
 }
 
 

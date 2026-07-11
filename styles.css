@@ -354,3 +354,13 @@
   .d-map{height:360px;border-radius:8px;overflow:hidden;border:1px solid var(--line);background:#0b1a26}
   .d-map-cap{font-family:var(--mono);font-size:11px;color:var(--mute);margin-top:6px}
   .leaflet-container{font-family:var(--sans)}
+
+  /* 빈집/지도 탭 */
+  .map-tab{height:calc(100vh - 240px);min-height:480px;border-radius:8px;overflow:hidden;border:1px solid var(--line);background:#0b1a26}
+  .map-controls{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center}
+  .layer-toggle{display:inline-flex;align-items:center;gap:6px;background:var(--card);border:1px solid var(--line);border-radius:6px;padding:8px 12px;font-size:13px;font-weight:600;cursor:pointer}
+  .layer-toggle input{cursor:pointer}
+  .layer-toggle span{user-select:none}
+  .badge-grade{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700}
+  .badge-grade.g1{background:#fee2e2;color:#991b1b}
+  .badge-grade.g2{background:#fef3c7;color:#92400e}
