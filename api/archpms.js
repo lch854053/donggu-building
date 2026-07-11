@@ -5,6 +5,7 @@
 // 기존 _lib 공통모듈만 재사용하며 building.js 등 기존 프록시는 건드리지 않음(순수 추가)
 import { guard, fetchWithTimeout, setSecurity } from "./_lib/proxy.js";
 import { unwrapGov } from "./_lib/govapi.js";
+import { fetchOdcloudBasisOulnSafe } from "./_lib/archpms-odcloud.js";
 
 const BASE = "https://apis.data.go.kr/1613000/ArchPmsHubService";
 const FETCH_TIMEOUT_MS = 8000;
@@ -57,10 +58,41 @@ export default async function handler(req, res) {
     const r = await fetchWithTimeout(url, { timeout: FETCH_TIMEOUT_MS });
     const text = await r.text();
     const { items, totalCount } = unwrapGov(text, op);
+
+    // getApBasisOulnInfo: 국토교통부 결과가 비면 odcloud 폴백 시도
+    const hasBunJi = !!q.bun && !!q.ji;
+    if (op === "getApBasisOulnInfo" && !items.length && hasBunJi) {
+      const odcloud = await fetchOdcloudBasisOulnSafe({
+        sigunguCd, bjdongCd, platGbCd, bun: q.bun, ji: q.ji
+      });
+      if (odcloud.items.length) {
+        setSecurity(res);
+        res.setHeader("Cache-Control", "s-maxage=3600, stale-while-revalidate");
+        return res.status(200).json({ items: odcloud.items, totalCount: odcloud.totalCount });
+      }
+    }
+
     setSecurity(res);
     res.setHeader("Cache-Control", "s-maxage=86400, stale-while-revalidate");
     return res.status(200).json({ items, totalCount });
   } catch (e) {
+    // getApBasisOulnInfo: 국토교통부 API 실패 시 odcloud 폴백 시도
+    const hasBunJi = !!q.bun && !!q.ji;
+    if (op === "getApBasisOulnInfo" && hasBunJi) {
+      try {
+        const odcloud = await fetchOdcloudBasisOulnSafe({
+          sigunguCd, bjdongCd, platGbCd, bun: q.bun, ji: q.ji
+        });
+        if (odcloud.items.length) {
+          setSecurity(res);
+          res.setHeader("Cache-Control", "s-maxage=3600, stale-while-revalidate");
+          return res.status(200).json({ items: odcloud.items, totalCount: odcloud.totalCount });
+        }
+      } catch (odcloudErr) {
+        const masked = String(odcloudErr?.message || odcloudErr).replace(/serviceKey=[^&\s]+/gi, "serviceKey=***");
+        console.error("[archpms-odcloud]", masked);
+      }
+    }
     const aborted = e?.name === "AbortError";
     const masked = String(e?.message || e).replace(/serviceKey=[^&\s]+/gi, "serviceKey=***");
     console.error("[archpms]", masked);
