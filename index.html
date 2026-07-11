@@ -3297,12 +3297,17 @@ async function initVacantTab(){
   if(V_DATA.length === 0) await loadVacantData();
   const hdong = document.getElementById("v-hdong");
   if(hdong.options.length <= 1){
-    const { hdong2bjd } = await loadHaengjeong();
-    const dongs = Object.keys(hdong2bjd || {}).sort();
-    for(const d of dongs){
-      const opt = document.createElement("option");
-      opt.value = d; opt.textContent = d;
-      hdong.appendChild(opt);
+    try{
+      const r = await fetch("/haengjeong.json");
+      const { hdong2bjd } = await r.json();
+      const dongs = Object.keys(hdong2bjd || {}).sort();
+      for(const d of dongs){
+        const opt = document.createElement("option");
+        opt.value = d; opt.textContent = d;
+        hdong.appendChild(opt);
+      }
+    }catch(e){
+      console.error("[initVacantTab]", e);
     }
   }
   if(!V_MS_KIND){
