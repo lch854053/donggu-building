@@ -2108,6 +2108,16 @@ function aptKindFromCode(gbCd){
   return "기타";
 }
 
+// K-apt codeAptNm → 한국부동산원 COMPLEX_GB_CD
+// 1=아파트, 2=연립, 3=다세대
+function kaptKindToGbCd(kindNm){
+  const s = String(kindNm || "");
+  if(s.includes("아파트")) return "1";
+  if(s.includes("연립")) return "2";
+  if(s.includes("다세대")) return "3";
+  return "";
+}
+
 // 주소(ADRES)에서 행정동 추정: 번지수로 jibun2hdong 13자리 키 매핑
 function hdongFromAddr(adres, bjd2hd){
   // adres 예: "광주광역시 동구 산수동 689" → 동명으로 법정동코드 역추적 필요
@@ -2271,6 +2281,7 @@ async function runHousingSearch(){
     }
 
     // ── 2순위: K-apt 60개 단지의 PNU→{kaptCode,bass,dtl} 사전 구축
+    // + 한국부동산원에 없는 K-apt 단지는 메인 목록에 추가해 검색 대상으로 만든다.
     H_KAPT_BY_PNU = {};
     let kaptList = [];
     try{
@@ -2280,6 +2291,7 @@ async function runHousingSearch(){
     if(kaptList.length){
       hProgress.total += kaptList.length;
       updateHProgress();
+      const koreaPnuSet = new Set(complexes.map(c => c.pnu));
       const kInfos = await runPool(kaptList, async (c)=>{
         // JSON에 사전 병합된 bass/dtl이 있으면 API 호출 생략
         let bass = c.bass;
@@ -2291,7 +2303,22 @@ async function runHousingSearch(){
         return bass ? { kaptCode:c.kaptCode, pnu:(c.pnu || pnuFromKapt(bass)), bass, dtl } : null;
       }, 5, ()=>{ hProgress.done++; updateHProgress(); });
       for(const k of kInfos){
-        if(k && k.pnu) H_KAPT_BY_PNU[k.pnu] = k;
+        if(!k || !k.pnu) continue;
+        H_KAPT_BY_PNU[k.pnu] = k;
+        // 한국부동산원 단지목록에 없는 K-apt 단지를 메인 목록에 추가
+        if(koreaPnuSet.has(k.pnu)) continue;
+        koreaPnuSet.add(k.pnu);
+        const kind = String(k.bass.codeAptNm || "");
+        complexes.push({
+          complexPk: k.kaptCode,
+          complexNm: k.kaptName || k.bass.kaptName || "",
+          adres: k.bass.kaptAddr || "",
+          complexGbCd: kaptKindToGbCd(kind),
+          dongCnt: Number(k.bass.kaptDongCnt || 0),
+          unitCnt: Number(k.bass.hoCnt || k.bass.kaptdaCnt || 0),
+          useaprDt: String(k.bass.kaptUsedate || ""),
+          pnu: k.pnu,
+        });
       }
     }
 
