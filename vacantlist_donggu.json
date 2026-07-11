@@ -1,0 +1,5834 @@
+[
+ {
+  "dong": "대인동",
+  "kind": "그외",
+  "year": null,
+  "struct": "벽돌구조",
+  "tarea": 139.82,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "대인동",
+  "kind": "단독",
+  "year": null,
+  "struct": "일반목구조",
+  "tarea": 98.115,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "대인동",
+  "kind": "단독",
+  "year": 1965,
+  "struct": "일반목구조",
+  "tarea": 39.66,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "금남로5가",
+  "kind": "단독",
+  "year": 1981,
+  "struct": "벽돌구조",
+  "tarea": 176.32,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "궁동",
+  "kind": "단독",
+  "year": 1968,
+  "struct": "벽돌구조",
+  "tarea": 148.08,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "궁동",
+  "kind": "단독",
+  "year": 1984,
+  "struct": "벽돌구조",
+  "tarea": 125.88,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "장동",
+  "kind": "단독",
+  "year": 1951,
+  "struct": "일반목구조",
+  "tarea": 68.41,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "장동",
+  "kind": "단독",
+  "year": 1959,
+  "struct": "일반목구조",
+  "tarea": 52.55,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "장동",
+  "kind": "단독",
+  "year": 1965,
+  "struct": "일반목구조",
+  "tarea": 14.54,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "장동",
+  "kind": "단독",
+  "year": 1993,
+  "struct": "벽돌구조",
+  "tarea": 58.05,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "장동",
+  "kind": "단독",
+  "year": 1979,
+  "struct": "벽돌구조",
+  "tarea": 124.64,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1956,
+  "struct": "일반목구조",
+  "tarea": 69.08,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1926,
+  "struct": "블록구조",
+  "tarea": 62.14,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1961,
+  "struct": "일반목구조",
+  "tarea": 81.12,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1951,
+  "struct": "일반목구조",
+  "tarea": 38.67,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1965,
+  "struct": "일반목구조",
+  "tarea": 45.28,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1957,
+  "struct": "일반목구조",
+  "tarea": 28.42,
+  "grade": "3등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1963,
+  "struct": "일반목구조",
+  "tarea": 54.87,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1971,
+  "struct": "벽돌구조",
+  "tarea": 69.41,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1957,
+  "struct": "일반목구조",
+  "tarea": 81.64,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1956,
+  "struct": "일반목구조",
+  "tarea": 0,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1969,
+  "struct": "벽돌구조",
+  "tarea": 41.32,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1967,
+  "struct": "벽돌구조",
+  "tarea": 31.07,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1969,
+  "struct": "벽돌구조",
+  "tarea": 76.02,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1951,
+  "struct": "일반목구조",
+  "tarea": 98.49,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1951,
+  "struct": "일반목구조",
+  "tarea": 54.54,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1949,
+  "struct": "일반목구조",
+  "tarea": 148.74,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1979,
+  "struct": "벽돌구조",
+  "tarea": 47.89,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1978,
+  "struct": "벽돌구조",
+  "tarea": 82.5,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1964,
+  "struct": "일반목구조",
+  "tarea": 53.1,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1994,
+  "struct": "일반목구조",
+  "tarea": 67.1,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1994,
+  "struct": "벽돌구조",
+  "tarea": 104.61,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1965,
+  "struct": "벽돌구조",
+  "tarea": 108.08,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "다가구",
+  "year": 2002,
+  "struct": "벽돌구조",
+  "tarea": 67.5,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1956,
+  "struct": "일반목구조",
+  "tarea": 86.93,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1960,
+  "struct": "일반목구조",
+  "tarea": 103.13,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 2004,
+  "struct": "일반목구조",
+  "tarea": 96.19,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1975,
+  "struct": "벽돌구조",
+  "tarea": 81.98,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1950,
+  "struct": "일반목구조",
+  "tarea": 89.63,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1973,
+  "struct": "일반목구조",
+  "tarea": 63.12,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1974,
+  "struct": "벽돌구조",
+  "tarea": 67.42,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1961,
+  "struct": "일반목구조",
+  "tarea": 69.45,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1962,
+  "struct": "일반목구조",
+  "tarea": 57.85,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1963,
+  "struct": "벽돌구조",
+  "tarea": 155.085,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1965,
+  "struct": "일반목구조",
+  "tarea": 41.65,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1969,
+  "struct": "일반목구조",
+  "tarea": 52.88,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1965,
+  "struct": "일반목구조",
+  "tarea": 68.75,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1965,
+  "struct": "일반목구조",
+  "tarea": 62.14,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1986,
+  "struct": "벽돌구조",
+  "tarea": 135.78,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1985,
+  "struct": "일반목구조",
+  "tarea": 131.67,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1966,
+  "struct": "일반목구조",
+  "tarea": 72.26,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1973,
+  "struct": "일반목구조",
+  "tarea": 81.31,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1962,
+  "struct": "일반목구조",
+  "tarea": 43.63,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1955,
+  "struct": "일반목구조",
+  "tarea": 57.57,
+  "grade": "3등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1983,
+  "struct": "벽돌구조",
+  "tarea": 34.53,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1967,
+  "struct": "벽돌구조",
+  "tarea": 57.84,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1962,
+  "struct": "일반목구조",
+  "tarea": 81.07,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1962,
+  "struct": "블록구조",
+  "tarea": 80.99,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1982,
+  "struct": "벽돌구조",
+  "tarea": 84.51,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1967,
+  "struct": "일반목구조",
+  "tarea": 65.11,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1974,
+  "struct": "벽돌구조",
+  "tarea": 89.24,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1966,
+  "struct": "벽돌구조",
+  "tarea": 47.59,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1951,
+  "struct": "블록구조",
+  "tarea": 62.89,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1962,
+  "struct": "일반목구조",
+  "tarea": 75.7,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1968,
+  "struct": "일반목구조",
+  "tarea": 34.04,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1984,
+  "struct": "벽돌구조",
+  "tarea": 112.51,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1958,
+  "struct": "일반목구조",
+  "tarea": 15.86,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1961,
+  "struct": "일반목구조",
+  "tarea": 27.1,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1962,
+  "struct": "일반목구조",
+  "tarea": 45.61,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1960,
+  "struct": "목구조",
+  "tarea": 100.45,
+  "grade": "3등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1962,
+  "struct": "일반목구조",
+  "tarea": 106.87,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1965,
+  "struct": "일반목구조",
+  "tarea": 40.99,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1970,
+  "struct": "벽돌구조",
+  "tarea": 106.1,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1979,
+  "struct": "벽돌구조",
+  "tarea": 164.79,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1973,
+  "struct": "벽돌구조",
+  "tarea": 68.16,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1984,
+  "struct": "벽돌구조",
+  "tarea": 89.47,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1977,
+  "struct": "벽돌구조",
+  "tarea": 220.49,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1967,
+  "struct": "벽돌구조",
+  "tarea": 23.46,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1962,
+  "struct": "일반목구조",
+  "tarea": 49.24,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1959,
+  "struct": "일반목구조",
+  "tarea": 58.88,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1963,
+  "struct": "일반목구조",
+  "tarea": 21.7,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1984,
+  "struct": "벽돌구조",
+  "tarea": 164.89,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1961,
+  "struct": "일반목구조",
+  "tarea": 44.62,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1967,
+  "struct": "일반목구조",
+  "tarea": 29.09,
+  "grade": "3등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "동명동",
+  "kind": "단독",
+  "year": 1960,
+  "struct": "일반목구조",
+  "tarea": 30.74,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1974,
+  "struct": "벽돌구조",
+  "tarea": 133.55,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1976,
+  "struct": "벽돌구조",
+  "tarea": 84.29,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1964,
+  "struct": "목구조",
+  "tarea": 73.7,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1972,
+  "struct": "일반목구조",
+  "tarea": 39.99,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1971,
+  "struct": "벽돌구조",
+  "tarea": 77.02,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1985,
+  "struct": "벽돌구조",
+  "tarea": 39.18,
+  "grade": "3등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1974,
+  "struct": "일반목구조",
+  "tarea": 54.54,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1962,
+  "struct": "일반목구조",
+  "tarea": 49.9,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1988,
+  "struct": "일반목구조",
+  "tarea": 34.04,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1965,
+  "struct": "벽돌구조",
+  "tarea": 69.4,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1984,
+  "struct": "벽돌구조",
+  "tarea": 90.48,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1967,
+  "struct": "일반목구조",
+  "tarea": 48.91,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1971,
+  "struct": "벽돌구조",
+  "tarea": 45.28,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1957,
+  "struct": "일반목구조",
+  "tarea": 77.02,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1961,
+  "struct": "일반목구조",
+  "tarea": 46.94,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1976,
+  "struct": "벽돌구조",
+  "tarea": 109.72,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1965,
+  "struct": "일반목구조",
+  "tarea": 55.52,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1985,
+  "struct": "벽돌구조",
+  "tarea": 158.43,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1965,
+  "struct": "벽돌구조",
+  "tarea": 27.1,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1959,
+  "struct": "일반목구조",
+  "tarea": 68.08,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1952,
+  "struct": "일반목구조",
+  "tarea": 59.5,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": null,
+  "struct": "벽돌구조",
+  "tarea": 37.35,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1967,
+  "struct": "벽돌구조",
+  "tarea": 45.61,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1962,
+  "struct": "일반목구조",
+  "tarea": 56.52,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1964,
+  "struct": "일반목구조",
+  "tarea": 40.32,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1963,
+  "struct": "목구조",
+  "tarea": 90.9,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1962,
+  "struct": "일반목구조",
+  "tarea": 75.69,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1964,
+  "struct": "블록구조",
+  "tarea": 84.28,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1964,
+  "struct": "일반목구조",
+  "tarea": 31.4,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1963,
+  "struct": "벽돌구조",
+  "tarea": 88.86,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1965,
+  "struct": "벽돌구조",
+  "tarea": 38.01,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1964,
+  "struct": "일반목구조",
+  "tarea": 60.63,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1968,
+  "struct": "일반목구조",
+  "tarea": 62.14,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1967,
+  "struct": "블록구조",
+  "tarea": 29.75,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1969,
+  "struct": "일반목구조",
+  "tarea": 56.18,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1967,
+  "struct": "벽돌구조",
+  "tarea": 39.66,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1971,
+  "struct": "일반목구조",
+  "tarea": 37.67,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1967,
+  "struct": "벽돌구조",
+  "tarea": 30.07,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1985,
+  "struct": "벽돌구조",
+  "tarea": 60.21,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1962,
+  "struct": "일반목구조",
+  "tarea": 61,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1958,
+  "struct": "블록구조",
+  "tarea": 80.85,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1962,
+  "struct": "일반목구조",
+  "tarea": 36.03,
+  "grade": "3등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1962,
+  "struct": "일반목구조",
+  "tarea": 27.3,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1975,
+  "struct": "벽돌구조",
+  "tarea": 50.24,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1958,
+  "struct": "일반목구조",
+  "tarea": 30.74,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1970,
+  "struct": "일반목구조",
+  "tarea": 73.7,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1973,
+  "struct": "일반목구조",
+  "tarea": 56.85,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1968,
+  "struct": "일반목구조",
+  "tarea": 67.06,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1925,
+  "struct": "일반목구조",
+  "tarea": 52.55,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1964,
+  "struct": "일반목구조",
+  "tarea": 31.6,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1969,
+  "struct": "일반목구조",
+  "tarea": 50.7,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1964,
+  "struct": "일반목구조",
+  "tarea": 76.33,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1966,
+  "struct": "일반목구조",
+  "tarea": 23.1,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1966,
+  "struct": "일반목구조",
+  "tarea": 23.1,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1964,
+  "struct": "일반목구조",
+  "tarea": 62.4,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": null,
+  "struct": "일반목구조",
+  "tarea": 49.3,
+  "grade": "3등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1962,
+  "struct": "일반목구조",
+  "tarea": 35.6,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1960,
+  "struct": "일반목구조",
+  "tarea": 82.1,
+  "grade": "3등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1958,
+  "struct": "일반목구조",
+  "tarea": 46.8,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1954,
+  "struct": "블록구조",
+  "tarea": 39.9,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": null,
+  "struct": "블록구조",
+  "tarea": 61.1,
+  "grade": "3등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1963,
+  "struct": "일반목구조",
+  "tarea": 14.21,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1980,
+  "struct": "벽돌구조",
+  "tarea": 192.045,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1959,
+  "struct": "일반목구조",
+  "tarea": 51.1,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": null,
+  "struct": "일반목구조",
+  "tarea": 66.2,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1951,
+  "struct": "일반목구조",
+  "tarea": 67.8,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1951,
+  "struct": "일반목구조",
+  "tarea": 56.1,
+  "grade": "3등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1961,
+  "struct": "일반목구조",
+  "tarea": 44.4,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1958,
+  "struct": "일반목구조",
+  "tarea": 70.42,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1958,
+  "struct": "일반목구조",
+  "tarea": 57.9,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1969,
+  "struct": "벽돌구조",
+  "tarea": 71.72,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1969,
+  "struct": "일반목구조",
+  "tarea": 34.9,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1951,
+  "struct": "일반목구조",
+  "tarea": 0,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1969,
+  "struct": "일반목구조",
+  "tarea": 60.82,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1971,
+  "struct": "일반목구조",
+  "tarea": 58,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1970,
+  "struct": "일반목구조",
+  "tarea": 60.5,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1990,
+  "struct": "일반목구조",
+  "tarea": 25.7,
+  "grade": "3등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": null,
+  "struct": "일반목구조",
+  "tarea": 25,
+  "grade": "3등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1960,
+  "struct": "일반목구조",
+  "tarea": 66.04,
+  "grade": "3등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1961,
+  "struct": "목구조",
+  "tarea": 72.71,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1962,
+  "struct": "벽돌구조",
+  "tarea": 42.9,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": null,
+  "struct": "일반목구조",
+  "tarea": 43.2,
+  "grade": "3등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1964,
+  "struct": "일반목구조",
+  "tarea": 56.95,
+  "grade": "3등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1964,
+  "struct": "일반목구조",
+  "tarea": 37.9,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1958,
+  "struct": "일반목구조",
+  "tarea": 39.5,
+  "grade": "3등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1964,
+  "struct": "일반목구조",
+  "tarea": 86.23,
+  "grade": "3등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1978,
+  "struct": "벽돌구조",
+  "tarea": 97.65,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1966,
+  "struct": "벽돌구조",
+  "tarea": 66.9,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1965,
+  "struct": "벽돌구조",
+  "tarea": 32.8,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1973,
+  "struct": "벽돌구조",
+  "tarea": 99.23,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1958,
+  "struct": "일반목구조",
+  "tarea": 40.74,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1959,
+  "struct": "일반목구조",
+  "tarea": 38.82,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1985,
+  "struct": "블록구조",
+  "tarea": 32.09,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1973,
+  "struct": "벽돌구조",
+  "tarea": 37.01,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1985,
+  "struct": "블록구조",
+  "tarea": 29.27,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1974,
+  "struct": "벽돌구조",
+  "tarea": 79.66,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1967,
+  "struct": "벽돌구조",
+  "tarea": 158.65,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1977,
+  "struct": "벽돌구조",
+  "tarea": 105.44,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1971,
+  "struct": "일반목구조",
+  "tarea": 48.92,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1978,
+  "struct": "벽돌구조",
+  "tarea": 107.09,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1978,
+  "struct": "벽돌구조",
+  "tarea": 131.89,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1976,
+  "struct": "벽돌구조",
+  "tarea": 44.29,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1976,
+  "struct": "벽돌구조",
+  "tarea": 58.5,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1967,
+  "struct": "벽돌구조",
+  "tarea": 37.68,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1960,
+  "struct": "일반목구조",
+  "tarea": 26.45,
+  "grade": "3등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1974,
+  "struct": "벽돌구조",
+  "tarea": 59.16,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1976,
+  "struct": "벽돌구조",
+  "tarea": 61.12,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1977,
+  "struct": "벽돌구조",
+  "tarea": 79.99,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1973,
+  "struct": "벽돌구조",
+  "tarea": 61.38,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1973,
+  "struct": "벽돌구조",
+  "tarea": 141.14,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1971,
+  "struct": "벽돌구조",
+  "tarea": 49.57,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1971,
+  "struct": "벽돌구조",
+  "tarea": 42.3,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1971,
+  "struct": "벽돌구조",
+  "tarea": 53.21,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1971,
+  "struct": "벽돌구조",
+  "tarea": 47.59,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1971,
+  "struct": "벽돌구조",
+  "tarea": 41.65,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1971,
+  "struct": "벽돌구조",
+  "tarea": 47.59,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1971,
+  "struct": "벽돌구조",
+  "tarea": 47.59,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1971,
+  "struct": "일반목구조",
+  "tarea": 74.38,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1971,
+  "struct": "벽돌구조",
+  "tarea": 42.96,
+  "grade": "3등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1971,
+  "struct": "일반목구조",
+  "tarea": 78,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1970,
+  "struct": "벽돌구조",
+  "tarea": 65.11,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1972,
+  "struct": "일반목구조",
+  "tarea": 40.98,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1971,
+  "struct": "일반목구조",
+  "tarea": 44.61,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1974,
+  "struct": "벽돌구조",
+  "tarea": 75.36,
+  "grade": "3등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1974,
+  "struct": "벽돌구조",
+  "tarea": 72.71,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1974,
+  "struct": "벽돌구조",
+  "tarea": 59.49,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1974,
+  "struct": "벽돌구조",
+  "tarea": 68.75,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 2003,
+  "struct": "벽돌구조",
+  "tarea": 68.86,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1974,
+  "struct": "벽돌구조",
+  "tarea": 69.74,
+  "grade": "3등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1961,
+  "struct": "일반목구조",
+  "tarea": 52.22,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1961,
+  "struct": "일반목구조",
+  "tarea": 56.51,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1971,
+  "struct": "블록구조",
+  "tarea": 29.75,
+  "grade": "3등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1971,
+  "struct": "일반목구조",
+  "tarea": 43.96,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1961,
+  "struct": "일반목구조",
+  "tarea": 76.36,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 2000,
+  "struct": "벽돌구조",
+  "tarea": 32.9,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1981,
+  "struct": "벽돌구조",
+  "tarea": 145.035,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1971,
+  "struct": "벽돌구조",
+  "tarea": 81.55,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1966,
+  "struct": "일반목구조",
+  "tarea": 43.63,
+  "grade": "3등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1965,
+  "struct": "벽돌구조",
+  "tarea": 87.59,
+  "grade": "3등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1981,
+  "struct": "벽돌구조",
+  "tarea": 164.39,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1973,
+  "struct": "일반목구조",
+  "tarea": 76.02,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1983,
+  "struct": "일반목구조",
+  "tarea": 93.59,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1963,
+  "struct": "일반목구조",
+  "tarea": 85.28,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1973,
+  "struct": "벽돌구조",
+  "tarea": 90.88,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1974,
+  "struct": "벽돌구조",
+  "tarea": 112.46,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1976,
+  "struct": "벽돌구조",
+  "tarea": 127.59,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "다가구",
+  "year": 1995,
+  "struct": "벽돌구조",
+  "tarea": 133.44,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1971,
+  "struct": "일반목구조",
+  "tarea": 64.44,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1973,
+  "struct": "벽돌구조",
+  "tarea": 36.02,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1974,
+  "struct": "벽돌구조",
+  "tarea": 40.65,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1974,
+  "struct": "벽돌구조",
+  "tarea": 71.72,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1973,
+  "struct": "일반목구조",
+  "tarea": 60.48,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1973,
+  "struct": "일반목구조",
+  "tarea": 51.89,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1973,
+  "struct": "일반목구조",
+  "tarea": 54.39,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1972,
+  "struct": "벽돌구조",
+  "tarea": 63.84,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1975,
+  "struct": "벽돌구조",
+  "tarea": 71.28,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1975,
+  "struct": "벽돌구조",
+  "tarea": 68.1,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1972,
+  "struct": "벽돌구조",
+  "tarea": 39,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1975,
+  "struct": "벽돌구조",
+  "tarea": 96.53,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1972,
+  "struct": "일반목구조",
+  "tarea": 60.47,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1983,
+  "struct": "벽돌구조",
+  "tarea": 124.84,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1980,
+  "struct": "일반목구조",
+  "tarea": 75.65,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1972,
+  "struct": "일반목구조",
+  "tarea": 59.82,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "계림동",
+  "kind": "단독",
+  "year": 1973,
+  "struct": "일반목구조",
+  "tarea": 49.25,
+  "grade": "3등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1975,
+  "struct": "벽돌구조",
+  "tarea": 78.66,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1979,
+  "struct": "벽돌구조",
+  "tarea": 83.7,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1976,
+  "struct": "벽돌구조",
+  "tarea": 79.98,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1981,
+  "struct": "벽돌구조",
+  "tarea": 176.18,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1977,
+  "struct": "벽돌구조",
+  "tarea": 118.33,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1981,
+  "struct": "벽돌구조",
+  "tarea": 129.15,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1976,
+  "struct": "벽돌구조",
+  "tarea": 93.78,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1976,
+  "struct": "벽돌구조",
+  "tarea": 110.06,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1977,
+  "struct": "벽돌구조",
+  "tarea": 118.99,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1971,
+  "struct": "일반목구조",
+  "tarea": 51.9,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1962,
+  "struct": "블록구조",
+  "tarea": 81.96,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1967,
+  "struct": "일반목구조",
+  "tarea": 62.13,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1964,
+  "struct": "일반목구조",
+  "tarea": 57.84,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1985,
+  "struct": "블록구조",
+  "tarea": 85.39,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": null,
+  "struct": "블록구조",
+  "tarea": 77.35,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1962,
+  "struct": "일반목구조",
+  "tarea": 82.96,
+  "grade": "3등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "그외",
+  "year": null,
+  "struct": "일반목구조",
+  "tarea": 28.09,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 2001,
+  "struct": "벽돌구조",
+  "tarea": 74.75,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1981,
+  "struct": "벽돌구조",
+  "tarea": 131.005,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1962,
+  "struct": "일반목구조",
+  "tarea": 44.62,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1975,
+  "struct": "벽돌구조",
+  "tarea": 117.99,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1960,
+  "struct": "일반목구조",
+  "tarea": 47.6,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1967,
+  "struct": "벽돌구조",
+  "tarea": 37.68,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1958,
+  "struct": "일반목구조",
+  "tarea": 21.15,
+  "grade": "3등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1968,
+  "struct": "벽돌구조",
+  "tarea": 37.67,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1967,
+  "struct": "벽돌구조",
+  "tarea": 77.68,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1991,
+  "struct": "벽돌구조",
+  "tarea": 131.89,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1968,
+  "struct": "벽돌구조",
+  "tarea": 35.7,
+  "grade": "3등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1968,
+  "struct": "벽돌구조",
+  "tarea": 37.35,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1995,
+  "struct": "벽돌구조",
+  "tarea": 111.42,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1966,
+  "struct": "벽돌구조",
+  "tarea": 39,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 2002,
+  "struct": "벽돌구조",
+  "tarea": 69.59,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1966,
+  "struct": "블록구조",
+  "tarea": 26.11,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1973,
+  "struct": "벽돌구조",
+  "tarea": 67.1,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1965,
+  "struct": "벽돌구조",
+  "tarea": 51.23,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 2011,
+  "struct": "경량철골구조",
+  "tarea": 49.9,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1970,
+  "struct": "벽돌구조",
+  "tarea": 43.3,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1965,
+  "struct": "벽돌구조",
+  "tarea": 35.7,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1967,
+  "struct": "일반목구조",
+  "tarea": 47.58,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1967,
+  "struct": "일반목구조",
+  "tarea": 72.71,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1967,
+  "struct": "일반목구조",
+  "tarea": 54.86,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1968,
+  "struct": "일반목구조",
+  "tarea": 52.56,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1967,
+  "struct": "일반목구조",
+  "tarea": 67.76,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1969,
+  "struct": "벽돌구조",
+  "tarea": 59.83,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1984,
+  "struct": "벽돌구조",
+  "tarea": 60.84,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1976,
+  "struct": "벽돌구조",
+  "tarea": 81.28,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1979,
+  "struct": "벽돌구조",
+  "tarea": 196.14,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1969,
+  "struct": "벽돌구조",
+  "tarea": 39.66,
+  "grade": "3등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1962,
+  "struct": "벽돌구조",
+  "tarea": 41.98,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1970,
+  "struct": "벽돌구조",
+  "tarea": 32.39,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1969,
+  "struct": "벽돌구조",
+  "tarea": 74.04,
+  "grade": "3등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1963,
+  "struct": "일반목구조",
+  "tarea": 49.55,
+  "grade": "3등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1959,
+  "struct": "벽돌구조",
+  "tarea": 72.39,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1964,
+  "struct": "일반목구조",
+  "tarea": 73.03,
+  "grade": "3등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1961,
+  "struct": "일반목구조",
+  "tarea": 56.85,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1961,
+  "struct": "일반목구조",
+  "tarea": 33.03,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1981,
+  "struct": "벽돌구조",
+  "tarea": 99.61,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1964,
+  "struct": "일반목구조",
+  "tarea": 13.22,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1971,
+  "struct": "벽돌구조",
+  "tarea": 39,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1959,
+  "struct": "일반목구조",
+  "tarea": 66.44,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1961,
+  "struct": "일반목구조",
+  "tarea": 68.41,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1961,
+  "struct": "일반목구조",
+  "tarea": 90.57,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1957,
+  "struct": "일반목구조",
+  "tarea": 75.69,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1964,
+  "struct": "일반목구조",
+  "tarea": 20.16,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "그외",
+  "year": 1992,
+  "struct": "벽돌구조",
+  "tarea": 164.98,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": null,
+  "struct": "일반목구조",
+  "tarea": 44.62,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1978,
+  "struct": "벽돌구조",
+  "tarea": 118.34,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1976,
+  "struct": "벽돌구조",
+  "tarea": 99.15,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1978,
+  "struct": "벽돌구조",
+  "tarea": 102.47,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1976,
+  "struct": "벽돌구조",
+  "tarea": 94.21,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1977,
+  "struct": "벽돌구조",
+  "tarea": 95.52,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1974,
+  "struct": "벽돌구조",
+  "tarea": 52.55,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1968,
+  "struct": "벽돌구조",
+  "tarea": 128.58,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1974,
+  "struct": "벽돌구조",
+  "tarea": 88.91,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1976,
+  "struct": "벽돌구조",
+  "tarea": 100.15,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1997,
+  "struct": "벽돌구조",
+  "tarea": 109.08,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1974,
+  "struct": "벽돌구조",
+  "tarea": 51.23,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1983,
+  "struct": "벽돌구조",
+  "tarea": 42.66,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1978,
+  "struct": "벽돌구조",
+  "tarea": 123.62,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1993,
+  "struct": "벽돌구조",
+  "tarea": 107.41,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1994,
+  "struct": "벽돌구조",
+  "tarea": 148.34,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1988,
+  "struct": "벽돌구조",
+  "tarea": 144.96,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1978,
+  "struct": "벽돌구조",
+  "tarea": 161.5,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1975,
+  "struct": "벽돌구조",
+  "tarea": 65.44,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1974,
+  "struct": "벽돌구조",
+  "tarea": 63.79,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1974,
+  "struct": "벽돌구조",
+  "tarea": 54.86,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1974,
+  "struct": "벽돌구조",
+  "tarea": 58.5,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1975,
+  "struct": "벽돌구조",
+  "tarea": 59.16,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1972,
+  "struct": "벽돌구조",
+  "tarea": 53.21,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1973,
+  "struct": "벽돌구조",
+  "tarea": 58.18,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1961,
+  "struct": "벽돌구조",
+  "tarea": 49.25,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1973,
+  "struct": "벽돌구조",
+  "tarea": 63.79,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1974,
+  "struct": "벽돌구조",
+  "tarea": 52.55,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1974,
+  "struct": "벽돌구조",
+  "tarea": 67.43,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1977,
+  "struct": "벽돌구조",
+  "tarea": 149.73,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1975,
+  "struct": "벽돌구조",
+  "tarea": 64.78,
+  "grade": "3등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1975,
+  "struct": "벽돌구조",
+  "tarea": 64.78,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1974,
+  "struct": "벽돌구조",
+  "tarea": 94.21,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1974,
+  "struct": "일반목구조",
+  "tarea": 57.17,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1974,
+  "struct": "벽돌구조",
+  "tarea": 67.42,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1978,
+  "struct": "벽돌구조",
+  "tarea": 154.69,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1979,
+  "struct": "벽돌구조",
+  "tarea": 137.49,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1973,
+  "struct": "일반목구조",
+  "tarea": 83.62,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1975,
+  "struct": "벽돌구조",
+  "tarea": 110.39,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1972,
+  "struct": "벽돌구조",
+  "tarea": 51.23,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1971,
+  "struct": "일반목구조",
+  "tarea": 56.84,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1971,
+  "struct": "일반목구조",
+  "tarea": 56.84,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1972,
+  "struct": "벽돌구조",
+  "tarea": 32.04,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1971,
+  "struct": "벽돌구조",
+  "tarea": 50.57,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1972,
+  "struct": "벽돌구조",
+  "tarea": 31.41,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1972,
+  "struct": "벽돌구조",
+  "tarea": 48.92,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1974,
+  "struct": "벽돌구조",
+  "tarea": 92.74,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1977,
+  "struct": "벽돌구조",
+  "tarea": 120.99,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1972,
+  "struct": "벽돌구조",
+  "tarea": 33.06,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1972,
+  "struct": "일반목구조",
+  "tarea": 56.53,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1972,
+  "struct": "일반목구조",
+  "tarea": 48.59,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1972,
+  "struct": "일반목구조",
+  "tarea": 55.21,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1973,
+  "struct": "일반목구조",
+  "tarea": 58.18,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1974,
+  "struct": "일반목구조",
+  "tarea": 53.55,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1974,
+  "struct": "벽돌구조",
+  "tarea": 53.53,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1976,
+  "struct": "벽돌구조",
+  "tarea": 120.67,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1974,
+  "struct": "벽돌구조",
+  "tarea": 69.42,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1975,
+  "struct": "벽돌구조",
+  "tarea": 84.95,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1970,
+  "struct": "벽돌구조",
+  "tarea": 51.9,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1974,
+  "struct": "벽돌구조",
+  "tarea": 77.35,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1975,
+  "struct": "벽돌구조",
+  "tarea": 66.44,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1974,
+  "struct": "벽돌구조",
+  "tarea": 71.4,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1976,
+  "struct": "벽돌구조",
+  "tarea": 135.38,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1976,
+  "struct": "벽돌구조",
+  "tarea": 118.67,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1976,
+  "struct": "벽돌구조",
+  "tarea": 87.26,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1966,
+  "struct": "일반목구조",
+  "tarea": 77.67,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1966,
+  "struct": "벽돌구조",
+  "tarea": 47.93,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1973,
+  "struct": "벽돌구조",
+  "tarea": 53.88,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1978,
+  "struct": "벽돌구조",
+  "tarea": 154.49,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1971,
+  "struct": "일반목구조",
+  "tarea": 56.85,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1973,
+  "struct": "일반목구조",
+  "tarea": 60.48,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1973,
+  "struct": "일반목구조",
+  "tarea": 60.48,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1976,
+  "struct": "벽돌구조",
+  "tarea": 101.15,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1973,
+  "struct": "벽돌구조",
+  "tarea": 107.93,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1971,
+  "struct": "벽돌구조",
+  "tarea": 46.93,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1971,
+  "struct": "벽돌구조",
+  "tarea": 52.21,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1993,
+  "struct": "벽돌구조",
+  "tarea": 182.68,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1964,
+  "struct": "블록구조",
+  "tarea": 57.84,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1964,
+  "struct": "일반목구조",
+  "tarea": 76.69,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1969,
+  "struct": "벽돌구조",
+  "tarea": 76.32,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1977,
+  "struct": "벽돌구조",
+  "tarea": 54.53,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1967,
+  "struct": "벽돌구조",
+  "tarea": 84.75,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1971,
+  "struct": "일반목구조",
+  "tarea": 39.66,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1973,
+  "struct": "벽돌구조",
+  "tarea": 68.08,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1972,
+  "struct": "벽돌구조",
+  "tarea": 53.22,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "산수동",
+  "kind": "단독",
+  "year": 1973,
+  "struct": "일반목구조",
+  "tarea": 61.8,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1969,
+  "struct": "블록구조",
+  "tarea": 43.3,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1967,
+  "struct": "블록구조",
+  "tarea": 57.84,
+  "grade": "3등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1951,
+  "struct": "목구조",
+  "tarea": 82.63,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1970,
+  "struct": "벽돌구조",
+  "tarea": 69.74,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1970,
+  "struct": "일반목구조",
+  "tarea": 48.5,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1970,
+  "struct": "일반목구조",
+  "tarea": 57.85,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1991,
+  "struct": "벽돌구조",
+  "tarea": 180.36,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1969,
+  "struct": "벽돌구조",
+  "tarea": 78.165,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1967,
+  "struct": "블록구조",
+  "tarea": 79.33,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1968,
+  "struct": "일반목구조",
+  "tarea": 44.62,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1976,
+  "struct": "벽돌구조",
+  "tarea": 46.27,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1978,
+  "struct": "벽돌구조",
+  "tarea": 111.19,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1978,
+  "struct": "벽돌구조",
+  "tarea": 117.35,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1979,
+  "struct": "벽돌구조",
+  "tarea": 95.05,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1972,
+  "struct": "벽돌구조",
+  "tarea": 53.22,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1972,
+  "struct": "벽돌구조",
+  "tarea": 42.97,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1973,
+  "struct": "일반목구조",
+  "tarea": 55.52,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1985,
+  "struct": "벽돌구조",
+  "tarea": 52.405,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1980,
+  "struct": "벽돌구조",
+  "tarea": 76.38,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1960,
+  "struct": "벽돌구조",
+  "tarea": 143.12,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1974,
+  "struct": "벽돌구조",
+  "tarea": 57.51,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1973,
+  "struct": "일반목구조",
+  "tarea": 65.44,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1973,
+  "struct": "벽돌구조",
+  "tarea": 69.41,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1972,
+  "struct": "벽돌구조",
+  "tarea": 64.45,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1951,
+  "struct": "일반목구조",
+  "tarea": 228.57,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1970,
+  "struct": "벽돌구조",
+  "tarea": 77.68,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1979,
+  "struct": "일반목구조",
+  "tarea": 69.33,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1970,
+  "struct": "벽돌구조",
+  "tarea": 44.29,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1968,
+  "struct": "벽돌구조",
+  "tarea": 70.06,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1981,
+  "struct": "벽돌구조",
+  "tarea": 52.77,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1985,
+  "struct": "벽돌구조",
+  "tarea": 117.78,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1972,
+  "struct": "벽돌구조",
+  "tarea": 39.33,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1975,
+  "struct": "벽돌구조",
+  "tarea": 91.88,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1989,
+  "struct": "벽돌구조",
+  "tarea": 146.97,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1988,
+  "struct": "벽돌구조",
+  "tarea": 132.85,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1967,
+  "struct": "벽돌구조",
+  "tarea": 49.91,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1951,
+  "struct": "블록구조",
+  "tarea": 69.75,
+  "grade": "3등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1962,
+  "struct": "블록구조",
+  "tarea": 53.87,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1964,
+  "struct": "일반목구조",
+  "tarea": 59.17,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1966,
+  "struct": "벽돌구조",
+  "tarea": 23.14,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1994,
+  "struct": "일반목구조",
+  "tarea": 26.44,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1988,
+  "struct": "벽돌구조",
+  "tarea": 146,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1985,
+  "struct": "블록구조",
+  "tarea": 50.8,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 2004,
+  "struct": "일반목구조",
+  "tarea": 47.04,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1970,
+  "struct": "일반목구조",
+  "tarea": 42.31,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1970,
+  "struct": "일반목구조",
+  "tarea": 51.89,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1972,
+  "struct": "일반목구조",
+  "tarea": 50.57,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1972,
+  "struct": "일반목구조",
+  "tarea": 51.23,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1969,
+  "struct": "일반목구조",
+  "tarea": 52.55,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1985,
+  "struct": "일반목구조",
+  "tarea": 47.59,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1969,
+  "struct": "일반목구조",
+  "tarea": 65.01,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1984,
+  "struct": "일반목구조",
+  "tarea": 49.25,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1975,
+  "struct": "벽돌구조",
+  "tarea": 107.09,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1964,
+  "struct": "벽돌구조",
+  "tarea": 103.295,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "다가구",
+  "year": null,
+  "struct": "경량철골구조",
+  "tarea": 65.37,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1973,
+  "struct": "벽돌구조",
+  "tarea": 68.08,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1968,
+  "struct": "일반목구조",
+  "tarea": 101.81,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1970,
+  "struct": "일반목구조",
+  "tarea": 61.47,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1960,
+  "struct": "일반목구조",
+  "tarea": 16.52,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "다가구",
+  "year": 1992,
+  "struct": "벽돌구조",
+  "tarea": 162.4,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1951,
+  "struct": "일반목구조",
+  "tarea": 29.75,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 2000,
+  "struct": "벽돌구조",
+  "tarea": 78.465,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1972,
+  "struct": "벽돌구조",
+  "tarea": 51.23,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1974,
+  "struct": "벽돌구조",
+  "tarea": 92.88,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1974,
+  "struct": "벽돌구조",
+  "tarea": 64.12,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1980,
+  "struct": "벽돌구조",
+  "tarea": 142.06,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1974,
+  "struct": "벽돌구조",
+  "tarea": 62.14,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1992,
+  "struct": "벽돌구조",
+  "tarea": 160.33,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1974,
+  "struct": "벽돌구조",
+  "tarea": 75.02,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1974,
+  "struct": "벽돌구조",
+  "tarea": 65.44,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1972,
+  "struct": "벽돌구조",
+  "tarea": 54.53,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1972,
+  "struct": "일반목구조",
+  "tarea": 80.98,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1967,
+  "struct": "벽돌구조",
+  "tarea": 30.26,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1985,
+  "struct": "벽돌구조",
+  "tarea": 78.84,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1972,
+  "struct": "벽돌구조",
+  "tarea": 133.86,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1973,
+  "struct": "일반목구조",
+  "tarea": 68.746,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1972,
+  "struct": "일반목구조",
+  "tarea": 50.23,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1972,
+  "struct": "일반목구조",
+  "tarea": 56.19,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1972,
+  "struct": "일반목구조",
+  "tarea": 59.15,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1972,
+  "struct": "일반목구조",
+  "tarea": 59.17,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1971,
+  "struct": "일반목구조",
+  "tarea": 56.19,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "지산동",
+  "kind": "단독",
+  "year": 1983,
+  "struct": "벽돌구조",
+  "tarea": 31.14,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "남동",
+  "kind": "단독",
+  "year": 1951,
+  "struct": "일반목구조",
+  "tarea": 40.32,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "남동",
+  "kind": "단독",
+  "year": 1977,
+  "struct": "벽돌구조",
+  "tarea": 124.93,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "남동",
+  "kind": "단독",
+  "year": 1951,
+  "struct": "일반목구조",
+  "tarea": 62.47,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "남동",
+  "kind": "단독",
+  "year": 1951,
+  "struct": "일반목구조",
+  "tarea": 62.14,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "남동",
+  "kind": "단독",
+  "year": 1965,
+  "struct": "일반목구조",
+  "tarea": 74.04,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "남동",
+  "kind": "단독",
+  "year": 1978,
+  "struct": "벽돌구조",
+  "tarea": 131.58,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "금동",
+  "kind": "단독",
+  "year": 1964,
+  "struct": "일반목구조",
+  "tarea": 40.65,
+  "grade": "3등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "금동",
+  "kind": "단독",
+  "year": 1972,
+  "struct": "벽돌구조",
+  "tarea": 93.21,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "금동",
+  "kind": "단독",
+  "year": null,
+  "struct": "일반목구조",
+  "tarea": 17.19,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "금동",
+  "kind": "단독",
+  "year": 1964,
+  "struct": "일반목구조",
+  "tarea": 30.41,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "금동",
+  "kind": "단독",
+  "year": 1984,
+  "struct": "벽돌구조",
+  "tarea": 27.13,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "금동",
+  "kind": "단독",
+  "year": 1969,
+  "struct": "벽돌구조",
+  "tarea": 122.3,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "금동",
+  "kind": "단독",
+  "year": 1951,
+  "struct": "벽돌구조",
+  "tarea": 47.27,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "금동",
+  "kind": "단독",
+  "year": 1951,
+  "struct": "일반목구조",
+  "tarea": 55.19,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "금동",
+  "kind": "단독",
+  "year": 1964,
+  "struct": "일반목구조",
+  "tarea": 13.55,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "금동",
+  "kind": "단독",
+  "year": 1964,
+  "struct": "일반목구조",
+  "tarea": 45.28,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "금동",
+  "kind": "단독",
+  "year": 1966,
+  "struct": "일반목구조",
+  "tarea": 35.69,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "금동",
+  "kind": "단독",
+  "year": 1989,
+  "struct": "벽돌구조",
+  "tarea": 318.91,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "금동",
+  "kind": "단독",
+  "year": 1972,
+  "struct": "블록구조",
+  "tarea": 88.91,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "금동",
+  "kind": "단독",
+  "year": 1970,
+  "struct": "일반목구조",
+  "tarea": 92.02,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "금동",
+  "kind": "단독",
+  "year": 1988,
+  "struct": "벽돌구조",
+  "tarea": 195.53,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "금동",
+  "kind": "단독",
+  "year": 1964,
+  "struct": "일반목구조",
+  "tarea": 49.9,
+  "grade": "3등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "금동",
+  "kind": "단독",
+  "year": 1967,
+  "struct": "벽돌구조",
+  "tarea": 37.67,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "금동",
+  "kind": "단독",
+  "year": 1966,
+  "struct": "벽돌구조",
+  "tarea": 39.33,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "금동",
+  "kind": "단독",
+  "year": null,
+  "struct": "벽돌구조",
+  "tarea": 32.39,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "금동",
+  "kind": "단독",
+  "year": 1951,
+  "struct": "목구조",
+  "tarea": 101.15,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "금동",
+  "kind": "단독",
+  "year": 1964,
+  "struct": "일반목구조",
+  "tarea": 32.06,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "금동",
+  "kind": "단독",
+  "year": 1951,
+  "struct": "일반목구조",
+  "tarea": 86.93,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "금동",
+  "kind": "단독",
+  "year": 1951,
+  "struct": "일반목구조",
+  "tarea": 81.97,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "금동",
+  "kind": "단독",
+  "year": 1971,
+  "struct": "일반목구조",
+  "tarea": 97.51,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "금동",
+  "kind": "단독",
+  "year": 1971,
+  "struct": "일반목구조",
+  "tarea": 55.53,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "금동",
+  "kind": "단독",
+  "year": 1964,
+  "struct": "일반목구조",
+  "tarea": 79.4,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "금동",
+  "kind": "단독",
+  "year": 1958,
+  "struct": "일반목구조",
+  "tarea": 102.57,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "금동",
+  "kind": "단독",
+  "year": 1951,
+  "struct": "일반목구조",
+  "tarea": 54.54,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "금동",
+  "kind": "단독",
+  "year": 1960,
+  "struct": "일반목구조",
+  "tarea": 51.23,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "금동",
+  "kind": "단독",
+  "year": 1964,
+  "struct": "일반목구조",
+  "tarea": 37.35,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "금동",
+  "kind": "단독",
+  "year": 1973,
+  "struct": "벽돌구조",
+  "tarea": 139.48,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "금동",
+  "kind": "단독",
+  "year": 1951,
+  "struct": "일반목구조",
+  "tarea": 39.66,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "호남동",
+  "kind": "단독",
+  "year": 1966,
+  "struct": "벽돌구조",
+  "tarea": 55.19,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "호남동",
+  "kind": "단독",
+  "year": null,
+  "struct": "일반목구조",
+  "tarea": 27.1,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "불로동",
+  "kind": "단독",
+  "year": 1964,
+  "struct": "일반목구조",
+  "tarea": 13.22,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "불로동",
+  "kind": "단독",
+  "year": 1970,
+  "struct": "일반목구조",
+  "tarea": 59.82,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "불로동",
+  "kind": "단독",
+  "year": 1969,
+  "struct": "일반목구조",
+  "tarea": 58.18,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "불로동",
+  "kind": "단독",
+  "year": 1972,
+  "struct": "일반목구조",
+  "tarea": 54.54,
+  "grade": "3등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "불로동",
+  "kind": "단독",
+  "year": 1964,
+  "struct": "일반목구조",
+  "tarea": 146.1,
+  "grade": "3등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "서석동",
+  "kind": "단독",
+  "year": 1985,
+  "struct": "일반목구조",
+  "tarea": 44.36,
+  "grade": "3등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "서석동",
+  "kind": "단독",
+  "year": 1987,
+  "struct": "벽돌구조",
+  "tarea": 112.825,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "서석동",
+  "kind": "단독",
+  "year": 1973,
+  "struct": "벽돌구조",
+  "tarea": 87.92,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "서석동",
+  "kind": "단독",
+  "year": 1968,
+  "struct": "일반목구조",
+  "tarea": 59.16,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "서석동",
+  "kind": "단독",
+  "year": 1964,
+  "struct": "일반목구조",
+  "tarea": 77,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "서석동",
+  "kind": "단독",
+  "year": 1985,
+  "struct": "일반목구조",
+  "tarea": 107.565,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "서석동",
+  "kind": "그외",
+  "year": 1966,
+  "struct": "목구조",
+  "tarea": 39.6,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "서석동",
+  "kind": "단독",
+  "year": 2001,
+  "struct": "철근콘크리트구조",
+  "tarea": 125.93,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "서석동",
+  "kind": "단독",
+  "year": null,
+  "struct": "일반목구조",
+  "tarea": 83.63,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "서석동",
+  "kind": "단독",
+  "year": 1959,
+  "struct": "일반목구조",
+  "tarea": 63.8,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "서석동",
+  "kind": "단독",
+  "year": 1962,
+  "struct": "일반목구조",
+  "tarea": 66.11,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "소태동",
+  "kind": "단독",
+  "year": 1973,
+  "struct": "벽돌구조",
+  "tarea": 68.42,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "소태동",
+  "kind": "단독",
+  "year": 1975,
+  "struct": "벽돌구조",
+  "tarea": 50.56,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "소태동",
+  "kind": "단독",
+  "year": 1991,
+  "struct": "벽돌구조",
+  "tarea": 155.52,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "소태동",
+  "kind": "단독",
+  "year": 1981,
+  "struct": "벽돌구조",
+  "tarea": 66.12,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "소태동",
+  "kind": "단독",
+  "year": 1920,
+  "struct": "일반목구조",
+  "tarea": 74.71,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "소태동",
+  "kind": "단독",
+  "year": 1978,
+  "struct": "벽돌구조",
+  "tarea": 59.29,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "소태동",
+  "kind": "단독",
+  "year": 1977,
+  "struct": "벽돌구조",
+  "tarea": 44.61,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "소태동",
+  "kind": "단독",
+  "year": 1985,
+  "struct": "블록구조",
+  "tarea": 23.97,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "소태동",
+  "kind": "단독",
+  "year": 1983,
+  "struct": "벽돌구조",
+  "tarea": 66.34,
+  "grade": "3등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "소태동",
+  "kind": "단독",
+  "year": 1964,
+  "struct": "일반목구조",
+  "tarea": 117.35,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "소태동",
+  "kind": "단독",
+  "year": 1979,
+  "struct": "벽돌구조",
+  "tarea": 43.65,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "소태동",
+  "kind": "단독",
+  "year": 1976,
+  "struct": "벽돌구조",
+  "tarea": 72.71,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "소태동",
+  "kind": "단독",
+  "year": 1966,
+  "struct": "블록구조",
+  "tarea": 56.84,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "소태동",
+  "kind": "단독",
+  "year": 1964,
+  "struct": "블록구조",
+  "tarea": 28.42,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "소태동",
+  "kind": "단독",
+  "year": 1975,
+  "struct": "벽돌구조",
+  "tarea": 72.02,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "소태동",
+  "kind": "단독",
+  "year": 1977,
+  "struct": "벽돌구조",
+  "tarea": 62.14,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "소태동",
+  "kind": "단독",
+  "year": 1982,
+  "struct": "벽돌구조",
+  "tarea": 99.32,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "소태동",
+  "kind": "단독",
+  "year": 1977,
+  "struct": "벽돌구조",
+  "tarea": 63.79,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "소태동",
+  "kind": "단독",
+  "year": 1979,
+  "struct": "벽돌구조",
+  "tarea": 117.09,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "소태동",
+  "kind": "단독",
+  "year": 1986,
+  "struct": "벽돌구조",
+  "tarea": 107.01,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "소태동",
+  "kind": "단독",
+  "year": 1964,
+  "struct": "벽돌구조",
+  "tarea": 54.695,
+  "grade": "3등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "소태동",
+  "kind": "단독",
+  "year": 1977,
+  "struct": "벽돌구조",
+  "tarea": 54.54,
+  "grade": "3등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "소태동",
+  "kind": "단독",
+  "year": 1978,
+  "struct": "벽돌구조",
+  "tarea": 73.38,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "소태동",
+  "kind": "단독",
+  "year": 1968,
+  "struct": "벽돌구조",
+  "tarea": 37.83,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "소태동",
+  "kind": "단독",
+  "year": 1968,
+  "struct": "벽돌구조",
+  "tarea": 37.9,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "소태동",
+  "kind": "단독",
+  "year": 1975,
+  "struct": "벽돌구조",
+  "tarea": 69.08,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "소태동",
+  "kind": "단독",
+  "year": 1975,
+  "struct": "벽돌구조",
+  "tarea": 49.9,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "소태동",
+  "kind": "단독",
+  "year": 1967,
+  "struct": "블록구조",
+  "tarea": 31.4,
+  "grade": "3등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "소태동",
+  "kind": "단독",
+  "year": 1968,
+  "struct": "블록구조",
+  "tarea": 43.63,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "소태동",
+  "kind": "단독",
+  "year": 1969,
+  "struct": "일반목구조",
+  "tarea": 55.2,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "소태동",
+  "kind": "단독",
+  "year": 1976,
+  "struct": "벽돌구조",
+  "tarea": 54.53,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "소태동",
+  "kind": "단독",
+  "year": 1971,
+  "struct": "벽돌구조",
+  "tarea": 50.57,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "소태동",
+  "kind": "단독",
+  "year": 1971,
+  "struct": "벽돌구조",
+  "tarea": 48.25,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "소태동",
+  "kind": "단독",
+  "year": 1978,
+  "struct": "벽돌구조",
+  "tarea": 65.78,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "소태동",
+  "kind": "단독",
+  "year": 1967,
+  "struct": "벽돌구조",
+  "tarea": 37.83,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "소태동",
+  "kind": "단독",
+  "year": 1985,
+  "struct": "벽돌구조",
+  "tarea": 35.88,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "소태동",
+  "kind": "단독",
+  "year": 1968,
+  "struct": "벽돌구조",
+  "tarea": 37.83,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "소태동",
+  "kind": "단독",
+  "year": 1969,
+  "struct": "벽돌구조",
+  "tarea": 37.83,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "소태동",
+  "kind": "단독",
+  "year": 1985,
+  "struct": "블록구조",
+  "tarea": 66.03,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "소태동",
+  "kind": "단독",
+  "year": 1981,
+  "struct": "벽돌구조",
+  "tarea": 74,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "소태동",
+  "kind": "단독",
+  "year": 1977,
+  "struct": "벽돌구조",
+  "tarea": 65.77,
+  "grade": "3등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "소태동",
+  "kind": "단독",
+  "year": 1978,
+  "struct": "벽돌구조",
+  "tarea": 81.87,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "소태동",
+  "kind": "단독",
+  "year": 1976,
+  "struct": "벽돌구조",
+  "tarea": 134.49,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "소태동",
+  "kind": "단독",
+  "year": 1978,
+  "struct": "벽돌구조",
+  "tarea": 85.61,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "소태동",
+  "kind": "단독",
+  "year": 1979,
+  "struct": "벽돌구조",
+  "tarea": 84.61,
+  "grade": "3등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "소태동",
+  "kind": "단독",
+  "year": 1974,
+  "struct": "벽돌구조",
+  "tarea": 73.05,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "소태동",
+  "kind": "단독",
+  "year": 1983,
+  "struct": "벽돌구조",
+  "tarea": 72.18,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "소태동",
+  "kind": "단독",
+  "year": 1994,
+  "struct": "벽돌구조",
+  "tarea": 83.79,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "소태동",
+  "kind": "단독",
+  "year": null,
+  "struct": "블록구조",
+  "tarea": 28.42,
+  "grade": "3등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "소태동",
+  "kind": "단독",
+  "year": 1994,
+  "struct": "벽돌구조",
+  "tarea": 84.97,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "소태동",
+  "kind": "단독",
+  "year": 1980,
+  "struct": "벽돌구조",
+  "tarea": 145.93,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "소태동",
+  "kind": "단독",
+  "year": 1980,
+  "struct": "벽돌구조",
+  "tarea": 82.44,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "소태동",
+  "kind": "단독",
+  "year": 1979,
+  "struct": "블록구조",
+  "tarea": 71.1,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "소태동",
+  "kind": "단독",
+  "year": 1964,
+  "struct": "일반목구조",
+  "tarea": 17.19,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "소태동",
+  "kind": "단독",
+  "year": 1964,
+  "struct": "일반목구조",
+  "tarea": 10.24,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "소태동",
+  "kind": "단독",
+  "year": 1969,
+  "struct": "일반목구조",
+  "tarea": 66.05,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "소태동",
+  "kind": "단독",
+  "year": 1998,
+  "struct": "경량철골구조",
+  "tarea": 94.8,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "소태동",
+  "kind": "단독",
+  "year": 1964,
+  "struct": "일반목구조",
+  "tarea": 18.84,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "소태동",
+  "kind": "단독",
+  "year": 1997,
+  "struct": "벽돌구조",
+  "tarea": 149.67,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "소태동",
+  "kind": "단독",
+  "year": 1971,
+  "struct": "벽돌구조",
+  "tarea": 74.58,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "소태동",
+  "kind": "단독",
+  "year": 1981,
+  "struct": "벽돌구조",
+  "tarea": 121.76,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "소태동",
+  "kind": "단독",
+  "year": 1964,
+  "struct": "일반목구조",
+  "tarea": 69.63,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "운림동",
+  "kind": "단독",
+  "year": 1921,
+  "struct": "일반목구조",
+  "tarea": 19.9,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "운림동",
+  "kind": "단독",
+  "year": 1964,
+  "struct": "일반목구조",
+  "tarea": 19.17,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "운림동",
+  "kind": "단독",
+  "year": 1979,
+  "struct": "벽돌구조",
+  "tarea": 67,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "운림동",
+  "kind": "단독",
+  "year": 1966,
+  "struct": "일반목구조",
+  "tarea": 75.37,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "운림동",
+  "kind": "단독",
+  "year": 1984,
+  "struct": "블록구조",
+  "tarea": 98.06,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "학동",
+  "kind": "단독",
+  "year": 1964,
+  "struct": "일반목구조",
+  "tarea": 34.19,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "학동",
+  "kind": "단독",
+  "year": 1951,
+  "struct": "블록구조",
+  "tarea": 22.14,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "학동",
+  "kind": "단독",
+  "year": 1971,
+  "struct": "벽돌구조",
+  "tarea": 46.94,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "학동",
+  "kind": "단독",
+  "year": 1945,
+  "struct": "일반목구조",
+  "tarea": 35.04,
+  "grade": "3등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "학동",
+  "kind": "단독",
+  "year": 1951,
+  "struct": "일반목구조",
+  "tarea": 51.23,
+  "grade": "3등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "학동",
+  "kind": "단독",
+  "year": 1969,
+  "struct": "일반목구조",
+  "tarea": 76.03,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "학동",
+  "kind": "단독",
+  "year": 1964,
+  "struct": "일반목구조",
+  "tarea": 42.64,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "학동",
+  "kind": "단독",
+  "year": 1971,
+  "struct": "블록구조",
+  "tarea": 33.38,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "학동",
+  "kind": "단독",
+  "year": 1976,
+  "struct": "벽돌구조",
+  "tarea": 80.98,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "학동",
+  "kind": "단독",
+  "year": 1964,
+  "struct": "벽돌구조",
+  "tarea": 75.03,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "학동",
+  "kind": "그외",
+  "year": 2008,
+  "struct": "철근콘크리트구조",
+  "tarea": 384.99,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "학동",
+  "kind": "단독",
+  "year": 1959,
+  "struct": "벽돌구조",
+  "tarea": 61.15,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "학동",
+  "kind": "단독",
+  "year": 1964,
+  "struct": "벽돌구조",
+  "tarea": 61.88,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "학동",
+  "kind": "단독",
+  "year": 1969,
+  "struct": "블록구조",
+  "tarea": 24.79,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "학동",
+  "kind": "단독",
+  "year": 2003,
+  "struct": "경량철골구조",
+  "tarea": 37.57,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "학동",
+  "kind": "단독",
+  "year": 1964,
+  "struct": "목구조",
+  "tarea": 55.77,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "학동",
+  "kind": "그외",
+  "year": 2008,
+  "struct": "철근콘크리트구조",
+  "tarea": 374.1,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "학동",
+  "kind": "단독",
+  "year": 1951,
+  "struct": "일반목구조",
+  "tarea": 82.96,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "학동",
+  "kind": "단독",
+  "year": 2005,
+  "struct": "철근콘크리트구조",
+  "tarea": 104.61,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "학동",
+  "kind": "단독",
+  "year": 2005,
+  "struct": "철근콘크리트구조",
+  "tarea": 104.61,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "학동",
+  "kind": "단독",
+  "year": 1972,
+  "struct": "일반목구조",
+  "tarea": 45.95,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "학동",
+  "kind": "단독",
+  "year": 1996,
+  "struct": "일반목구조",
+  "tarea": 35.04,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "학동",
+  "kind": "단독",
+  "year": 1964,
+  "struct": "블록구조",
+  "tarea": 116.02,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "학동",
+  "kind": "단독",
+  "year": 1964,
+  "struct": "벽돌구조",
+  "tarea": 60.49,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "학동",
+  "kind": "단독",
+  "year": 1981,
+  "struct": "벽돌구조",
+  "tarea": 98.37,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "학동",
+  "kind": "단독",
+  "year": 1968,
+  "struct": "벽돌구조",
+  "tarea": 29.74,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "학동",
+  "kind": "단독",
+  "year": 1970,
+  "struct": "벽돌구조",
+  "tarea": 46.6,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "학동",
+  "kind": "단독",
+  "year": 1979,
+  "struct": "벽돌구조",
+  "tarea": 85.17,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "학동",
+  "kind": "단독",
+  "year": 1982,
+  "struct": "벽돌구조",
+  "tarea": 123.97,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "학동",
+  "kind": "단독",
+  "year": 1978,
+  "struct": "벽돌구조",
+  "tarea": 126.43,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "학동",
+  "kind": "그외",
+  "year": 1951,
+  "struct": "시멘트블럭조",
+  "tarea": 91.8,
+  "grade": "3등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "학동",
+  "kind": "단독",
+  "year": 1979,
+  "struct": "벽돌구조",
+  "tarea": 81.9,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "학동",
+  "kind": "단독",
+  "year": 1974,
+  "struct": "벽돌구조",
+  "tarea": 75.36,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "학동",
+  "kind": "단독",
+  "year": 1975,
+  "struct": "벽돌구조",
+  "tarea": 71.06,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "학동",
+  "kind": "단독",
+  "year": 1995,
+  "struct": "철근콘크리트구조",
+  "tarea": 502.88,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "학동",
+  "kind": "단독",
+  "year": 1964,
+  "struct": "일반목구조",
+  "tarea": 118.16,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "선교동",
+  "kind": "단독",
+  "year": null,
+  "struct": "일반목구조",
+  "tarea": 29.09,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "용산동",
+  "kind": "단독",
+  "year": 1971,
+  "struct": "블록구조",
+  "tarea": 78.33,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "용산동",
+  "kind": "단독",
+  "year": 1978,
+  "struct": "벽돌구조",
+  "tarea": 75.245,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "용산동",
+  "kind": "단독",
+  "year": null,
+  "struct": "일반목구조",
+  "tarea": 87.43,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "용산동",
+  "kind": "단독",
+  "year": 1976,
+  "struct": "벽돌구조",
+  "tarea": 52.55,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "용산동",
+  "kind": "단독",
+  "year": 1977,
+  "struct": "벽돌구조",
+  "tarea": 97.85,
+  "grade": "2등급",
+  "baseDate": "2025-07-16"
+ },
+ {
+  "dong": "용산동",
+  "kind": "단독",
+  "year": 1985,
+  "struct": "블록구조",
+  "tarea": 47.24,
+  "grade": "1등급",
+  "baseDate": "2025-07-16"
+ }
+]
