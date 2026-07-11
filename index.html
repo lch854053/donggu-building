@@ -429,6 +429,22 @@ async function fetchBuilding(p){
   };
 }
 
+// 건축인허가 기본개요 (프록시 /api/archpms 경유)
+// 건축물대장(getBrTitleInfo)에 등록되지 않은 신축 건물(예: 동계로 68 = 계림2동행정복합센터,
+// 사용승인 2023) 폴백용. 반환: { items:[...], error:null } — items 빈배열 + error 없음 = 인허가도 없음
+async function fetchArchBuilding(p){
+  const { ok, status, data, error } = await api("archpms", {
+    op:"getApBasisOulnInfo",
+    sigunguCd:p.sigunguCd, bjdongCd:p.bjdongCd,
+    platGbCd:p.platGbCd, bun:p.bun, ji:p.ji
+  });
+  if(!ok) return { items:[], error: status ? `서버 오류 ${status}` : error };
+  return {
+    items: Array.isArray(data.items) ? data.items : [],
+    error:  data.error || null
+  };
+}
+
 // 주소 → 좌표 (VWorld 지오코더 프록시)
 async function geocodeAddr(address){
   const { ok, data } = await api("vworld-geocode", { address });
@@ -639,6 +655,29 @@ async function processOne(raw){
         }
       }
     }
+  }
+
+  // 4-c) 건축물대장이 여전히 없으면 → 건축인허가정보(getApBasisOulnInfo) 폴백.
+  //      대장 데이터에 아직 반영되지 않은 신축 건물(예: 동계로 68 = 계림2동행정복합센터,
+  //      사용승인 2023) 대응. 인허가에서 구조·층수·동명·도로명은 구할 수 없어 "-"로 두되,
+  //      도로명은 juso가 준 값으로 채운다. 데이터는 신뢰하므로 ok + 안내문구.
+  if(!bld.error && !bld.titles.length){
+    const arch = await fetchArchBuilding(usedParams);
+    if(!arch.error && arch.items.length){
+      const main = pickArchMain(arch.items);
+      if(main){
+        const ab = archRowToBuilding(main);
+        // juso 도로명으로 newPlatPlc 보정 (인허가엔 도로명 없음)
+        const jusoRoad = stripParens(String(top.roadAddrPart1 || top.roadAddr || "")).trim();
+        if(jusoRoad) ab.newPlatPlc = jusoRoad;
+        return {
+          input:raw, status:"ok",
+          reason:"건축물대장 미반영 — 건축인허가정보 기준 표시",
+          params:usedParams, data:ab, buildings:[ab], dongFiltered:false
+        };
+      }
+    }
+    if(arch.error) bld.error = arch.error;
   }
 
   if(bld.error)
@@ -1323,6 +1362,24 @@ async function runDetail(){
           if(!r2.error && r2.titles.length){ titles = r2.titles; usedParams = v; }
         }
       }
+    }
+
+    // 4) 건축물대장이 여전히 없으면 → 건축인허가정보(getApBasisOulnInfo) 폴백.
+    //    대장에 아직 반영되지 않은 신축 건물(예: 동계로 68 = 계림2동행정복합센터) 대응.
+    //    인허가 행은 mergeBuilding 이 읽는 키(mainPurpsCdNm·platArea·totArea·useAprDay·bldNm
+    //    ·platPlc 등)를 대부분 갖고 있어, newPlatPlc(도로명)와 mainAtchGbCdNm만 보충하면
+    //    cardHTML→mergeBuilding 파이프라인이 그대로 동작한다. 구조·층수는 "-"로 표시된다.
+    if(!errMsg && !titles.length && usedParams){
+      const arch = await fetchArchBuilding(usedParams);
+      if(!arch.error && arch.items.length){
+        const main = pickArchMain(arch.items);
+        if(main){
+          const jusoRoad = stripParens(String(top0.roadAddrPart1 || top0.roadAddr || "")).trim();
+          titles = [{ ...main, newPlatPlc: jusoRoad || main.platPlc, mainAtchGbCdNm: "주건축물" }];
+          viaJuso = false;   // 인허가 경로 — 도로명 일치 필터 미적용
+        }
+      }
+      if(arch.error && !errMsg) errMsg = arch.error;
     }
 
     // 일시 오류가 있었더라도 다른 후보/폴백에서 대장을 찾았으면 성공을 우선 (일괄조회와 일관)

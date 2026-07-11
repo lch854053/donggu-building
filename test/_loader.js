@@ -25,6 +25,7 @@ export function loadTransform() {
     return {
       jusoToBldCandidates, jusoToBldGroup, pickTop, extractDong, dongDigits,
       cleanForSearch, stripParens, totalParking, mergeBuilding,
+      archRowToBuilding, pickArchMain,
       toPNU, hdongOf, fmt, esc, extractYear, fmtUseApr, norm,
       matchCat, leadNum, dongMatch, dedupeBy, bldLabel, gbLabel,
       roadMatches, geomAreaM2, geomContainsPoint,
