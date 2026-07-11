@@ -12,5 +12,18 @@
     "useAprDay": "20220614",
     "tarea": 45603.70,
     "parking": 494
+  },
+  {
+    "pnu": "2911010900101250000",
+    "complexNm": "교대역 모아엘가 그랑데",
+    "doroAddr": "전남광주통합특별시 동구 무등로 373",
+    "adres": "전남광주통합특별시 동구 계림동 125",
+    "kind": "아파트",
+    "hhld": 815,
+    "dongCnt": 11,
+    "grndFlr": 25,
+    "ugrndFlr": 2,
+    "useAprDay": "202605",
+    "parking": 1467
   }
 ]
