@@ -383,12 +383,13 @@
             <select id="v-hdong"><option value="__ALL__">전체</option></select>
           </div>
           <div class="field">
-            <label>주택유형 <span class="sel-hint">(미선택 = 전체)</span></label>
-            <div class="ms" id="vms-kind"></div>
-          </div>
-          <div class="field">
             <label>등급판정 <span class="sel-hint">(미선택 = 전체)</span></label>
             <div class="ms" id="vms-grade"></div>
+          </div>
+          <div class="field">
+            <label class="lbl-row"><span>건축년도</span><span class="readout" id="v-ro-year">전체</span></label>
+            <div class="dual" id="v-dual-year" data-min="1900" data-max="2026" data-step="1" data-unit="" data-group="0"></div>
+            <label class="chk-row"><input type="checkbox" id="v-yearunknown" checked><span>연도 미확인 포함</span></label>
           </div>
         </div>
         <div class="controls">
@@ -407,6 +408,7 @@
       <div class="stat"><div class="k">총 빈집</div><div class="v" id="vs-total">0</div></div>
       <div class="stat"><div class="k">1등급</div><div class="v" id="vs-grade1">0</div></div>
       <div class="stat"><div class="k">2등급</div><div class="v" id="vs-grade2">0</div></div>
+      <div class="stat"><div class="k">3등급</div><div class="v" id="vs-grade3">0</div></div>
     </div>
 
     <div id="vResultArea" style="display:none">
@@ -422,7 +424,6 @@
           <thead><tr>
             <th class="num">#</th>
             <th>행정동</th>
-            <th>주택유형</th>
             <th>건축년도</th>
             <th>주구조</th>
             <th class="num">연면적(㎡)</th>
@@ -682,7 +683,7 @@ async function processOne(raw){
   const cands = await searchJuso(query);
   if(!cands.length) return {input:raw, status:"err", reason:"주소를 찾을 수 없음"};
 
-  // 2) 변환 — 같은 건물군(도로명+건물본번+법정동 일치)의 모든 필지를 후보로.
+  // 2) 변환 — 같은 건물군(도로명+건물본번+행정동 일치)의 모든 필지를 후보로.
   //    부속지번에만 대장이 있는 다필지 건물(예: 중흥로 223→576-16은 부속,
   //    223-1→576-13이 대표) 대응. cands[0] 단건만 쓰던 기존 방식을 확장.
   //    단, juso가 인근 번지를 먼저 반환하는 경우(예: 85 검색→[0]=81)에 대비해
@@ -771,7 +772,7 @@ async function processOne(raw){
   // 대표 1행: 첫 주건축물 (없으면 첫 동)
   const rep = buildings.find(b => b.atchGb === "주건축물") || buildings[0];
 
-  // 서로 다른 건물군(법정동 또는 도로명 건물번호가 다른 후보)이 2건 이상이면 확인 필요.
+  // 서로 다른 건물군(행정동 또는 도로명 건물번호가 다른 후보)이 2건 이상이면 확인 필요.
   // 같은 건물군의 부속 필지(예: 중흥로 223/223-1)는 한 건물로 보아 ok 처리.
   // 대장 도로명이 juso와 불일치해 교정 표시(roadFixed)한 경우도 확인 필요 알림.
   const groupKeys = new Set(cands.map(j => `${j.emdNm||""}-${j.rn||""}-${j.buldMnnm||""}`));
@@ -913,7 +914,7 @@ function exportExcel(){
           "대지면적":d.platArea??"","건축면적":d.archArea??"","연면적":d.totArea??"",
           "건폐율(%)":d.bcRat??"","용적률(%)":d.vlRat??"",
           "지상층수":d.grndFlr??"","지하층수":d.ugrndFlr??"","총주차":d.totPkng||0,"사용승인일":d.useAprDay||"",
-          "시군구코드":p.sigunguCd||"","법정동코드":p.bjdongCd||"","번":p.bun||"","지":p.ji||"","산여부":p.platGbCd||"",
+          "시군구코드":p.sigunguCd||"","행정동코드":p.bjdongCd||"","번":p.bun||"","지":p.ji||"","산여부":p.platGbCd||"",
           "상태":({ok:"정상",warn:"확인필요"})[r.status]||"","비고":r.reason||""
         });
       });
@@ -923,7 +924,7 @@ function exportExcel(){
         "지번주소":r.jibun||"","도로명주소":"","건물명":"",
         "주용도":"","주구조":"","대지면적":"","건축면적":"","연면적":"",
         "건폐율(%)":"","용적률(%)":"","지상층수":"","지하층수":"","총주차":"","사용승인일":"",
-        "시군구코드":p.sigunguCd||"","법정동코드":p.bjdongCd||"","번":p.bun||"","지":p.ji||"","산여부":p.platGbCd||"",
+        "시군구코드":p.sigunguCd||"","행정동코드":p.bjdongCd||"","번":p.bun||"","지":p.ji||"","산여부":p.platGbCd||"",
         "상태":({err:"실패",none:"대장없음",mute:"동구외"})[r.status]||"","비고":r.reason||""
       });
     }
@@ -976,8 +977,8 @@ function clearAll(){
 /* ── 조건검색(Cond) 상태 ── */
 let HJ = null;            // 행정동 매핑 { jibun2hdong, hdong2bjd }
 let HDONG2JIBUN = null;   // 행정동 → [지번키] 역매핑 (jibun2hdong 역index)
-let BJD_PARCELS = null;   // 법정동코드 → 매핑된 지번 수 (동단위 비용 추정용)
-let ALL_BJD = [];         // 동구 전체 법정동코드(전체 검색용)
+let BJD_PARCELS = null;   // 행정동코드 → 매핑된 지번 수 (동단위 비용 추정용)
+let ALL_BJD = [];         // 동구 전체 행정동코드(전체 검색용)
 let CRESULTS = [];        // 조건검색 결과 (표시용 building 객체 배열)
 
 /* ---- 용도/구조 분류 (흔한 것 노출 + 기타) ---- */
@@ -1075,7 +1076,7 @@ async function loadHaengjeong(){
   try{
     const r = await fetch("/haengjeong.json");
     HJ = await r.json();
-    // jibun2hdong 역매핑: 행정동 → [지번키] (단건 대상), 법정동 → 지번수 (동단위 비용 추정)
+    // jibun2hdong 역매핑: 행정동 → [지번키] (단건 대상), 행정동 → 지번수 (동단위 비용 추정)
     HDONG2JIBUN = {}; BJD_PARCELS = {};
     for(const [k, hd] of Object.entries(HJ.jibun2hdong || {})){
       if(!HDONG2JIBUN[hd]) HDONG2JIBUN[hd] = [];
@@ -1087,7 +1088,7 @@ async function loadHaengjeong(){
     sel.innerHTML = '<option value="">매핑 로드 실패</option>';
     return;
   }
-  // 전체 법정동코드 집합
+  // 전체 행정동코드 집합
   const set = new Set();
   Object.values(HJ.hdong2bjd).forEach(arr => arr.forEach(c => set.add(c)));
   ALL_BJD = [...set];
@@ -1122,9 +1123,9 @@ async function runConditionSearch(){
   if(!hdong){ alert("행정동을 선택하세요."); return; }
   const isAll = hdong==="__ALL__";
 
-  // 조회할 법정동 목록
+  // 조회할 행정동 목록
   const bjdList = isAll ? ALL_BJD : (HJ.hdong2bjd[hdong]||[]);
-  if(!bjdList.length){ alert("해당 행정동의 법정동 정보가 없습니다."); return; }
+  if(!bjdList.length){ alert("해당 행정동의 행정동 정보가 없습니다."); return; }
 
   // 조건값 (다중선택 + 슬라이더)
   const selPurps = MS.purps.selected();   // [] = 전체
@@ -1147,15 +1148,15 @@ async function runConditionSearch(){
   document.getElementById("cStats").style.display="none";
   if(isAll) document.getElementById("cHint").textContent = "전체 검색은 시간이 걸립니다…";
 
-  // 1) 법정동별 수집 전략 결정
-  //    판단 기준: 보유 지번 수 P  vs  그 법정동 동단위 추정 페이지수
+  // 1) 행정동별 수집 전략 결정
+  //    판단 기준: 보유 지번 수 P  vs  그 행정동 동단위 추정 페이지수
   //    P가 더 적으면 단건이 싸므로 단건, 아니면 동 단위 (어느 동도 동단위보다 나빠지지 않음)
   const EST_BLD_PER_PARCEL = 1.7;   // 지번당 건물 추정(동구 실측 ~1.6~1.9)
   const estPages = (bjd) => Math.max(1, Math.ceil((BJD_PARCELS?.[bjd] || 0) * EST_BLD_PER_PARCEL / 100));
   const ownedOf  = (bjd) => isAll ? [] :
     (HDONG2JIBUN?.[hdong] || []).filter(k => k.slice(0,5) === bjd);
 
-  const pageBjds = [];        // 동 단위로 받을 법정동
+  const pageBjds = [];        // 동 단위로 받을 행정동
   const parcelTasks = [];     // 단건으로 받을 {bjd,bun,ji}
   for(const bjd of bjdList){
     const owned = ownedOf(bjd);
@@ -1168,9 +1169,9 @@ async function runConditionSearch(){
 
   const all = [];             // 수집된 raw title 들
 
-  // 2) 동 단위 법정동: 1페이지로 totalCount 파악 후 잔여 페이지 계산
+  // 2) 동 단위 행정동: 1페이지로 totalCount 파악 후 잔여 페이지 계산
   //    (건축HUB는 numOfRows 와 무관하게 ~100건/페이지로 응답)
-  const MAX_PAGES = 50;       // 법정동당 최대 페이지 (~100건/페이지 → 최대 5000건)
+  const MAX_PAGES = 50;       // 행정동당 최대 페이지 (~100건/페이지 → 최대 5000건)
   const more = [];
   if(pageBjds.length){
     let p1done = 0; cUpdate(0, pageBjds.length);
@@ -1403,7 +1404,7 @@ async function runDetail(){
 
     // 1) juso 검색 → 동구 후보(중복 제거). 0건이어도 VWorld 폴백으로 진행
     const jusoList = await searchJuso(query);
-    // 같은 건물군(도로명+건물본번+법정동 일치)의 모든 필지를 후보로.
+    // 같은 건물군(도로명+건물본번+행정동 일치)의 모든 필지를 후보로.
     // 부속지번에만 대장이 있는 다필지 건물(예: 중흥로 223→576-16 부속,
     // 223-1→576-13 대표) 대응. 기존 roadAddrPart1 일치 필터는 223/223-1을
     // 분리해버려 223이 대장없음으로 떨어지는 원인이었음.
@@ -1967,7 +1968,7 @@ async function fetchAptDtl(kaptCode){
   return info;
 }
 
-// 3순위: 오피스텔/도시형생활주택 보충 (건축인허가 getApHsTpInfo, 법정동 단위)
+// 3순위: 오피스텔/도시형생활주택 보충 (건축인허가 getApHsTpInfo, 행정동 단위)
 async function fetchHsTpDongPage(bjd, pageNo){
   const { ok, data } = await api("archpms", {
     op:"getApHsTpInfo",
@@ -2199,20 +2200,20 @@ function kaptKindToGbCd(kindNm){
 
 // 주소(ADRES)에서 행정동 추정: 번지수로 jibun2hdong 13자리 키 매핑
 function hdongFromAddr(adres, bjd2hd){
-  // adres 예: "광주광역시 동구 산수동 689" → 동명으로 법정동코드 역추적 필요
-  // PNU에서 법정동코드(앞10)+번지(번4+지4) 추출이 더 정확 → 별도 함수 사용
+  // adres 예: "광주광역시 동구 산수동 689" → 동명으로 행정동코드 역추적 필요
+  // PNU에서 행정동코드(앞10)+번지(번4+지4) 추출이 더 정확 → 별도 함수 사용
   return "";
 }
 
-// PNU(19자리)에서 행정동 추정: 법정동5(앞10의 뒤5) + 번4 + 지4 → jibun2hdong 13자리 키
+// PNU(19자리)에서 행정동 추정: 행정동5(앞10의 뒤5) + 번4 + 지4 → jibun2hdong 13자리 키
 function hdongFromPnu(pnu, bjd2hd){
   if(!pnu || pnu.length < 19) return "";
-  const bjdongCd = pnu.slice(5,10);   // 법정동코드 5자리
+  const bjdongCd = pnu.slice(5,10);   // 행정동코드 5자리
   const bun = pnu.slice(11,15);
   const ji  = pnu.slice(15,19);
   const key = bjdongCd + bun + ji;
   if(HJ_H.jibun2hdong[key]) return HJ_H.jibun2hdong[key];
-  // 폭백: 법정동코드 기준 (모호 가능)
+  // 폭백: 행정동코드 기준 (모호 가능)
   return bjd2hd[bjdongCd] || "";
 }
 
@@ -2339,7 +2340,7 @@ async function runHousingSearch(){
     document.getElementById("hStats").style.display="none";
     if(isAll) document.getElementById("hHint").textContent = "전체 검색은 시간이 걸립니다…";
 
-    // 법정동코드(5자리) → 행정동 사전(폴백용)
+    // 행정동코드(5자리) → 행정동 사전(폴백용)
     const bjd2hd = {};
     for(const [hd, bjds] of Object.entries(HJ_H.hdong2bjd||{})){
       for(const b of bjds) bjd2hd[b] = hd;
@@ -2987,7 +2988,7 @@ function clearHousing(){
 /* ============================================================
    철거멸실관리대장 (조건검색 탭)
    건축인허가 ArchPmsHubService 의 getApDemolExtngMgmRgstInfo.
-   행정동(→법정동 목록) 단위로 동단위 스캔 + 철거·멸실 연도 필터.
+   행정동(→행정동 목록) 단위로 동단위 스캔 + 철거·멸실 연도 필터.
    기존 조건검색(runConditionSearch)의 동단위 스캔·페이지네이션·엑셀 패턴 재사용.
    ============================================================ */
 
@@ -3025,7 +3026,7 @@ function mergeDemol(r, bjd){
     strct:     r.strctCdNm || "-",                  // 주구조
     totArea:   r.totArea ?? null,                   // 연면적
     bldCnt:    r.bldCnt ?? null,                    // 건물수
-    bjd,                                            // 법정동코드 (행정동 매핑용)
+    bjd,                                            // 행정동코드 (행정동 매핑용)
     bun:       String(r.bun || "").padStart(4,"0"), // 본번 (jibun2hdong 키용)
     ji:        String(r.ji || "").padStart(4,"0"),  // 부번 (jibun2hdong 키용)
   };
@@ -3100,7 +3101,7 @@ async function runDemolSearch(){
   if(!hdong){ alert("행정동을 선택하세요."); return; }
   const isAll = hdong==="__ALL__";
   const bjdList = isAll ? ALL_BJD : (HJ.hdong2bjd[hdong]||[]);
-  if(!bjdList.length){ alert("해당 행정동의 법정동 정보가 없습니다."); return; }
+  if(!bjdList.length){ alert("해당 행정동의 행정동 정보가 없습니다."); return; }
 
   // 조건값
   const selGb = M_GB.selected();                 // [] = 전체
@@ -3143,8 +3144,8 @@ async function runDemolSearch(){
   }
 
   // 필터: 행정동(단건선택 시) + 구분 + 연도
-  // 행정동 매핑 키 = 법정동코드(5)+본번(4)+부번(4) = 13자리 (jibun2hdong 키와 동일).
-  // 매핑이 없으면 법정동 단위로 추정(hdongOfBjd).
+  // 행정동 매핑 키 = 행정동코드(5)+본번(4)+부번(4) = 13자리 (jibun2hdong 키와 동일).
+  // 매핑이 없으면 행정동 단위로 추정(hdongOfBjd).
   const scanned = all.length;
   const matched = [];
   for(const r of all){
@@ -3180,7 +3181,7 @@ async function runDemolSearch(){
   }, 300);
 }
 
-// 법정동코드(bjdongCd, 5자리) → 행정동명. hdong2bjd 역매항.
+// 행정동코드(bjdongCd, 5자리) → 행정동명. hdong2bjd 역매항.
 function hdongOfBjd(bjd){
   if(!HJ?.hdong2bjd) return "";
   for(const [hd, bjds] of Object.entries(HJ.hdong2bjd)){
@@ -3288,8 +3289,8 @@ function exportDemolExcel(){
    ============================================================ */
 let V_DATA = [];
 let V_RESULTS = [];
-let V_MS_KIND = null;
 let V_MS_GRADE = null;
+let V_DUAL_YEAR = null;
 let V_PAGE = 1;
 const V_PAGE_SIZE = 50;
 
@@ -3310,9 +3311,15 @@ async function initVacantTab(){
       console.error("[initVacantTab]", e);
     }
   }
-  if(!V_MS_KIND){
-    const kinds = [...new Set(V_DATA.map(d => d.kind).filter(Boolean))].sort();
-    V_MS_KIND = buildMultiselect("vms-kind", kinds, false);
+  if(!V_DUAL_YEAR){
+    const yh = document.getElementById("v-dual-year");
+    if(yh){
+      const min = Number(yh.dataset.min || "1900");
+      const max = Number(yh.dataset.max || "2026");
+      const step = Number(yh.dataset.step || "1");
+      yh.dataset.min = min; yh.dataset.max = max; yh.dataset.step = step;
+      V_DUAL_YEAR = buildDual("v-dual-year","v-ro-year");
+    }
   }
   if(!V_MS_GRADE){
     const grades = [...new Set(V_DATA.map(d => d.grade).filter(Boolean))].sort();
@@ -3335,24 +3342,30 @@ async function runVacantSearch(){
   await initVacantTab();
   const hdong = document.getElementById("v-hdong").value;
   const isAll = hdong === "__ALL__";
-  const selKind = V_MS_KIND.selected();
   const selGrade = V_MS_GRADE.selected();
+  const [yearMin, yearMax] = V_DUAL_YEAR.values();
+  const yearActive = !V_DUAL_YEAR.isFull();
+  const incUnknown = document.getElementById("v-yearunknown").checked;
 
   V_RESULTS = V_DATA.filter(d => {
     if(!isAll && d.dong !== hdong) return false;
-    if(selKind.length && !selKind.includes(d.kind)) return false;
     if(selGrade.length && !selGrade.includes(d.grade)) return false;
+    const yr = d.year;
+    if(yr === null){ if(!incUnknown) return false; }
+    else if(yearActive && (yr < yearMin || yr > yearMax)) return false;
     return true;
   });
 
   const total = V_DATA.length;
   const grade1 = V_DATA.filter(d => d.grade === "1등급").length;
   const grade2 = V_DATA.filter(d => d.grade === "2등급").length;
+  const grade3 = V_DATA.filter(d => d.grade === "3등급").length;
 
   document.getElementById("vs-match").textContent = V_RESULTS.length.toLocaleString("ko-KR");
   document.getElementById("vs-total").textContent = total.toLocaleString("ko-KR");
   document.getElementById("vs-grade1").textContent = grade1.toLocaleString("ko-KR");
   document.getElementById("vs-grade2").textContent = grade2.toLocaleString("ko-KR");
+  document.getElementById("vs-grade3").textContent = grade3.toLocaleString("ko-KR");
   document.getElementById("vStats").style.display = "flex";
   document.getElementById("vResDong").textContent = isAll ? "전체" : hdong;
 
@@ -3365,8 +3378,9 @@ async function runVacantSearch(){
 
 function clearVacant(){
   document.getElementById("v-hdong").value = "__ALL__";
-  if(V_MS_KIND) V_MS_KIND.reset();
   if(V_MS_GRADE) V_MS_GRADE.reset();
+  if(V_DUAL_YEAR) V_DUAL_YEAR.reset();
+  const yu = document.getElementById("v-yearunknown"); if(yu) yu.checked = true;
   document.getElementById("vStats").style.display = "none";
   document.getElementById("vResultArea").style.display = "none";
   document.getElementById("vHint").textContent = "";
@@ -3379,14 +3393,15 @@ function renderVacantPage(){
   const start = (V_PAGE - 1) * V_PAGE_SIZE;
   const pageRows = V_RESULTS.slice(start, start + V_PAGE_SIZE);
   const frag = document.createDocumentFragment();
+  const currentYear = new Date().getFullYear();
   for(let i = 0; i < pageRows.length; i++){
     const d = pageRows[i];
     const tr = document.createElement("tr");
+    const yearCell = d.year ? `${d.year} <span class="year-elapsed">(${(currentYear - d.year)}년)</span>` : "-";
     tr.innerHTML = `
       <td class="num">${start + i + 1}</td>
       <td>${esc(d.dong)}</td>
-      <td>${esc(d.kind || "-")}</td>
-      <td>${d.year || "-"}</td>
+      <td>${yearCell}</td>
       <td>${esc(d.struct || "-")}</td>
       <td class="num">${fmt(d.tarea)}</td>
       <td>${esc(d.grade || "-")}</td>
@@ -3425,10 +3440,11 @@ function renderVacantPager(){
 
 function exportVacantExcel(){
   if(!V_RESULTS.length) return;
+  const currentYear = new Date().getFullYear();
   const rows = V_RESULTS.map(d => ({
     "행정동": d.dong,
-    "주택유형": d.kind || "",
     "건축년도": d.year || "",
+    "경과년수": d.year ? (currentYear - d.year) : "",
     "주구조": d.struct || "",
     "연면적(㎡)": d.tarea,
     "등급": d.grade || "",
