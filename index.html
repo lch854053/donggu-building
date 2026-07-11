@@ -2217,6 +2217,12 @@ function fillMissingFromBuilding(row, titles){
     const area = titles.reduce((s,t)=> s + (Number(t.totArea)||0), 0);
     if(area > 0) out.tarea = area;
   }
+  // 사용승인일 보정: 원본이 비거나 연도 추출 불가(거짓값)면 대장 표제부 실제값으로 채운다.
+  // getApHsTpInfo(오피스텔/도시형생활주택)는 useAprDay가 항상 비어 있어 이 보정이 필수.
+  if((!out.useAprDay || !extractYear(out.useAprDay)) && rep.useAprDay){
+    const d = String(rep.useAprDay);
+    if(extractYear(d) !== null) out.useAprDay = d;
+  }
   return out;
 }
 
@@ -2370,7 +2376,7 @@ async function runHousingSearch(){
       const areaRaw = t.silHoHhldArea;
       const area = areaRaw != null ? Number(areaRaw) : null;
       if(area != null && (area < areaMin || area > areaMax)) continue;
-      const useAprDay = String(t.useAprDay || t.crtnDay || "");
+      const useAprDay = String(t.useAprDay || "");
       const yr = extractYear(useAprDay);
       if(yr===null){ if(!incUnknown) continue; }
       else if(yearActive && (yr < yearMin || yr > yearMax)) continue;
