@@ -431,7 +431,8 @@
           <thead><tr>
             <th class="num">#</th>
             <th>행정동</th>
-            <th>주소</th>
+            <th>지번주소</th>
+            <th>도로명주소</th>
             <th>건축년도</th>
             <th>주구조</th>
             <th class="num">연면적(㎡)</th>
@@ -3418,6 +3419,7 @@ function renderVacantPage(){
       <td class="num">${start + i + 1}</td>
       <td>${esc(d.hdong || "행정동 미확인")}</td>
       <td>${esc(d.jibun || "-")}</td>
+      <td>${esc(d.doro || "-")}</td>
       <td>${yearCell}</td>
       <td>${esc(d.struct || "-")}</td>
       <td class="num">${fmt(d.tarea)}</td>
@@ -3460,7 +3462,8 @@ function exportVacantExcel(){
   const currentYear = new Date().getFullYear();
   const rows = V_RESULTS.map(d => ({
     "행정동": d.dong,
-    "주소": d.jibun || "",
+    "지번주소": d.jibun || "",
+    "도로명주소": d.doro || "",
     "건축년도": d.year || "",
     "경과년수": d.year ? (currentYear - d.year) : "",
     "주구조": d.struct || "",

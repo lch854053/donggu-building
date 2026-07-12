@@ -95,6 +95,7 @@ function readExcelSupplement() {
     const r = raw[i];
     if (!r) continue;
     const jibun = String(r[2] || "").trim();
+    const doro = String(r[3] || "").trim();
     const hdong = String(r[4] || "").trim();
     const tarea = Number(r[10] || 0);
     const struct = String(r[7] || "").trim();
@@ -102,7 +103,7 @@ function readExcelSupplement() {
     if (!jibun || !hdong) continue;
     const dong = dongFromJibun(jibun);
     if (!dong) continue;
-    rows.push({ dong, hdong, jibun, tarea, struct, grade });
+    rows.push({ dong, hdong, jibun, doro, tarea, struct, grade });
   }
   return rows;
 }
@@ -111,7 +112,7 @@ function buildExcelMap(excelRows) {
   const map = new Map();
   for (const r of excelRows) {
     const key = `${r.dong}|${r.tarea}|${r.struct}|${r.grade}`;
-    if (!map.has(key)) map.set(key, { hdong: r.hdong, jibun: r.jibun });
+    if (!map.has(key)) map.set(key, { hdong: r.hdong, jibun: r.jibun, doro: r.doro });
   }
   return map;
 }
@@ -133,7 +134,7 @@ function hdongFromExcel(row, excelMap) {
 // ───────────────────────────────────────────────
 // 2차: 카카오
 // ───────────────────────────────────────────────
-async function jibunAddrFromCoord(lon, lat) {
+async function addrFromCoord(lon, lat) {
   if (!KAKAO_REST_API_KEY) throw new Error("KAKAO_REST_API_KEY 환경변수 필요");
   const url = `https://dapi.kakao.com/v2/local/geo/coord2address.json?x=${encodeURIComponent(lon)}&y=${encodeURIComponent(lat)}`;
   const r = await fetchWithTimeout(url, {
@@ -143,10 +144,15 @@ async function jibunAddrFromCoord(lon, lat) {
   if (!r.ok) throw new Error(`Kakao coord2address HTTP ${r.status}`);
   const data = await r.json();
   const docs = Array.isArray(data?.documents) ? data.documents : [];
-  if (!docs.length) return "";
-  return String(docs[0].address?.address_name || "")
+  if (!docs.length) return { jibun: "", doro: "" };
+  const doc = docs[0];
+  const jibun = String(doc.address?.address_name || "")
     .replace(/전남광주통합특별시/g, "광주광역시")
     .trim();
+  const doro = String(doc.road_address?.address_name || "")
+    .replace(/전남광주통합특별시/g, "광주광역시")
+    .trim();
+  return { jibun, doro };
 }
 
 async function hdongFromAddress(addr) {
@@ -165,16 +171,16 @@ async function hdongFromAddress(addr) {
 }
 
 async function resolveFromKakao(lon, lat) {
-  const jibun = await jibunAddrFromCoord(lon, lat);
-  if (!jibun) return { hdong: "", jibun: "" };
+  const { jibun, doro } = await addrFromCoord(lon, lat);
+  if (!jibun) return { hdong: "", jibun: "", doro: "" };
   const hdong = await hdongFromAddress(jibun);
-  return { hdong, jibun };
+  return { hdong, jibun, doro };
 }
 
 // ───────────────────────────────────────────────
 // 3차: 행안부 + 카카오
 // ───────────────────────────────────────────────
-async function jibunAddrFromJuso(dong) {
+async function addrFromJuso(dong) {
   if (!JUSO_CONFM_KEY) throw new Error("JUSO_CONFM_KEY 환경변수 필요");
   const query = `전남광주통합특별시 동구 ${dong}`;
   const url = `https://business.juso.go.kr/addrlink/addrLinkApi.do?keyword=${encodeURIComponent(query)}&resultType=json&confmKey=${encodeURIComponent(JUSO_CONFM_KEY)}`;
@@ -186,21 +192,25 @@ async function jibunAddrFromJuso(dong) {
     throw new Error(`Juso addrLinkApi 오류: ${common.errorMessage || common.errorCode}`);
   }
   const juso = Array.isArray(data?.results?.juso) ? data.results.juso[0] : null;
-  if (!juso) return "";
+  if (!juso) return { jibun: "", doro: "" };
   const sggNm = String(juso.sggNm || "").trim();
   const emdNm = String(juso.emdNm || "").trim();
   const lnbrMnnm = String(juso.lnbrMnnm || "").trim();
   const lnbrSlno = String(juso.lnbrSlno || "0").trim();
-  if (!sggNm || !emdNm || !lnbrMnnm) return "";
+  const roadAddr = String(juso.roadAddr || "").trim();
+  const jibunAddr = String(juso.jibunAddr || "").trim();
+  if (!sggNm || !emdNm || !lnbrMnnm) return { jibun: "", doro: "" };
   const sub = lnbrSlno && lnbrSlno !== "0" ? `-${lnbrSlno}` : "";
-  return `광주광역시 ${sggNm} ${emdNm} ${lnbrMnnm}${sub}`;
+  const jibun = jibunAddr || `광주광역시 ${sggNm} ${emdNm} ${lnbrMnnm}${sub}`;
+  const doro = roadAddr.replace(/전남광주통합특별시/g, "광주광역시").trim();
+  return { jibun, doro };
 }
 
 async function resolveFromJuso(dong) {
-  const jibun = await jibunAddrFromJuso(dong);
-  if (!jibun) return { hdong: "", jibun: "" };
+  const { jibun, doro } = await addrFromJuso(dong);
+  if (!jibun) return { hdong: "", jibun: "", doro: "" };
   const hdong = await hdongFromAddress(jibun);
-  return { hdong, jibun };
+  return { hdong, jibun, doro };
 }
 
 // ───────────────────────────────────────────────
@@ -310,7 +320,7 @@ async function main() {
     if (i % 100 === 0) {
       console.log(`  [1차] ${i + 1}/${rows.length} - ${hdong || "(미확인)"}`);
     }
-    return matched || { hdong: "", jibun: "" };
+    return matched || { hdong: "", jibun: "", doro: "" };
   });
 
   let stage1Ok = 0;
@@ -329,7 +339,7 @@ async function main() {
 
     const rawX = Number(row["위도"] || 0);
     const rawY = Number(row["경도"] || 0);
-    if (!rawX || !rawY) return { hdong: "", jibun: "" };
+    if (!rawX || !rawY) return { hdong: "", jibun: "", doro: "" };
     try {
       const { lon, lat } = toWGS84(rawX, rawY);
       const result = await resolveFromKakao(lon, lat);
@@ -339,7 +349,7 @@ async function main() {
       return result;
     } catch (e) {
       console.error(`  [${i + 1}/${rows.length}] 2차 실패: ${e.message}`);
-      return { hdong: "", jibun: "" };
+      return { hdong: "", jibun: "", doro: "" };
     }
   }, CONCURRENCY);
 
@@ -362,7 +372,7 @@ async function main() {
     if (hdong2 && DONGGU_HDONGS.has(hdong2)) return stage2[i];
 
     const dong = String(row["읍면동명"] || "").trim();
-    if (!dong) return { hdong: "", jibun: "" };
+    if (!dong) return { hdong: "", jibun: "", doro: "" };
     try {
       const result = await resolveFromJuso(dong);
       if (i % 100 === 0) {
@@ -371,7 +381,7 @@ async function main() {
       return result;
     } catch (e) {
       console.error(`  [${i + 1}/${rows.length}] 3차 실패: ${e.message}`);
-      return { hdong: "", jibun: "" };
+      return { hdong: "", jibun: "", doro: "" };
     }
   }, CONCURRENCY);
 
@@ -383,7 +393,7 @@ async function main() {
     const rawX = Number(row["위도"] || 0);
     const rawY = Number(row["경도"] || 0);
 
-    let { hdong, jibun } = stage3[i];
+    let { hdong, jibun, doro } = stage3[i];
     if (hdong && !DONGGU_HDONGS.has(hdong)) hdong = "";
 
     const manual = manualMap.get(`${rawX},${rawY}`);
@@ -404,6 +414,7 @@ async function main() {
       y: rawY || null,
       hdong,
       jibun,
+      doro,
     };
   });
 
@@ -411,13 +422,17 @@ async function main() {
   await writeFile(outputPath, JSON.stringify(out, null, " ") + "\n", "utf8");
 
   let withJibun = 0;
-  for (const o of out) if (o.jibun) withJibun++;
+  let withDoro = 0;
+  for (const o of out) {
+    if (o.jibun) withJibun++;
+    if (o.doro) withDoro++;
+  }
   console.log(`\n완료: ${out.length}건 저장`);
   console.log(`  1차(엑셀) 성공: ${stage1Ok}건`);
   console.log(`  2차(카카오) 추가 성공: ${stage2Ok - stage1Ok}건`);
   console.log(`  3차(행안부+카카오) 추가 성공: ${mapped - stage2Ok}건`);
   console.log(`  최종 매핑 성공: ${mapped}건 / 실패: ${finalFail}건`);
-  console.log(`  주소 확보: ${withJibun}건`);
+  console.log(`  지번 주소 확보: ${withJibun}건 / 도로명 주소 확보: ${withDoro}건`);
   console.log(`저장 경로: ${outputPath}`);
 
 main().catch(e => {
