@@ -1,0 +1,5 @@
+{
+  "baseDate": "2025-07-16",
+  "source": "동구관내빈집현황 - 보강용.xlsx",
+  "description": "동구 빈집현황 보강용 엑셀. 행정동 매핑용. 1년 이상 지났으면 data/vacant-supplement.xlsx와 이 파일을 새로운 데이터로 교체하세요."
+}

@@ -3348,7 +3348,8 @@ async function runVacantSearch(){
   const incUnknown = document.getElementById("v-yearunknown").checked;
 
   V_RESULTS = V_DATA.filter(d => {
-    if(!isAll && d.dong !== hdong) return false;
+    const targetDong = d.hdong || d.dong || "";
+    if(!isAll && targetDong !== hdong) return false;
     if(selGrade.length && !selGrade.includes(d.grade)) return false;
     const yr = d.year;
     if(yr === null){ if(!incUnknown) return false; }
@@ -3400,7 +3401,7 @@ function renderVacantPage(){
     const yearCell = d.year ? `${d.year} <span class="year-elapsed">(${(currentYear - d.year)}년)</span>` : "-";
     tr.innerHTML = `
       <td class="num">${start + i + 1}</td>
-      <td>${esc(d.dong)}</td>
+      <td>${esc(d.hdong || "행정동 미확인")}</td>
       <td>${yearCell}</td>
       <td>${esc(d.struct || "-")}</td>
       <td class="num">${fmt(d.tarea)}</td>

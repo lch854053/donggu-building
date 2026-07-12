@@ -10,6 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      issues: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -19,10 +20,26 @@ jobs:
         with:
           node-version: 20
 
+      - name: Install dependencies
+        run: npm install
+
       - name: Update vacant house data
         run: npm run update-vacant
         env:
           ODCLOUD_SERVICE_KEY: ${{ secrets.ODCLOUD_SERVICE_KEY }}
+          KAKAO_REST_API_KEY: ${{ secrets.KAKAO_REST_API_KEY }}
+          JUSO_CONFM_KEY: ${{ secrets.JUSO_CONFM_KEY }}
+
+      - name: Create issue if Excel supplement is stale
+        if: hashFiles('data/.vacant-excel-stale') != ''
+        run: |
+          BASE_DATE=$(grep '^baseDate=' data/.vacant-excel-stale | cut -d= -f2)
+          DAYS_OLD=$(grep '^daysOld=' data/.vacant-excel-stale | cut -d= -f2)
+          gh issue create \
+            --title "[리마인드] vacant-supplement.xlsx 갱신 필요 (기준일: $BASE_DATE, ${DAYS_OLD}일 경과)" \
+            --body "동구 빈집현황 보강 엑셀 데이터가 1년 이상 지났습니다. 동구에서 새로운 '동구관내빈집현황' 엑셀 파일을 받아 다음을 교체해 주세요.\n\n- data/vacant-supplement.xlsx\n- data/vacant-supplement-meta.json (baseDate 수정)\n\n그 후 \`npm run update-vacant\`를 다시 실행하면 새로운 행정동 매핑이 반영됩니다."
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Commit and push if changed
         run: |
