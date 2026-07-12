@@ -421,10 +421,19 @@
     <div id="vResultArea" style="display:none">
       <div class="result-head">
         <div class="legend"><span>행정동 <b id="vResDong"></b></span></div>
-        <button class="export" id="vExportBtn" onclick="exportVacantExcel()">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg>
-          엑셀 다운로드
-        </button>
+        <div class="h-controls">
+          <select id="vSort" class="h-sort" onchange="applyVacantSort()">
+            <option value="default">정렬: 기본</option>
+            <option value="gradeAsc">등급 오름차순</option>
+            <option value="gradeDesc">등급 내림차순</option>
+            <option value="yearAsc">건축년도 오름차순</option>
+            <option value="yearDesc">건축년도 내림차순</option>
+          </select>
+          <button class="export" id="vExportBtn" onclick="exportVacantExcel()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg>
+            엑셀 다운로드
+          </button>
+        </div>
       </div>
       <div class="table-scroll">
         <table>
@@ -3298,6 +3307,8 @@ function exportDemolExcel(){
    ============================================================ */
 let V_DATA = [];
 let V_RESULTS = [];
+let V_RESULTS_RAW = [];
+let V_SORT = "default";
 let V_MS_GRADE = null;
 let V_DUAL_YEAR = null;
 let V_PAGE = 1;
@@ -3356,7 +3367,7 @@ async function runVacantSearch(){
   const yearActive = !V_DUAL_YEAR.isFull();
   const incUnknown = document.getElementById("v-yearunknown").checked;
 
-  V_RESULTS = V_DATA.filter(d => {
+  V_RESULTS_RAW = V_DATA.filter(d => {
     const targetDong = d.hdong || d.dong || "";
     if(!isAll && targetDong !== hdong) return false;
     if(selGrade.length && !selGrade.includes(d.grade)) return false;
@@ -3365,6 +3376,7 @@ async function runVacantSearch(){
     else if(yearActive && (yr < yearMin || yr > yearMax)) return false;
     return true;
   });
+  applyVacantSort();
 
   const total = V_DATA.length;
   const grade1 = V_RESULTS.filter(d => d.grade === "1등급").length;
@@ -3380,9 +3392,6 @@ async function runVacantSearch(){
   document.getElementById("vGradeLegend").style.display = "block";
   document.getElementById("vResDong").textContent = isAll ? "전체" : hdong;
 
-  V_PAGE = 1;
-  renderVacantPage();
-  renderVacantPager();
   document.getElementById("vResultArea").style.display = "block";
   document.getElementById("vHint").textContent = V_RESULTS.length ? "" : "조건에 맞는 빈집이 없습니다.";
 }
@@ -3392,11 +3401,47 @@ function clearVacant(){
   if(V_MS_GRADE) V_MS_GRADE.reset();
   if(V_DUAL_YEAR) V_DUAL_YEAR.reset();
   const yu = document.getElementById("v-yearunknown"); if(yu) yu.checked = true;
+  const vSort = document.getElementById("vSort"); if(vSort) vSort.value = "default";
   document.getElementById("vStats").style.display = "none";
   document.getElementById("vGradeLegend").style.display = "none";
   document.getElementById("vResultArea").style.display = "none";
   document.getElementById("vHint").textContent = "";
   V_RESULTS = [];
+  V_RESULTS_RAW = [];
+  V_SORT = "default";
+  V_PAGE = 1;
+}
+
+function applyVacantSort(){
+  const sort = document.getElementById("vSort").value;
+  V_SORT = sort;
+  V_RESULTS = V_RESULTS_RAW.slice();
+  switch(sort){
+    case "gradeAsc":
+      V_RESULTS.sort((a,b) => gradeSortKey(a.grade) - gradeSortKey(b.grade));
+      break;
+    case "gradeDesc":
+      V_RESULTS.sort((a,b) => gradeSortKey(b.grade) - gradeSortKey(a.grade));
+      break;
+    case "yearAsc":
+      V_RESULTS.sort((a,b) => yearSortValue(a.year) - yearSortValue(b.year));
+      break;
+    case "yearDesc":
+      V_RESULTS.sort((a,b) => yearSortValue(b.year) - yearSortValue(a.year));
+      break;
+  }
+  V_PAGE = 1;
+  renderVacantPage();
+  renderVacantPager();
+}
+
+function gradeSortKey(grade){
+  const m = String(grade || "").match(/^(\d+)등급$/);
+  return m ? Number(m[1]) : Infinity;
+}
+
+function yearSortValue(year){
+  return year === null || year === undefined ? Infinity : Number(year);
 }
 
 function renderVacantPage(){
