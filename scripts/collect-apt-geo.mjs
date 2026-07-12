@@ -20,6 +20,8 @@ const VWORLD_URL = "https://api.vworld.kr/req/data";
 const DOMAIN = "https://donggu-building.vercel.app";
 const CONCURRENCY = 6;
 const pnuRe = /^\d{19}$/;
+// VWorld 연속지적도는 신규 시군구코드(12210)만 인식. 구 코드(29110) 정규화.
+const pnuForVWorld = (pnu) => pnu.startsWith("29110") ? "12210" + pnu.slice(5) : pnu;
 
 function fetchWithTimeout(url, opts = {}) {
   const { timeout = 10000, ...rest } = opts;
@@ -48,11 +50,12 @@ async function loadJson(p) {
 }
 
 // PNU → VWorld 연속지적도 필지 폴리곤. 없으면 null
+// attrFilter '=' 연산자는 URLSearchParams 인코딩 문제로 동작하지 않아 LIKE 사용 (PNU 19자리 고정=정확매칭)
 async function parcelGeometryByPNU(pnu) {
   const params = new URLSearchParams({
     service: "data", request: "GetFeature",
     data: "LP_PA_CBND_BUBUN",
-    attrFilter: `pnu:=:${pnu}`,
+    attrFilter: `pnu:LIKE:${pnuForVWorld(pnu)}`,
     crs: "EPSG:4326", format: "json", size: "10",
     key: VWORLD_KEY, domain: DOMAIN,
   });
