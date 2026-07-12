@@ -9,17 +9,28 @@ const DOMAIN = "https://donggu-building.vercel.app";
 const numRe = /^-?\d+(\.\d+)?$/;
 const pnuRe = /^\d{19}$/;
 
+// VWorld 연속지적도는 시군구코드로 신규 코드(12210=전남광주통합특별시 동구)만 인식.
+// 건축HUB/우리 데이터는 구 코드(29110)를 쓰므로 VWorld 조회 시 12210으로 정규화.
+const SIGUNGU_OLD = "29110";  // 구 광주동구 (건축HUB 표제부)
+const SIGUNGU_VW  = "12210";  // VWorld 연속지적도
+function pnuForVWorld(pnu){
+  return pnu.startsWith(SIGUNGU_OLD) ? SIGUNGU_VW + pnu.slice(5) : pnu;
+}
+
 // 복수 PNU 일괄조회 제한 — VWorld는 단일 필터만 지원하므로 서버에서 병렬 호출 후 병합.
 // 한 번에 너무 많으면 Vercel 서버리스 타임아웃/상류 한도 위험이 있어 상한을 둔다.
 const MAX_BATCH = 60;
 const BATCH_CONCURRENCY = 8;
 
 // 단일 PNU → VWorld 호출 → {properties, geometry} | null
+// attrFilter 연산자는 URLSearchParams 가 '=' 를 %3D 로 인코딩하면 VWorld가
+// 'pnu=값' 으로 잘못 파싱(연산자 자리 사라짐)하므로, '=' 대신 LIKE 를 사용.
+// PNU 는 19자리 고정값이라 LIKE(부분매칭)로도 정확히 일치.
 async function fetchOne(pnu, key) {
   const params = new URLSearchParams({
     service: "data", request: "GetFeature",
     data: "LP_PA_CBND_BUBUN",
-    attrFilter: `pnu:=:${pnu}`,
+    attrFilter: `pnu:LIKE:${pnuForVWorld(pnu)}`,
     crs: "EPSG:4326", format: "json", size: "10", key, domain: DOMAIN,
   });
   const r = await fetchWithTimeout(`${VWORLD_URL}?${params}`);
@@ -93,7 +104,8 @@ export default async function handler(req, res) {
   let filter;
   if (pnu) {
     if (!pnuRe.test(pnu)) return res.status(400).json({ error: "PNU 형식 오류" });
-    filter = { attrFilter: `pnu:=:${pnu}` };
+    // '=' 연산자는 URLSearchParams 인코딩 문제로 동작하지 않으므로 LIKE 사용 (위 주석 참조)
+    filter = { attrFilter: `pnu:LIKE:${pnuForVWorld(pnu)}` };
   } else {
     if (!x || !y) return res.status(400).json({ error: "x/y 좌표 또는 pnu 누락" });
     if (!numRe.test(x) || !numRe.test(y))
