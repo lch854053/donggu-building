@@ -3358,9 +3358,9 @@ async function runVacantSearch(){
   });
 
   const total = V_DATA.length;
-  const grade1 = V_DATA.filter(d => d.grade === "1등급").length;
-  const grade2 = V_DATA.filter(d => d.grade === "2등급").length;
-  const grade3 = V_DATA.filter(d => d.grade === "3등급").length;
+  const grade1 = V_RESULTS.filter(d => d.grade === "1등급").length;
+  const grade2 = V_RESULTS.filter(d => d.grade === "2등급").length;
+  const grade3 = V_RESULTS.filter(d => d.grade === "3등급").length;
 
   document.getElementById("vs-match").textContent = V_RESULTS.length.toLocaleString("ko-KR");
   document.getElementById("vs-total").textContent = total.toLocaleString("ko-KR");
