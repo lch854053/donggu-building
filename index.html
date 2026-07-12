@@ -518,7 +518,7 @@
           <div class="controls">
             <button class="run" id="mapRunBtn" onclick="runMapSearch()">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-              지도에 반영
+              조회
             </button>
             <span class="cond-hint" id="mapHint"></span>
           </div>
@@ -3792,7 +3792,7 @@ function initMapLeaflet(){
   });
 }
 
-// ── 검색 실행 (사이드 패널 "지도에 반영" 버튼) ──
+// ── 검색 실행 (사이드 패널 "조회" 버튼) ──
 async function runMapSearch(){
   const sources = mapSelectedSources();
   if(!sources.length){ document.getElementById("mapHint").textContent = "소스를 1개 이상 선택하세요."; return; }
@@ -3803,6 +3803,11 @@ async function runMapSearch(){
   document.getElementById("mapHint").textContent = "";
 
   try{
+    // 선택 해제된 소스의 이전 결과를 초기화 (체크해제해도 잔류하지 않도록)
+    if(!sources.includes("vacant")) M_RESULTS.vacant = [];
+    if(!sources.includes("apt"))    M_RESULTS.apt = [];
+    if(!sources.includes("cond"))   M_RESULTS.cond = [];
+
     if(sources.includes("vacant")) filterVacantForMap(isAll ? null : hdong);
     if(sources.includes("apt"))    filterAptForMap(isAll ? null : hdong);
     if(sources.includes("cond")){
