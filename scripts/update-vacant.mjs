@@ -102,7 +102,7 @@ function readExcelSupplement() {
     if (!jibun || !hdong) continue;
     const dong = dongFromJibun(jibun);
     if (!dong) continue;
-    rows.push({ dong, hdong, tarea, struct, grade });
+    rows.push({ dong, hdong, jibun, tarea, struct, grade });
   }
   return rows;
 }
@@ -111,19 +111,23 @@ function buildExcelMap(excelRows) {
   const map = new Map();
   for (const r of excelRows) {
     const key = `${r.dong}|${r.tarea}|${r.struct}|${r.grade}`;
-    if (!map.has(key)) map.set(key, r.hdong);
+    if (!map.has(key)) map.set(key, { hdong: r.hdong, jibun: r.jibun });
   }
   return map;
 }
 
-function hdongFromExcel(row, excelMap) {
+function matchFromExcel(row, excelMap) {
   const dong = String(row["읍면동명"] || "").trim();
   const tarea = Number(row["연면적"] || 0);
   const struct = String(row["건축물대장주구조"] || "").trim();
   const grade = String(row["등급판정결과"] || "").trim();
-  if (!dong || !tarea) return "";
+  if (!dong || !tarea) return null;
   const key = `${dong}|${tarea}|${struct}|${grade}`;
-  return excelMap.get(key) || "";
+  return excelMap.get(key) || null;
+}
+
+function hdongFromExcel(row, excelMap) {
+  return matchFromExcel(row, excelMap)?.hdong || "";
 }
 
 // ───────────────────────────────────────────────
@@ -160,10 +164,11 @@ async function hdongFromAddress(addr) {
   return String(docs[0].address?.region_3depth_h_name || "").trim();
 }
 
-async function hdongFromKakao(lon, lat) {
-  const addr = await jibunAddrFromCoord(lon, lat);
-  if (!addr) return "";
-  return await hdongFromAddress(addr);
+async function resolveFromKakao(lon, lat) {
+  const jibun = await jibunAddrFromCoord(lon, lat);
+  if (!jibun) return { hdong: "", jibun: "" };
+  const hdong = await hdongFromAddress(jibun);
+  return { hdong, jibun };
 }
 
 // ───────────────────────────────────────────────
@@ -191,10 +196,11 @@ async function jibunAddrFromJuso(dong) {
   return `광주광역시 ${sggNm} ${emdNm} ${lnbrMnnm}${sub}`;
 }
 
-async function hdongFromJuso(dong) {
-  const addr = await jibunAddrFromJuso(dong);
-  if (!addr) return "";
-  return await hdongFromAddress(addr);
+async function resolveFromJuso(dong) {
+  const jibun = await jibunAddrFromJuso(dong);
+  if (!jibun) return { hdong: "", jibun: "" };
+  const hdong = await hdongFromAddress(jibun);
+  return { hdong, jibun };
 }
 
 // ───────────────────────────────────────────────
@@ -299,17 +305,18 @@ async function main() {
 
   console.log("1차: 엑셀 보강 매칭 중...");
   const stage1 = rows.map((row, i) => {
-    const hdong = hdongFromExcel(row, excelMap);
+    const matched = matchFromExcel(row, excelMap);
+    const hdong = matched?.hdong || "";
     if (i % 100 === 0) {
       console.log(`  [1차] ${i + 1}/${rows.length} - ${hdong || "(미확인)"}`);
     }
-    return hdong;
+    return matched || { hdong: "", jibun: "" };
   });
 
   let stage1Ok = 0;
   let stage1NeedsFallback = 0;
   for (let i = 0; i < rows.length; i++) {
-    const hdong = stage1[i];
+    const hdong = stage1[i].hdong;
     if (hdong && DONGGU_HDONGS.has(hdong)) stage1Ok++;
     else stage1NeedsFallback++;
   }
@@ -317,31 +324,32 @@ async function main() {
 
   console.log("2차: 카카오 좌표 → 행정동 매핑 중...");
   const stage2 = await runPool(rows, async (row, i) => {
-    const hdong1 = stage1[i];
-    if (hdong1 && DONGGU_HDONGS.has(hdong1)) return hdong1; // 1차 성공은 그대로
+    const hdong1 = stage1[i].hdong;
+    if (hdong1 && DONGGU_HDONGS.has(hdong1)) return stage1[i];
 
     const rawX = Number(row["위도"] || 0);
     const rawY = Number(row["경도"] || 0);
-    if (!rawX || !rawY) return "";
+    if (!rawX || !rawY) return { hdong: "", jibun: "" };
     try {
       const { lon, lat } = toWGS84(rawX, rawY);
-      const hdong = await hdongFromKakao(lon, lat);
+      const result = await resolveFromKakao(lon, lat);
       if (i % 100 === 0) {
-        console.log(`  [2차] ${i + 1}/${rows.length} - ${hdong || "(미확인)"}`);
+        console.log(`  [2차] ${i + 1}/${rows.length} - ${result.hdong || "(미확인)"}`);
       }
-      return hdong;
+      return result;
     } catch (e) {
       console.error(`  [${i + 1}/${rows.length}] 2차 실패: ${e.message}`);
-      return "";
+      return { hdong: "", jibun: "" };
     }
   }, CONCURRENCY);
 
   let stage2Ok = stage1Ok;
   let stage2NeedsFallback = 0;
   for (let i = 0; i < rows.length; i++) {
-    const hdong = stage2[i];
+    const hdong = stage2[i].hdong;
     if (hdong && DONGGU_HDONGS.has(hdong)) {
-      if (!stage1[i] || !DONGGU_HDONGS.has(stage1[i])) stage2Ok++;
+      const hdong1 = stage1[i].hdong;
+      if (!hdong1 || !DONGGU_HDONGS.has(hdong1)) stage2Ok++;
     } else {
       stage2NeedsFallback++;
     }
@@ -350,20 +358,20 @@ async function main() {
 
   console.log("3차: 행안부 + 카카오 행정동 매핑 중...");
   const stage3 = await runPool(rows, async (row, i) => {
-    const hdong2 = stage2[i];
-    if (hdong2 && DONGGU_HDONGS.has(hdong2)) return hdong2;
+    const hdong2 = stage2[i].hdong;
+    if (hdong2 && DONGGU_HDONGS.has(hdong2)) return stage2[i];
 
     const dong = String(row["읍면동명"] || "").trim();
-    if (!dong) return "";
+    if (!dong) return { hdong: "", jibun: "" };
     try {
-      const hdong = await hdongFromJuso(dong);
+      const result = await resolveFromJuso(dong);
       if (i % 100 === 0) {
-        console.log(`  [3차] ${i + 1}/${rows.length} - ${hdong || "(미확인)"}`);
+        console.log(`  [3차] ${i + 1}/${rows.length} - ${result.hdong || "(미확인)"}`);
       }
-      return hdong;
+      return result;
     } catch (e) {
       console.error(`  [${i + 1}/${rows.length}] 3차 실패: ${e.message}`);
-      return "";
+      return { hdong: "", jibun: "" };
     }
   }, CONCURRENCY);
 
@@ -375,7 +383,7 @@ async function main() {
     const rawX = Number(row["위도"] || 0);
     const rawY = Number(row["경도"] || 0);
 
-    let hdong = stage3[i] || "";
+    let { hdong, jibun } = stage3[i];
     if (hdong && !DONGGU_HDONGS.has(hdong)) hdong = "";
 
     const manual = manualMap.get(`${rawX},${rawY}`);
@@ -395,19 +403,22 @@ async function main() {
       x: rawX || null,
       y: rawY || null,
       hdong,
+      jibun,
     };
   });
 
   const outputPath = join(ROOT, "vacantlist_donggu.json");
   await writeFile(outputPath, JSON.stringify(out, null, " ") + "\n", "utf8");
 
+  let withJibun = 0;
+  for (const o of out) if (o.jibun) withJibun++;
   console.log(`\n완료: ${out.length}건 저장`);
   console.log(`  1차(엑셀) 성공: ${stage1Ok}건`);
   console.log(`  2차(카카오) 추가 성공: ${stage2Ok - stage1Ok}건`);
   console.log(`  3차(행안부+카카오) 추가 성공: ${mapped - stage2Ok}건`);
   console.log(`  최종 매핑 성공: ${mapped}건 / 실패: ${finalFail}건`);
+  console.log(`  주소 확보: ${withJibun}건`);
   console.log(`저장 경로: ${outputPath}`);
-}
 
 main().catch(e => {
   console.error(e);
