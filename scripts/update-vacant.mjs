@@ -25,9 +25,39 @@ const ROOT = join(__dirname, "..");
 const ODCLOUD_SERVICE_KEY = process.env.ODCLOUD_SERVICE_KEY;
 const KAKAO_REST_API_KEY = process.env.KAKAO_REST_API_KEY;
 const JUSO_CONFM_KEY = process.env.JUSO_CONFM_KEY;
+const VWORLD_KEY = process.env.VWORLD_KEY;   // 지도 탭 폴리곤 수집용
 const ODCLOUD_ENDPOINT = "https://api.odcloud.kr/api/15144631/v1/uddi:4b08ea19-5d8e-4050-99a6-bf6905c56b06";
 const PER_PAGE = 1000;
 const CONCURRENCY = 5;   // 상류 API 초당 한도 고려
+
+// VWorld 연속지적도 — 좌표 기반 단일 필지 폴리곤 조회
+const VWORLD_DATA_URL = "https://api.vworld.kr/req/data";
+const VWORLD_DOMAIN = "https://donggu-building.vercel.app";
+const GEO_CONCURRENCY = 6;   // VWorld 지적도 호출 동시성
+
+// 좌표(POINT) → VWorld 연속지적도 필지 폴리곤. 실패/없음 → null
+async function parcelGeometryByCoord(lon, lat) {
+  if (!VWORLD_KEY) return null;
+  const params = new URLSearchParams({
+    service: "data", request: "GetFeature",
+    data: "LP_PA_CBND_BUBUN",
+    geomFilter: `POINT(${lon} ${lat})`,
+    crs: "EPSG:4326", format: "json", size: "10",
+    key: VWORLD_KEY, domain: VWORLD_DOMAIN,
+  });
+  try {
+    const r = await fetchWithTimeout(`${VWORLD_DATA_URL}?${params}`, { timeout: 10000 });
+    if (!r.ok) return null;
+    const data = await r.json();
+    if (data?.response?.status !== "OK") return null;
+    const feats = data?.response?.result?.featureCollection?.features || [];
+    if (!feats.length) return null;
+    const p = feats[0].properties || {};
+    return { pnu: String(p.pnu || ""), geometry: feats[0].geometry || null };
+  } catch {
+    return null;
+  }
+}
 
 // odcloud "빈집 현황" 데이터 좌표계는 EPSG:5181 (Korea 2000 / Southern Belt)
 const EPSG_5181 = "+proj=tmerc +lat_0=38 +lon_0=127 +k=1 +x_0=200000 +y_0=500000 +ellps=GRS80 +units=m +no_defs";
@@ -434,6 +464,49 @@ async function main() {
   console.log(`  최종 매핑 성공: ${mapped}건 / 실패: ${finalFail}건`);
   console.log(`  지번 주소 확보: ${withJibun}건 / 도로명 주소 확보: ${withDoro}건`);
   console.log(`저장 경로: ${outputPath}`);
+
+  // ───────────────────────────────────────────────
+  // 지도 탭용: 빈집 폴리곤 사전 수집 → vacant_geo.json
+  // EPSG:5181 좌표 → WGS84 변환 후 VWorld 연속지적도로 필지 폴리곤 조회.
+  // 실패 건은 스킵(좌표계 한계 등). 지도 탭에서는 폴리곤 없는 건물은 마커 폴백.
+  // ───────────────────────────────────────────────
+  if (VWORLD_KEY) {
+    console.log("\n지도 탭용 빈집 폴리곤 수집 중...");
+    const geoInput = out
+      .map((o, i) => ({ i, rawX: Number(o.x) || 0, rawY: Number(o.y) || 0 }))
+      .filter(it => it.rawX && it.rawY);
+    console.log(`  폴리곤 수집 대상: ${geoInput.length}건 (좌표 보유)`);
+    const geoResults = await runPool(geoInput, async (it) => {
+      const { lon, lat } = toWGS84(it.rawX, it.rawY);
+      const g = await parcelGeometryByCoord(lon, lat);
+      if (it.i % 100 === 0) console.log(`  [폴리곤] ${it.i + 1}/${out.length}`);
+      return g;
+    }, GEO_CONCURRENCY);
+
+    const geoOut = [];
+    let geoOk = 0;
+    for (let i = 0; i < out.length; i++) {
+      const o = out[i];
+      const g = geoResults[i];
+      if (g && g.geometry) {
+        geoOk++;
+        geoOut.push({
+          pnu: g.pnu,
+          dong: o.dong, hdong: o.hdong, kind: o.kind,
+          year: o.year, struct: o.struct, tarea: o.tarea,
+          grade: o.grade, jibun: o.jibun, doro: o.doro,
+          geometry: g.geometry,
+        });
+      }
+    }
+    const geoPath = join(ROOT, "vacant_geo.json");
+    await writeFile(geoPath, JSON.stringify(geoOut, null, " ") + "\n", "utf8");
+    console.log(`  빈집 폴리곤 수집: ${geoOk}건 / ${out.length}건`);
+    console.log(`  저장 경로: ${geoPath}`);
+  } else {
+    console.log("\nVWORLD_KEY 없음 — 빈집 폴리곤 수집 생략");
+  }
+}
 
 main().catch(e => {
   console.error(e);
