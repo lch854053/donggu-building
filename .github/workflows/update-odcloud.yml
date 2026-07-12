@@ -25,13 +25,18 @@ jobs:
           ODCLOUD_SERVICE_KEY: ${{ secrets.ODCLOUD_SERVICE_KEY }}
           JUSO_CONFM_KEY: ${{ secrets.JUSO_CONFM_KEY }}
 
+      - name: Collect apartment polygon data for map tab
+        run: npm run collect-apt-geo
+        env:
+          VWORLD_KEY: ${{ secrets.VWORLD_KEY }}
+
       - name: Commit and push if changed
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           if [ -n "$(git status --porcelain)" ]; then
-            git add aptlist_odcloud_donggu.json
-            git commit -m "chore: monthly odcloud apartment data update"
+            git add aptlist_odcloud_donggu.json apt_geo.json
+            git commit -m "chore: monthly odcloud apartment data + apartment polygon update"
             git push
           else
             echo "No changes to commit"

@@ -31,6 +31,7 @@
     <button class="tab" id="tab-btn-housing" onclick="switchTab('housing')">공동주택 관리</button>
     <button class="tab" id="tab-btn-demol" onclick="switchTab('demol')">철거멸실대장</button>
     <button class="tab" id="tab-btn-vacant" onclick="switchTab('vacant')">빈집현황</button>
+    <button class="tab" id="tab-btn-map" onclick="switchTab('map')">지도</button>
   </div>
 
   <!-- ===== 건축물 조회 ===== -->
@@ -467,6 +468,82 @@
       <div id="vPager" class="cpager"></div>
     </div>
   </div><!-- /tab-vacant -->
+
+  <!-- ===== TAB 7: 지도 ===== -->
+  <div id="tab-map" style="display:none">
+    <div class="map-layout">
+      <!-- 사이드 패널: 소스 선택 + 조건 필터 + 결과목록 -->
+      <aside class="map-side" id="mapSide">
+        <div class="ms-section">
+          <div class="ms-label">데이터 소스</div>
+          <div class="map-source-grid" id="mapSourceGrid">
+            <label class="ms-chk"><input type="checkbox" value="vacant" checked><span class="ms-dot ms-dot-vacant"></span>빈집현황</label>
+            <label class="ms-chk"><input type="checkbox" value="apt" checked><span class="ms-dot ms-dot-apt"></span>공동주택</label>
+            <label class="ms-chk"><input type="checkbox" value="cond"><span class="ms-dot ms-dot-cond"></span>건축물(조건검색)</label>
+          </div>
+        </div>
+
+        <div class="ms-section">
+          <div class="field">
+            <label>행정동</label>
+            <select id="map-hdong"><option value="__ALL__">전체</option></select>
+          </div>
+        </div>
+
+        <!-- 소스별 조건 (기본 숨김, 소스 선택 시 노출) -->
+        <div class="ms-section" id="map-cond-vacant" style="display:none">
+          <div class="field">
+            <label>등급 <span class="sel-hint">(미선택 = 전체)</span></label>
+            <div class="ms" id="map-ms-vgrade"></div>
+          </div>
+        </div>
+        <div class="ms-section" id="map-cond-apt" style="display:none">
+          <div class="field">
+            <label>단지종류 <span class="sel-hint">(미선택 = 전체)</span></label>
+            <div class="ms" id="map-ms-hkind"></div>
+          </div>
+        </div>
+        <div class="ms-section" id="map-cond-cond" style="display:none">
+          <div class="field">
+            <label>용도 <span class="sel-hint">(미선택 = 전체)</span></label>
+            <div class="ms" id="map-ms-purps"></div>
+          </div>
+          <div class="field">
+            <label>구조 <span class="sel-hint">(미선택 = 전체)</span></label>
+            <div class="ms" id="map-ms-strct"></div>
+          </div>
+        </div>
+
+        <div class="ms-section">
+          <div class="controls">
+            <button class="run" id="mapRunBtn" onclick="runMapSearch()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+              지도에 반영
+            </button>
+            <span class="cond-hint" id="mapHint"></span>
+          </div>
+        </div>
+
+        <!-- 결과목록 -->
+        <div class="ms-section map-results" id="mapResultsWrap" style="display:none">
+          <div class="map-results-head">
+            <span>결과 <b id="mapResultCount">0</b>건</span>
+            <button class="ghost-sm" onclick="clearMapSelection()">선택 해제</button>
+          </div>
+          <div class="map-results-list" id="mapResultsList"></div>
+        </div>
+      </aside>
+
+      <!-- 지도 영역 -->
+      <div class="map-canvas">
+        <div id="mapView" class="map-view"></div>
+        <div class="map-legend" id="mapLegend"></div>
+        <div class="map-loading" id="mapLoading" style="display:none">불러오는 중…</div>
+        <!-- 폴리곤 클릭 시 상세카드 -->
+        <div class="map-card" id="mapCard" style="display:none"></div>
+      </div>
+    </div>
+  </div><!-- /tab-map -->
 
   <div class="footnote">
     - 조회 범위는 전남광주통합특별시 동구이며, 지번·도로명주소로 모두 검색 가능합니다<br>
@@ -1882,9 +1959,9 @@ document.getElementById("dInput")?.addEventListener("keydown", e=>{
 /* ---- 건축물 조회 하부 탭 상태 ---- */
 let B_SUBTAB = "bulk";
 
-/* ---- 탭 전환 (building / housing / demol / vacant) ---- */
+/* ---- 탭 전환 (building / housing / demol / vacant / map) ---- */
 function switchTab(which){
-  const tabs = ["building","housing","demol","vacant"];
+  const tabs = ["building","housing","demol","vacant","map"];
   if(!tabs.includes(which)) which="building";
   for(const t of tabs){
     document.getElementById("tab-"+t).style.display = (t===which)?"block":"none";
@@ -1894,6 +1971,7 @@ function switchTab(which){
   if(which==="demol"){ loadHaengjeong(); initDemolFilters(); }
   if(which==="housing") loadHousing();
   if(which==="vacant") initVacantTab();
+  if(which==="map") initMapTab();
 }
 
 function switchBuildingSubtab(key){
@@ -3548,6 +3626,616 @@ function exportVacantExcel(){
   XLSX.utils.book_append_sheet(wb, ws, "빈집현황");
   const dongLabel = document.getElementById("vResDong").textContent || "전체";
   XLSX.writeFile(wb, `빈집현황_${dongLabel}_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
+
+/* ============================================================
+   지도 탭 (Map)
+   - 사이드 패널: 데이터 소스(빈집/공동주택/건축물조건검색) + 조건 필터
+   - 지도: VWorld 항공타일 + 연속지적도 폴리곤을 소스별 색상으로 표시
+   - 폴리곤 클릭 → 소스별 상세카드 (공동주택은 K-apt 풀세트)
+   - 조건검색(건축물)은 live API → 뷰포트 내 PNU만 일괄 폴리곤 조회
+   ============================================================ */
+
+// 동구 중심좌표 (광주 동구청 근처)
+const MAP_CENTER = [35.1595, 126.9225];
+const MAP_DEFAULT_ZOOM = 13;
+
+let M_MAP = null;            // Leaflet 인스턴스
+let M_TILE = [];             // 타일 레이어
+let M_LAYER = {};            // 소스별 레이어 그룹: { vacant:L.FeatureGroup, apt:L.FeatureGroup, cond:L.FeatureGroup }
+let M_DATA = {               // 소스별 정적 데이터 캐시
+  vacant: [],                // vacant_geo.json
+  apt: [],                   // apt_geo.json
+};
+let M_RESULTS = { vacant: [], apt: [], cond: [] };  // 필터 적용 후 결과(원본 객체 배열)
+let M_MS = {};               // 다중선택 컴포넌트
+let M_INITIALIZED = false;
+let M_MOVE_TIMER = null;
+const COND_PNU_CACHE = new Map();  // 조건검색: pnu → geometry (뷰포트 갱신 캐시)
+const COND_CHUNK = 50;             // 조건검색 폴리곤 일괄조회 단위
+const COND_MAX_VIEWPORT = 150;     // 뷰포트 내 미수집 PNU 상한 (초과 시 줌인 안내)
+
+// ── 색상 정의 ──
+const M_COLOR = {
+  vacant: {
+    "1등급":"#2f7d5b", "2등급":"#d4a017", "3등급":"#d97706", "4등급":"#a4322f",
+    "_default":"#a4322f",
+  },
+  apt: {
+    "아파트":"#2563eb", "연립":"#0891b2", "다세대":"#7c3aed",
+    "오피스텔":"#ea580c", "도시형생활주택":"#db2777", "_default":"#475569",
+  },
+  cond: { "_default":"#16a34a" },
+};
+function mapColor(source, attr){
+  const set = M_COLOR[source] || M_COLOR.cond;
+  return set[attr] || set._default;
+}
+
+// ── 복수 PNU → GeoJSON FeatureCollection (api/vworld-parcel.js ?pnus=)
+async function parcelsFromPNUs(pnuArray){
+  if(!pnuArray.length) return [];
+  const out = [];
+  for(let i = 0; i < pnuArray.length; i += COND_CHUNK){
+    const chunk = pnuArray.slice(i, i + COND_CHUNK);
+    const { ok, data } = await api("vworld-parcel", { pnus: chunk.join(",") });
+    if(ok && data && Array.isArray(data.features)){
+      for(const f of data.features){
+        if(f && f.geometry) out.push(f);
+      }
+    }
+  }
+  return out;
+}
+
+// ── 지도 초기화 (최초 1회) ──
+async function initMapTab(){
+  if(!M_INITIALIZED){
+    buildMapFilters();
+    await loadMapStaticData();
+    await loadMapHaengjeong();
+    initMapLeaflet();
+    M_INITIALIZED = true;
+  }
+  // 소스 체크박스 상태에 따라 조건 섹션 노출
+  syncMapCondSections();
+  // 줌 레벨에 맞는 범례 렌더
+  renderMapLegend();
+  setTimeout(()=>{ try{ M_MAP && M_MAP.invalidateSize(); }catch(e){} }, 120);
+}
+
+// 행정동 드롭다운 구성 (haengjeong.json 재사용)
+async function loadMapHaengjeong(){
+  const sel = document.getElementById("map-hdong");
+  if(sel.options.length > 1) return;
+  try{
+    const r = await fetch("/haengjeong.json");
+    const { hdong2bjd } = await r.json();
+    const dongs = Object.keys(hdong2bjd || {}).sort();
+    for(const d of dongs){
+      const opt = document.createElement("option");
+      opt.value = d; opt.textContent = d;
+      sel.appendChild(opt);
+    }
+  }catch(e){ console.error("[loadMapHaengjeong]", e); }
+}
+
+// 정적 폴리곤 데이터 로드 (vacant_geo.json, apt_geo.json)
+async function loadMapStaticData(){
+  if(M_DATA.vacant.length === 0){
+    try{
+      const r = await fetch("/vacant_geo.json");
+      if(r.ok) M_DATA.vacant = await r.json();
+    }catch(e){ console.error("[loadMapStaticData vacant]", e); }
+  }
+  if(M_DATA.apt.length === 0){
+    try{
+      const r = await fetch("/apt_geo.json");
+      if(r.ok) M_DATA.apt = await r.json();
+    }catch(e){ console.error("[loadMapStaticData apt]", e); }
+  }
+}
+
+// 사이드 패널 다중선택 필터 구성
+function buildMapFilters(){
+  if(M_MS.vgrade) return;
+  // 빈집 등급
+  const vacantGrades = [...new Set(M_DATA.vacant.map(d => d.grade).filter(Boolean))].sort();
+  if(vacantGrades.length) M_MS.vgrade = buildMultiselect("map-ms-vgrade", vacantGrades, false);
+  // 공동주택 종류
+  M_MS.hkind = buildMultiselect("map-ms-hkind", HKIND_OPTS, false);
+  // 건축물 용도/구조
+  M_MS.purps = buildMultiselect("map-ms-purps", PURPS_OPTS);
+  M_MS.strct = buildMultiselect("map-ms-strct", STRCT_OPTS);
+}
+
+// 소스 체크 상태 → 조건 섹션 노출 동기화
+function syncMapCondSections(){
+  const sources = mapSelectedSources();
+  document.getElementById("map-cond-vacant").style.display = sources.includes("vacant") ? "" : "none";
+  document.getElementById("map-cond-apt").style.display    = sources.includes("apt")    ? "" : "none";
+  document.getElementById("map-cond-cond").style.display   = sources.includes("cond")   ? "" : "none";
+}
+function mapSelectedSources(){
+  return [...document.querySelectorAll('#mapSourceGrid input:checked')].map(c => c.value);
+}
+
+// 소스 체크박스 변경 시 섹션 토글 (이벤트 위임)
+document.addEventListener("change", (e)=>{
+  if(e.target.closest('#mapSourceGrid')){
+    syncMapCondSections();
+  }
+});
+
+// ── Leaflet 맵 생성 ──
+function initMapLeaflet(){
+  const map = L.map("mapView", { zoomControl:true, attributionControl:false });
+  M_MAP = map;
+  const blank = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
+  M_TILE.push(L.tileLayer('/api/vworld-tile?layer=Satellite&z={z}&y={y}&x={x}', { maxZoom:19, errorTileUrl:blank }).addTo(map));
+  M_TILE.push(L.tileLayer('/api/vworld-tile?layer=Hybrid&z={z}&y={y}&x={x}', { maxZoom:19, errorTileUrl:blank }).addTo(map));
+  map.setView(MAP_CENTER, MAP_DEFAULT_ZOOM);
+
+  M_LAYER.vacant = L.featureGroup().addTo(map);
+  M_LAYER.apt    = L.featureGroup().addTo(map);
+  M_LAYER.cond   = L.featureGroup().addTo(map);
+
+  // 줌/이동 → 조건검색 뷰포트 폴리곤 갱신(디바운스)
+  map.on("moveend", ()=>{
+    clearTimeout(M_MOVE_TIMER);
+    M_MOVE_TIMER = setTimeout(()=>{
+      if(mapSelectedSources().includes("cond") && M_RESULTS.cond.length){
+        refreshCondViewport();
+      }
+    }, 350);
+  });
+}
+
+// ── 검색 실행 (사이드 패널 "지도에 반영" 버튼) ──
+async function runMapSearch(){
+  const sources = mapSelectedSources();
+  if(!sources.length){ document.getElementById("mapHint").textContent = "소스를 1개 이상 선택하세요."; return; }
+  const hdong = document.getElementById("map-hdong").value;
+  const isAll = hdong === "__ALL__";
+  const runBtn = document.getElementById("mapRunBtn");
+  runBtn.disabled = true;
+  document.getElementById("mapHint").textContent = "";
+
+  try{
+    if(sources.includes("vacant")) filterVacantForMap(isAll ? null : hdong);
+    if(sources.includes("apt"))    filterAptForMap(isAll ? null : hdong);
+    if(sources.includes("cond")){
+      await runCondForMap(isAll ? null : hdong);
+    }
+    renderAllMapLayers();
+    renderMapResults();
+    renderMapLegend();
+    fitMapToResults();
+  }catch(e){
+    console.error("[runMapSearch]", e);
+    document.getElementById("mapHint").textContent = "오류: " + (e.message || e);
+  }finally{
+    runBtn.disabled = false;
+  }
+}
+
+// ── 빈집 필터링 (정적 vacant_geo) ──
+function filterVacantForMap(hdong){
+  const selGrade = M_MS.vgrade ? M_MS.vgrade.selected() : [];
+  M_RESULTS.vacant = M_DATA.vacant.filter(d => {
+    if(hdong && (d.hdong || d.dong) !== hdong) return false;
+    if(selGrade.length && !selGrade.includes(d.grade)) return false;
+    return true;
+  });
+}
+
+// ── 공동주택 필터링 (정적 apt_geo) ──
+function filterAptForMap(hdong){
+  const selKind = M_MS.hkind ? M_MS.hkind.selected() : [];
+  // 행정동 매칭: apt_geo는 PNU(앞10자리=bjdongCd)를 가짐. HJ.hdong2bjd 역매핑으로
+  // bjdongCd → 행정동명을 구해 hdong과 비교. housing 탭(bjd2hd 구성 방식)과 동일.
+  let bjd2hd = null;
+  if(hdong && HJ){
+    bjd2hd = {};
+    for(const [hd, bjds] of Object.entries(HJ.hdong2bjd || {})){
+      for(const b of bjds) bjd2hd[b] = hd;
+    }
+  }
+  M_RESULTS.apt = M_DATA.apt.filter(d => {
+    if(bjd2hd){
+      const bjdCd = String(d.pnu || "").slice(5,10);
+      if((bjd2hd[bjdCd] || "") !== hdong) return false;
+    }
+    if(selKind.length && !selKind.includes(d.kind)) return false;
+    return true;
+  });
+}
+
+// ── 건축물 조건검색 (live API) → 결과 건물의 parcel key 수집 ──
+async function runCondForMap(hdong){
+  document.getElementById("mapHint").textContent = "건축물 조건검색 중…";
+  COND_PNU_CACHE.clear();
+  M_LAYER.cond.clearLayers();
+
+  if(!HJ) await loadHaengjeong();
+  const bjdList = hdong ? (HJ.hdong2bjd[hdong] || []) : ALL_BJD;
+  if(!bjdList.length){ M_RESULTS.cond = []; return; }
+
+  const selPurps = M_MS.purps ? M_MS.purps.selected() : [];
+  const selStrct = M_MS.strct ? M_MS.strct.selected() : [];
+
+  // 동 단위로 표제부 페이지 조회(runPool 재사용) → 용도/구조 필터 → pnu 수집
+  const MAX_PAGES = 50;
+  // 1페이지로 totalCount 파악
+  const p1 = await runPool(bjdList, async (bjd)=>{
+    const { titles, totalCount } = await fetchDongPage(bjd, 1);
+    return { bjd, titles, totalCount };
+  }, 5);
+  const more = [];
+  const all = [];
+  for(const r of p1){
+    all.push(...r.titles);
+    const pageSize = Math.max(r.titles.length, 1);
+    if(r.totalCount > pageSize){
+      const pages = Math.min(Math.ceil(r.totalCount / pageSize), MAX_PAGES);
+      for(let pg = 2; pg <= pages; pg++) more.push({ bjd: r.bjd, pg });
+    }
+  }
+  // 잔여 페이지 병렬 조회
+  if(more.length){
+    const got = await runPool(more, async (t)=>{
+      const { titles } = await fetchDongPage(t.bjd, t.pg);
+      return titles;
+    }, 5);
+    for(const ts of got) if(Array.isArray(ts)) all.push(...ts);
+  }
+
+  // 필터 + pnu 수집 (중복 pnu 제거)
+  const seen = new Map();
+  for(const t of all){
+    if(!matchCat(t.mainPurpsCdNm, selPurps, PURPS_OPTS)) continue;
+    if(!matchCat(t.strctCdNm, selStrct, STRCT_OPTS)) continue;
+    const bun = String(t.bun || "").padStart(4,"0");
+    const ji  = String(t.ji  || "").padStart(4,"0");
+    if(!bun || !ji) continue;
+    const pnu = toPNU({ sigunguCd:SIGUNGU, bjdongCd:t.bjdongCd, platGbCd:t.platGbCd || "0", bun, ji });
+    if(!seen.has(pnu)) seen.set(pnu, t);
+  }
+  M_RESULTS.cond = [...seen.entries()].map(([pnu, t]) => ({
+    pnu,
+    bjdongCd: t.bjdongCd || pnu.slice(5,10),
+    dongNm: t.dongNm || "",
+    bldNm: t.bldNm || "",
+    mainPurps: t.mainPurpsCdNm || "",
+    strct: t.strctCdNm || "",
+    grndFlr: t.grndFlrCnt || "",
+    ugrndFlr: t.ugrndFlrCnt || "",
+    useAprDay: t.useAprDay || "",
+    platPlc: t.newPlatPlc || t.platPlc || "",
+  }));
+  document.getElementById("mapHint").textContent = `건축물 조건검색: ${M_RESULTS.cond.length}건`;
+}
+
+
+
+// ── 뷰포트 내 조건검색 폴리곤 갱신 ──
+async function refreshCondViewport(){
+  if(!M_MAP) return;
+  const bounds = M_MAP.getBounds();
+  const inView = M_RESULTS.cond.filter(it => {
+    // PNU로는 좌표를 알 수 없으므로, 캐시된 geometry의 bounds로 판별.
+    // 미수집건은 일단 후보로 포함(아래에서 조회 후 다음 moveend에 반영).
+    const g = COND_PNU_CACHE.get(it.pnu);
+    if(g) return geoIntersectsBounds(g, bounds);
+    return true;   // 미수집 → 조회 대상
+  });
+  // 미수집 PNU만 추출
+  const need = inView.filter(it => !COND_PNU_CACHE.has(it.pnu)).map(it => it.pnu);
+  if(need.length > COND_MAX_VIEWPORT){
+    document.getElementById("mapHint").textContent = `표시할 건물이 너무 많습니다(${need.length}건). 지도를 확대(줌인)하세요.`;
+    return;
+  }
+  if(need.length === 0){
+    document.getElementById("mapHint").textContent = "";
+    redrawCondLayer();
+    return;
+  }
+  showMapLoading(true);
+  const feats = await parcelsFromPNUs(need);
+  for(const f of feats){
+    if(f.properties?.pnu) COND_PNU_CACHE.set(f.properties.pnu, f.geometry);
+  }
+  redrawCondLayer();
+  showMapLoading(false);
+  document.getElementById("mapHint").textContent = "";
+}
+
+// GeoJSON geometry가 Leaflet bounds와 교차하는지 (대략)
+function geoIntersectsBounds(geom, bounds){
+  try{
+    const b = L.geoJSON(geom).getBounds();
+    return b.isValid() && bounds.intersects(b);
+  }catch(e){ return false; }
+}
+
+// 조건검색 레이어 다시 그리기 (캐시된 geometry 중 뷰포트 내만)
+function redrawCondLayer(){
+  if(!M_MAP) return;
+  M_LAYER.cond.clearLayers();
+  const bounds = M_MAP.getBounds();
+  const polys = [];
+  for(const it of M_RESULTS.cond){
+    const g = COND_PNU_CACHE.get(it.pnu);
+    if(!g) continue;
+    if(!geoIntersectsBounds(g, bounds)) continue;
+    polys.push(makeMapPolygon(g, "cond", it.pnu, it));
+  }
+  if(polys.length){
+    for(const p of polys) p.addTo(M_LAYER.cond);
+  }
+}
+
+// ── 레이어 렌더 (전체) ──
+function renderAllMapLayers(){
+  // 빈집
+  M_LAYER.vacant.clearLayers();
+  for(const d of M_RESULTS.vacant){
+    const p = makeMapPolygon(d.geometry, "vacant", d.pnu || (d.jibun||""), d);
+    p.addTo(M_LAYER.vacant);
+  }
+  // 공동주택
+  M_LAYER.apt.clearLayers();
+  for(const d of M_RESULTS.apt){
+    const p = makeMapPolygon(d.geometry, "apt", d.pnu, d);
+    p.addTo(M_LAYER.apt);
+  }
+  // 조건검색은 redrawCondViewport 에서 처리(뷰포트 기반)
+  M_LAYER.cond.clearLayers();
+  if(mapSelectedSources().includes("cond") && M_RESULTS.cond.length){
+    refreshCondViewport();
+  }
+}
+
+// 폴리곤 1개 생성 + 스타일 + 클릭 핸들러
+function makeMapPolygon(geometry, source, id, data){
+  const color = mapColor(source, source === "vacant" ? data.grade : (source === "apt" ? data.kind : null));
+  const layer = L.geoJSON(geometry, {
+    style: { color, weight: 2, fillColor: color, fillOpacity: 0.35 },
+  });
+  layer.on("click", ()=>{ showMapDetailCard(source, data); highlightMapPolygon(layer, source); });
+  layer._mId = id; layer._mSource = source;
+  return layer;
+}
+
+let M_HIGHLIGHT = null;
+function highlightMapPolygon(layer, source){
+  if(M_HIGHLIGHT){ try{ M_HIGHLIGHT.setStyle({ weight:2, fillOpacity:0.35 }); }catch(e){} }
+  try{ layer.setStyle({ weight:4, fillOpacity:0.6 }); layer.bringToFront(); }catch(e){}
+  M_HIGHLIGHT = layer;
+}
+
+// ── 결과목록 (사이드 패널 하단) ──
+function renderMapResults(){
+  const wrap = document.getElementById("mapResultsWrap");
+  const list = document.getElementById("mapResultsList");
+  const sources = mapSelectedSources();
+  const all = [];
+  if(sources.includes("vacant")) for(const d of M_RESULTS.vacant) all.push({ src:"vacant", d });
+  if(sources.includes("apt"))    for(const d of M_RESULTS.apt)    all.push({ src:"apt", d });
+  if(sources.includes("cond"))   for(const d of M_RESULTS.cond)   all.push({ src:"cond", d });
+
+  document.getElementById("mapResultCount").textContent = all.length.toLocaleString("ko-KR");
+  if(!all.length){ wrap.style.display = "none"; return; }
+  wrap.style.display = "";
+  // 너무 많으면 일부만 렌더
+  const MAX_SHOW = 300;
+  const shown = all.slice(0, MAX_SHOW);
+  const frag = document.createDocumentFragment();
+  for(const { src, d } of shown){
+    const row = document.createElement("div");
+    row.className = "map-result-row";
+    const color = mapColor(src, src === "vacant" ? d.grade : (src === "apt" ? d.kind : null));
+    let label = "";
+    let sub = "";
+    if(src === "vacant"){ label = `빈집 ${d.grade||""} · ${d.kind||""}`; sub = formatJibun(d.jibun) || d.doro || ""; }
+    else if(src === "apt"){ label = d.complexNm || "공동주택"; sub = `${d.kind||""} · ${d.jibun || d.adres || d.doroAddr || ""}`; }
+    else { label = d.bldNm || "건축물"; sub = `${d.mainPurps||""} · ${d.dongNm||""}`; }
+    row.innerHTML = `<span class="mr-dot" style="background:${color}"></span>
+      <span class="mr-text"><b>${esc(label)}</b><span>${esc(sub)}</span></span>`;
+    row.onclick = ()=>{ focusMapResult(src, d); };
+    frag.appendChild(row);
+  }
+  list.innerHTML = "";
+  list.appendChild(frag);
+  if(all.length > MAX_SHOW){
+    const more = document.createElement("div");
+    more.className = "map-result-more";
+    more.textContent = `외 ${all.length - MAX_SHOW}건 (지도에서 확인)`;
+    list.appendChild(more);
+  }
+}
+
+// 결과목록 클릭 → 해당 폴리곤으로 이동 + 상세카드
+function focusMapResult(src, d){
+  let geom = d.geometry;
+  if(src === "cond"){ geom = COND_PNU_CACHE.get(d.pnu); }
+  if(geom && M_MAP){
+    try{
+      const b = L.geoJSON(geom).getBounds();
+      if(b.isValid()) M_MAP.fitBounds(b, { padding:[40,40], maxZoom:18 });
+    }catch(e){}
+  }
+  showMapDetailCard(src, d);
+}
+
+// ── 상세카드 ──
+function showMapDetailCard(source, data){
+  const card = document.getElementById("mapCard");
+  let html = `<div class="mc-head"><span class="mc-src mc-src-${source}">${sourceLabel(source)}</span>
+    <button class="mc-close" onclick="closeMapCard()">✕</button></div>`;
+  if(source === "vacant"){
+    html += renderVacantCard(data);
+  }else if(source === "apt"){
+    html += renderAptCard(data);
+  }else{
+    html += renderCondCard(data);
+  }
+  card.innerHTML = html;
+  card.style.display = "";
+}
+function closeMapCard(){ document.getElementById("mapCard").style.display = "none"; }
+function sourceLabel(s){ return s === "vacant" ? "빈집현황" : s === "apt" ? "공동주택" : "건축물"; }
+
+function renderVacantCard(d){
+  const yr = d.year ? `${d.year}년 (경과 ${new Date().getFullYear() - d.year}년)` : "미확인";
+  return `<div class="mc-title">${esc(d.grade||"빈집")} · ${esc(d.kind||"")}</div>
+    <div class="mc-addr">${esc(formatJibun(d.jibun) || "—")}</div>
+    ${d.doro ? `<div class="mc-sub">${esc(d.doro)}</div>` : ""}
+    <table class="mc-tbl">
+      <tr><th>행정동</th><td>${esc(d.hdong || d.dong || "—")}</td></tr>
+      <tr><th>건축년도</th><td>${yr}</td></tr>
+      <tr><th>주구조</th><td>${esc(d.struct || "—")}</td></tr>
+      <tr><th>연면적</th><td>${d.tarea ? Number(d.tarea).toLocaleString("ko-KR") + "㎡" : "—"}</td></tr>
+      <tr><th>기준일자</th><td>${esc(d.baseDate || "—")}</td></tr>
+    </table>`;
+}
+
+function renderAptCard(d){
+  const html = `<div class="mc-title">${esc(d.complexNm || "공동주택")}</div>
+    <div class="mc-addr">${esc(d.jibun || d.adres || d.doroAddr || "—")}</div>
+    <table class="mc-tbl">
+      <tr><th>종류</th><td>${esc(d.kind || "—")}</td></tr>
+      <tr><th>세대수</th><td>${d.hhld != null ? Number(d.hhld).toLocaleString("ko-KR") + "세대" : "—"}</td></tr>
+      ${d.dongCnt ? `<tr><th>동수</th><td>${d.dongCnt}동</td></tr>` : ""}
+      ${d.grndFlr ? `<tr><th>층수</th><td>지하 ${d.ugrndFlr||0} / 지상 ${d.grndFlr}</td></tr>` : ""}
+      <tr><th>사용승인일</th><td>${esc(formatDate(d.useAprDay))}</td></tr>
+      ${d.strct ? `<tr><th>구조</th><td>${esc(d.strct)}</td></tr>` : ""}
+      ${d.tarea ? `<tr><th>연면적</th><td>${Number(d.tarea).toLocaleString("ko-KR")}㎡</td></tr>` : ""}
+      ${d.parking ? `<tr><th>주차</th><td>${d.parking}대</td></tr>` : ""}
+      ${d.officeTel ? `<tr><th>관리사무소</th><td>${esc(d.officeTel)}</td></tr>` : ""}
+    </table>
+    <div class="mc-note" data-pnu="${esc(d.pnu)}" data-kapt="${esc(d.kaptCode||"")}">K-apt 상세 불러오는 중…</div>`;
+  // K-apt 상세는 카드 DOM에 들어간 후 lazy 로드
+  if(d.source === "kapt" && d.kaptCode){
+    setTimeout(()=>loadAptCardDetail(d.kaptCode, d.pnu), 0);
+  }
+  return html;
+}
+
+// K-apt 단지 상세(풀세트) lazy 로드 → 카드의 mc-note 영역에 추가 정보 주입
+async function loadAptCardDetail(kaptCode, pnu){
+  const note = document.querySelector(`.mc-note[data-pnu="${CSS.escape(pnu)}"]`);
+  if(!note) return;
+  try{
+    // aptlist_donggu.json 캐시에서 kaptCode로 bass/dtl 찾기
+    let bass = null, dtl = null;
+    // H_KAPT_BY_PNU 가 housing 탭에서 채워져 있으면 재사용
+    const cached = H_KAPT_BY_PNU?.[pnu];
+    if(cached){ bass = cached.bass; dtl = cached.dtl; }
+    if(!bass){
+      const r = await fetch("/aptlist_donggu.json");
+      if(r.ok){
+        const arr = await r.json();
+        const found = arr.find(x => x.kaptCode === kaptCode);
+        if(found){ bass = found.bass; dtl = found.dtl; }
+      }
+    }
+    if(!bass){ note.textContent = "상세정보 없음"; return; }
+    const b = bass, d = dtl;
+    const parking = d ? (Number(d.kaptdPcnt||0) + Number(d.kaptdPcntu||0)) : 0;
+    const rows = [];
+    if(b.codeHeatNm) rows.push(["난방", b.codeHeatNm]);
+    if(b.codeSaleNm) rows.push(["분양형태", b.codeSaleNm]);
+    if(b.kaptBcompany) rows.push(["시공사", b.kaptBcompany]);
+    if(b.kaptAcompany) rows.push(["시행사", b.kaptAcompany]);
+    if(b.codeMgrNm) rows.push(["관리방식", b.codeMgrNm]);
+    if(b.kaptTel) rows.push(["관리사무소", b.kaptTel]);
+    if(b.kaptFax) rows.push(["FAX", b.kaptFax]);
+    if(d && d.kaptdEcnt != null) rows.push(["승강기", d.kaptdEcnt + "대"]);
+    if(parking) rows.push(["주차", parking + "대"]);
+    if(!rows.length){ note.textContent = "추가 상세정보 없음"; return; }
+    note.innerHTML = `<div class="mc-sub-title">단지 상세정보 (K-apt)</div><table class="mc-tbl mc-tbl-sub">${
+      rows.map(([k,v])=>`<tr><th>${esc(k)}</th><td>${esc(String(v))}</td></tr>`).join("")
+    }</table>`;
+  }catch(e){ note.textContent = "상세정보 로드 실패"; }
+}
+
+function renderCondCard(d){
+  return `<div class="mc-title">${esc(d.bldNm || "건축물")}</div>
+    <div class="mc-addr">${esc(d.platPlc || "—")}</div>
+    <table class="mc-tbl">
+      <tr><th>용도</th><td>${esc(d.mainPurps || "—")}</td></tr>
+      <tr><th>구조</th><td>${esc(d.strct || "—")}</td></tr>
+      <tr><th>층수</th><td>지하 ${d.ugrndFlr||0} / 지상 ${d.grndFlr||0}</td></tr>
+      <tr><th>사용승인일</th><td>${esc(formatDate(d.useAprDay))}</td></tr>
+    </table>`;
+}
+
+// ── 범례 ──
+function renderMapLegend(){
+  const el = document.getElementById("mapLegend");
+  const sources = mapSelectedSources();
+  const items = [];
+  if(sources.includes("vacant")){
+    items.push(`<div class="ml-group"><b>빈집 등급</b></div>`);
+    for(const g of ["1등급","2등급","3등급","4등급"]){
+      items.push(`<div class="ml-row"><span class="ml-sw" style="background:${mapColor("vacant",g)}"></span>${g}</div>`);
+    }
+  }
+  if(sources.includes("apt")){
+    items.push(`<div class="ml-group"><b>공동주택 종류</b></div>`);
+    for(const k of ["아파트","연립","다세대","오피스텔","도시형생활주택"]){
+      items.push(`<div class="ml-row"><span class="ml-sw" style="background:${mapColor("apt",k)}"></span>${k}</div>`);
+    }
+  }
+  if(sources.includes("cond")){
+    items.push(`<div class="ml-group"><b>건축물 조건검색</b></div>`);
+    items.push(`<div class="ml-row"><span class="ml-sw" style="background:${mapColor("cond",null)}"></span>검색 일치</div>`);
+  }
+  el.innerHTML = items.join("");
+}
+
+// 결과 전체 영역으로 줌 맞춤
+function fitMapToResults(){
+  if(!M_MAP) return;
+  const sources = mapSelectedSources();
+  const geoms = [];
+  if(sources.includes("vacant")) for(const d of M_RESULTS.vacant) if(d.geometry) geoms.push(d.geometry);
+  if(sources.includes("apt"))    for(const d of M_RESULTS.apt)    if(d.geometry) geoms.push(d.geometry);
+  if(sources.includes("cond")){
+    for(const it of M_RESULTS.cond){
+      const g = COND_PNU_CACHE.get(it.pnu);
+      if(g) geoms.push(g);
+    }
+  }
+  if(!geoms.length) return;
+  try{
+    const group = L.featureGroup(geoms.map(g => L.geoJSON(g)));
+    const b = group.getBounds();
+    if(b.isValid()) M_MAP.fitBounds(b, { padding:[30,30], maxZoom:17 });
+  }catch(e){}
+}
+
+function showMapLoading(on){
+  document.getElementById("mapLoading").style.display = on ? "" : "none";
+}
+
+function clearMapSelection(){
+  // 결과 초기화 + 레이어 비움
+  M_RESULTS = { vacant:[], apt:[], cond:[] };
+  COND_PNU_CACHE.clear();
+  for(const k of Object.keys(M_LAYER)){ if(M_LAYER[k]) M_LAYER[k].clearLayers(); }
+  document.getElementById("mapResultsWrap").style.display = "none";
+  document.getElementById("mapHint").textContent = "";
+  closeMapCard();
+}
+
+// 날짜 포맷 헬퍼 (YYYYMMDD → YYYY.MM.DD)
+function formatDate(s){
+  const v = String(s || "").trim();
+  if(/^\d{8}$/.test(v)) return `${v.slice(0,4)}.${v.slice(4,6)}.${v.slice(6,8)}`;
+  return v || "—";
 }
 
 
