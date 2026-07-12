@@ -32,6 +32,7 @@ const CONCURRENCY = 5;   // 상류 API 초당 한도 고려
 
 // VWorld 연속지적도 — 좌표 기반 단일 필지 폴리곤 조회
 const VWORLD_DATA_URL = "https://api.vworld.kr/req/data";
+const VWORLD_GEO_URL  = "https://api.vworld.kr/req/address";
 const VWORLD_DOMAIN = "https://donggu-building.vercel.app";
 const GEO_CONCURRENCY = 6;   // VWorld 지적도 호출 동시성
 
@@ -57,6 +58,47 @@ async function parcelGeometryByCoord(lon, lat) {
   } catch {
     return null;
   }
+}
+
+// VWorld geocoder(parcel) — 지번주소 → 정확한 좌표. 단독주택 좌표가 거대 집합 필지의
+// 대표점인 경우가 많아 좌표 기반 조회만으로는 엉뚱한 큰 폴리곤이 잡힘.
+// 지번주소를 geocoder로 변환한 좌표를 쓰면 정확한 단일 필지를 잡을 수 있음.
+async function geocodeJibun(jibunAddr) {
+  if (!VWORLD_KEY || !jibunAddr) return null;
+  const params = new URLSearchParams({
+    service: "address", request: "getcoord", crs: "epsg:4326",
+    address: jibunAddr, format: "json", type: "parcel", key: VWORLD_KEY,
+  });
+  try {
+    const r = await fetchWithTimeout(`${VWORLD_GEO_URL}?${params}`, { timeout: 10000 });
+    if (!r.ok) return null;
+    const data = await r.json();
+    if (data?.response?.status !== "OK") return null;
+    const pt = data?.response?.result?.point;
+    if (!pt || !pt.x || !pt.y) return null;
+    return { x: Number(pt.x), y: Number(pt.y) };
+  } catch {
+    return null;
+  }
+}
+
+// 빈집 1건 → 폴리곤. geocoder 우선, 실패/없음 시 원본 EPSG:5181 좌표 폴백.
+async function parcelForVacant(o) {
+  // 1순위: 지번주소 geocoder → 정확 좌표 → POINT 조회
+  if (o.jibun) {
+    const pt = await geocodeJibun(o.jibun);
+    if (pt) {
+      const g = await parcelGeometryByCoord(pt.x, pt.y);
+      if (g && g.geometry) { g._viaGeo = true; return g; }
+    }
+  }
+  // 2순위: 원본 EPSG:5181 좌표 → WGS84 변환 → POINT 조회
+  const rx = Number(o.x) || 0, ry = Number(o.y) || 0;
+  if (rx && ry) {
+    const { lon, lat } = toWGS84(rx, ry);
+    return await parcelGeometryByCoord(lon, lat);
+  }
+  return null;
 }
 
 // odcloud "빈집 현황" 데이터 좌표계는 EPSG:5181 (Korea 2000 / Southern Belt)
@@ -467,29 +509,32 @@ async function main() {
 
   // ───────────────────────────────────────────────
   // 지도 탭용: 빈집 폴리곤 사전 수집 → vacant_geo.json
-  // EPSG:5181 좌표 → WGS84 변환 후 VWorld 연속지적도로 필지 폴리곤 조회.
-  // 실패 건은 스킵(좌표계 한계 등). 지도 탭에서는 폴리곤 없는 건물은 마커 폴백.
+  // 빈집 원본 좌표(EPSG:5181)는 건물이 아닌 거대 집합 필지의 대표점인 경우가 많아
+  // 좌표 기반 POINT 조회만으로는 엉뚱한 큰 폴리곤이 잡힘.
+  // 따라서 지번주소(jibun)를 VWorld geocoder로 정확 좌표로 변환 후 POINT 조회(1순위)하고,
+  // 실패 시 원본 EPSG:5181 좌표 → WGS84 폴백(2순위).
   // ───────────────────────────────────────────────
   if (VWORLD_KEY) {
     console.log("\n지도 탭용 빈집 폴리곤 수집 중...");
     const geoInput = out
-      .map((o, i) => ({ i, rawX: Number(o.x) || 0, rawY: Number(o.y) || 0 }))
-      .filter(it => it.rawX && it.rawY);
-    console.log(`  폴리곤 수집 대상: ${geoInput.length}건 (좌표 보유)`);
+      .map((o, i) => ({ i, o }))
+      .filter(it => it.o.jibun || (Number(it.o.x) && Number(it.o.y)));
+    console.log(`  폴리곤 수집 대상: ${geoInput.length}건 (지번/좌표 보유)`);
     const geoResults = await runPool(geoInput, async (it) => {
-      const { lon, lat } = toWGS84(it.rawX, it.rawY);
-      const g = await parcelGeometryByCoord(lon, lat);
+      const g = await parcelForVacant(it.o);
       if (it.i % 100 === 0) console.log(`  [폴리곤] ${it.i + 1}/${out.length}`);
       return g;
     }, GEO_CONCURRENCY);
 
     const geoOut = [];
-    let geoOk = 0;
-    for (let i = 0; i < out.length; i++) {
-      const o = out[i];
-      const g = geoResults[i];
+    let geoOk = 0, byGeo = 0, byCoord = 0;
+    for (let k = 0; k < geoInput.length; k++) {
+      const it = geoInput[k];
+      const o = it.o;
+      const g = geoResults[k];
       if (g && g.geometry) {
         geoOk++;
+        if (o.jibun && g._viaGeo) byGeo++; else byCoord++;
         geoOut.push({
           pnu: g.pnu,
           dong: o.dong, hdong: o.hdong, kind: o.kind,
@@ -501,7 +546,7 @@ async function main() {
     }
     const geoPath = join(ROOT, "vacant_geo.json");
     await writeFile(geoPath, JSON.stringify(geoOut, null, " ") + "\n", "utf8");
-    console.log(`  빈집 폴리곤 수집: ${geoOk}건 / ${out.length}건`);
+    console.log(`  빈집 폴리곤 수집: ${geoOk}건 / ${out.length}건 (geocoder ${byGeo} / 좌표폴백 ${byCoord})`);
     console.log(`  저장 경로: ${geoPath}`);
   } else {
     console.log("\nVWORLD_KEY 없음 — 빈집 폴리곤 수집 생략");
