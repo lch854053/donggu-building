@@ -411,6 +411,13 @@
       <div class="stat"><div class="k">3등급</div><div class="v" id="vs-grade3">0</div></div>
     </div>
 
+    <div class="grade-legend" id="vGradeLegend" style="display:none">
+      <div class="gl-item"><b>1등급</b> 상태가 양호하여 별도의 보수 없이 또는 가벼운 수리 후 즉시 거주 및 활용 가능</div>
+      <div class="gl-item"><b>2등급</b> 부분적인 개보수를 거치면 거주 및 활용이 가능</div>
+      <div class="gl-item"><b>3등급</b> 주요 구조부에 대한 보강이 필요하거나 안전상의 문제로 출입 제한 조치 필요</div>
+      <div class="gl-item"><b>4등급</b> 노후화가 심각해 붕괴 및 화재 등 안전사고 우려가 크며 철거가 필요</div>
+    </div>
+
     <div id="vResultArea" style="display:none">
       <div class="result-head">
         <div class="legend"><span>행정동 <b id="vResDong"></b></span></div>
@@ -3368,6 +3375,7 @@ async function runVacantSearch(){
   document.getElementById("vs-grade2").textContent = grade2.toLocaleString("ko-KR");
   document.getElementById("vs-grade3").textContent = grade3.toLocaleString("ko-KR");
   document.getElementById("vStats").style.display = "flex";
+  document.getElementById("vGradeLegend").style.display = "block";
   document.getElementById("vResDong").textContent = isAll ? "전체" : hdong;
 
   V_PAGE = 1;
@@ -3383,6 +3391,7 @@ function clearVacant(){
   if(V_DUAL_YEAR) V_DUAL_YEAR.reset();
   const yu = document.getElementById("v-yearunknown"); if(yu) yu.checked = true;
   document.getElementById("vStats").style.display = "none";
+  document.getElementById("vGradeLegend").style.display = "none";
   document.getElementById("vResultArea").style.display = "none";
   document.getElementById("vHint").textContent = "";
   V_RESULTS = [];

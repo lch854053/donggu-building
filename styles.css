@@ -198,6 +198,16 @@
   .stat.err .v{color:var(--err)} .stat.total .v{color:var(--ink)}
   .stat.none .v{color:var(--none)}
 
+  /* Grade legend */
+  .grade-legend{
+    margin:-6px 0 18px;padding:12px 14px;background:var(--card);border:1px solid var(--line);
+    border-radius:6px;font-size:12px;line-height:1.55;color:var(--ink-2)
+  }
+  .grade-legend .gl-item{margin:3px 0}
+  .grade-legend .gl-item b{
+    display:inline-block;min-width:44px;font-family:var(--mono);font-weight:700;color:var(--ink)
+  }
+
   /* Legend + actions */
   .result-head{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:12px}
   .legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--ink-soft)}
