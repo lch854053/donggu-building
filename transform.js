@@ -265,6 +265,10 @@ function fmt(n){ return n==null ? "-" : Number(n).toLocaleString("ko-KR"); }
 
 function esc(s){ return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 
+function formatJibun(addr){
+  return String(addr ?? "").replace(/^광주광역시 동구\s*/u, "").trim() || "-";
+}
+
 // 사용승인일에서 연도만 추출 ("20150911"→2015, "2015"→2015, 누락→null)
 function extractYear(useAprDay){
   if(!useAprDay || useAprDay==="-") return null;

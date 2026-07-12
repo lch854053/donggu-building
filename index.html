@@ -3463,7 +3463,7 @@ function renderVacantPage(){
     tr.innerHTML = `
       <td class="num">${start + i + 1}</td>
       <td>${esc(d.hdong || "행정동 미확인")}</td>
-      <td>${esc(d.jibun || "-")}</td>
+      <td>${esc(formatJibun(d.jibun) || "-")}</td>
       <td>${esc(d.doro || "-")}</td>
       <td>${yearCell}</td>
       <td>${esc(d.struct || "-")}</td>
@@ -3506,8 +3506,8 @@ function exportVacantExcel(){
   if(!V_RESULTS.length) return;
   const currentYear = new Date().getFullYear();
   const rows = V_RESULTS.map(d => ({
-    "행정동": d.dong,
-    "지번주소": d.jibun || "",
+    "행정동": d.hdong || "",
+    "지번주소": formatJibun(d.jibun),
     "도로명주소": d.doro || "",
     "건축년도": d.year || "",
     "경과년수": d.year ? (currentYear - d.year) : "",
