@@ -63,6 +63,12 @@
   .tab:hover{color:var(--ink-soft)}
   .tab.active{color:var(--accent);border-bottom-color:var(--accent)}
 
+  /* 건축물 조회 하부 탭 */
+  .b-subtabs{display:flex;flex-wrap:wrap;gap:4px;margin:0 0 18px;border-bottom:1px solid var(--line)}
+  .b-subtab{font-family:var(--sans);font-size:13px;font-weight:600;cursor:pointer;padding:9px 15px;border:none;background:none;color:var(--mute);border-bottom:2px solid transparent;margin-bottom:-1px}
+  .b-subtab:hover{color:var(--ink-soft)}
+  .b-subtab.active{color:var(--accent);border-bottom-color:var(--accent)}
+
   /* Condition form */
   .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:16px}
   .field label{display:block;font-size:12px;font-weight:600;color:var(--ink-soft);margin-bottom:6px}

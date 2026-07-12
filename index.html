@@ -27,14 +27,21 @@
 
   <!-- TABS -->
   <div class="tabs">
-    <button class="tab active" id="tab-btn-bulk" onclick="switchTab('bulk')">일괄조회</button>
-    <button class="tab" id="tab-btn-cond" onclick="switchTab('cond')">조건검색</button>
-    <button class="tab" id="tab-btn-detail" onclick="switchTab('detail')">단건 상세조회</button>
+    <button class="tab active" id="tab-btn-building" onclick="switchTab('building')">건축물 조회</button>
     <button class="tab" id="tab-btn-housing" onclick="switchTab('housing')">공동주택 관리</button>
     <button class="tab" id="tab-btn-demol" onclick="switchTab('demol')">철거멸실대장</button>
     <button class="tab" id="tab-btn-vacant" onclick="switchTab('vacant')">빈집현황</button>
   </div>
 
+  <!-- ===== 건축물 조회 ===== -->
+  <div id="tab-building">
+    <div class="b-subtabs">
+      <button class="b-subtab active" data-sub="bulk" onclick="switchBuildingSubtab('bulk')">일괄조회</button>
+      <button class="b-subtab" data-sub="cond" onclick="switchBuildingSubtab('cond')">조건조회</button>
+      <button class="b-subtab" data-sub="detail" onclick="switchBuildingSubtab('detail')">단건 상세조회</button>
+    </div>
+
+    <div id="building-sub-bulk" class="b-subpanel">
   <!-- ===== TAB 1: 일괄조회 ===== -->
   <div id="tab-bulk">
   <!-- INPUT -->
@@ -108,9 +115,11 @@
     </div>
   </div>
   </div><!-- /tab-bulk -->
+    </div>
 
+    <div id="building-sub-cond" class="b-subpanel" style="display:none">
   <!-- ===== TAB 2: 조건검색 ===== -->
-  <div id="tab-cond" style="display:none">
+  <div id="tab-cond">
     <div class="card">
       <div class="card-head"><h2><span class="num-tag">1</span>검색 조건</h2></div>
       <div class="card-body">
@@ -196,6 +205,27 @@
       <div id="cPager" class="cpager"></div>
     </div>
   </div><!-- /tab-cond -->
+    </div>
+
+    <div id="building-sub-detail" class="b-subpanel" style="display:none">
+  <!-- ===== 단건 상세조회 ===== -->
+  <div id="tab-detail">
+    <div class="card">
+      <div class="card-head"><h2><span class="num-tag">검</span>단건 상세조회</h2></div>
+      <div class="card-body">
+        <div class="d-search-row">
+          <input id="dInput" type="text" placeholder="예) 제봉로 167   ·   서남로 14   ·   경양로 234 110동">
+          <button class="run" id="dRunBtn" onclick="runDetail()">조회</button>
+          <button class="ghost" onclick="clearDetail()">초기화</button>
+        </div>
+        <div class="hint">지번·도로명 모두 가능. 아파트는 동(예: <b>108동</b>)을 함께 입력하면 해당 동이 먼저 선택됩니다.</div>
+        <div class="d-status" id="dStatus" style="display:none"></div>
+      </div>
+    </div>
+    <div id="dResult" style="display:none;margin-top:18px"></div>
+  </div><!-- /tab-detail -->
+    </div>
+  </div><!-- /tab-building -->
 
   <!-- ===== 공동주택 관리 (K-apt 단지 기준) ===== -->
   <div id="tab-housing" style="display:none">
@@ -286,23 +316,6 @@
       <div id="hPager" class="cpager"></div>
     </div>
   </div><!-- /tab-housing -->
-
-  <!-- ===== 단건 상세조회 ===== -->
-  <div id="tab-detail" style="display:none">
-    <div class="card">
-      <div class="card-head"><h2><span class="num-tag">검</span>단건 상세조회</h2></div>
-      <div class="card-body">
-        <div class="d-search-row">
-          <input id="dInput" type="text" placeholder="예) 제봉로 167   ·   서남로 14   ·   경양로 234 110동">
-          <button class="run" id="dRunBtn" onclick="runDetail()">조회</button>
-          <button class="ghost" onclick="clearDetail()">초기화</button>
-        </div>
-        <div class="hint">지번·도로명 모두 가능. 아파트는 동(예: <b>108동</b>)을 함께 입력하면 해당 동이 먼저 선택됩니다.</div>
-        <div class="d-status" id="dStatus" style="display:none"></div>
-      </div>
-    </div>
-    <div id="dResult" style="display:none;margin-top:18px"></div>
-  </div><!-- /tab-detail -->
 
   <!-- ===== 철거멸실관리대장 (조건검색) ===== -->
   <div id="tab-demol" style="display:none">
@@ -1866,18 +1879,32 @@ document.getElementById("dInput")?.addEventListener("keydown", e=>{
   if(e.key==="Enter"){ e.preventDefault(); runDetail(); }
 });
 
-/* ---- 탭 전환 (bulk / cond / detail / demol / housing) ---- */
+/* ---- 건축물 조회 하부 탭 상태 ---- */
+let B_SUBTAB = "bulk";
+
+/* ---- 탭 전환 (building / housing / demol / vacant) ---- */
 function switchTab(which){
-  const tabs = ["bulk","cond","detail","demol","housing","vacant"];
-  if(!tabs.includes(which)) which="bulk";
+  const tabs = ["building","housing","demol","vacant"];
+  if(!tabs.includes(which)) which="building";
   for(const t of tabs){
     document.getElementById("tab-"+t).style.display = (t===which)?"block":"none";
     document.getElementById("tab-btn-"+t).classList.toggle("active", t===which);
   }
-  if(which==="cond") loadHaengjeong();
+  if(which==="building") switchBuildingSubtab(B_SUBTAB);
   if(which==="demol"){ loadHaengjeong(); initDemolFilters(); }
   if(which==="housing") loadHousing();
   if(which==="vacant") initVacantTab();
+}
+
+function switchBuildingSubtab(key){
+  const valid = ["bulk","cond","detail"];
+  if(!valid.includes(key)) key = "bulk";
+  B_SUBTAB = key;
+  for(const k of valid){
+    document.getElementById("building-sub-"+k).style.display = (k===key)?"block":"none";
+    document.querySelector(`.b-subtab[data-sub="${k}"]`)?.classList.toggle("active", k===key);
+  }
+  if(key==="cond") loadHaengjeong();
 }
 
 /* ============================================================
