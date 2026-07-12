@@ -3398,7 +3398,12 @@ function renderVacantPage(){
   for(let i = 0; i < pageRows.length; i++){
     const d = pageRows[i];
     const tr = document.createElement("tr");
-    const yearCell = d.year ? `${d.year} <span class="year-elapsed">(${(currentYear - d.year)}년)</span>` : "-";
+    const yearCell = (() => {
+      if (!d.year) return '<span class="badge mute">연도미확인</span>';
+      const age = currentYear - d.year;
+      const cls = age >= 40 ? " veryold" : age >= 30 ? " old" : "";
+      return `${d.year} <span class="age${cls}">${age}년</span>`;
+    })();
     tr.innerHTML = `
       <td class="num">${start + i + 1}</td>
       <td>${esc(d.hdong || "행정동 미확인")}</td>
