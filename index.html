@@ -3637,9 +3637,11 @@ function exportVacantExcel(){
    - 조건검색(건축물)은 live API → 뷰포트 내 PNU만 일괄 폴리곤 조회
    ============================================================ */
 
-// 동구 중심좌표 (광주 동구청 근처)
+// 동구 중심좌표 (광주 동구청)
 const MAP_CENTER = [35.1595, 126.9225];
-const MAP_DEFAULT_ZOOM = 13;
+const MAP_DEFAULT_ZOOM = 15;
+// 동구 경계 (데이터 실측값 + 여유) — 타일 로드·패닝·축소를 이 영역으로 제한해 로딩 단축
+const MAP_BOUNDS = [[35.068, 126.889], [35.185, 126.976]];
 
 let M_MAP = null;            // Leaflet 인스턴스
 let M_TILE = [];             // 타일 레이어
@@ -3770,11 +3772,19 @@ document.addEventListener("change", (e)=>{
 
 // ── Leaflet 맵 생성 ──
 function initMapLeaflet(){
-  const map = L.map("mapView", { zoomControl:true, attributionControl:false });
+  const map = L.map("mapView", {
+    zoomControl:true,
+    attributionControl:false,
+    maxBounds: MAP_BOUNDS,            // 패닝을 동구 경계로 제한
+    maxBoundsViscosity: 0.9,          // 경계에서 부드럽게 멈춤
+    minZoom: 12,                      // 동구 전체가 보이는 수준까지 축소 허용
+    maxZoom: 19
+  });
   M_MAP = map;
   const blank = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
-  M_TILE.push(L.tileLayer('/api/vworld-tile?layer=Satellite&z={z}&y={y}&x={x}', { maxZoom:19, errorTileUrl:blank }).addTo(map));
-  M_TILE.push(L.tileLayer('/api/vworld-tile?layer=Hybrid&z={z}&y={y}&x={x}', { maxZoom:19, errorTileUrl:blank }).addTo(map));
+  // bounds 옵션으로 동구 경계 바깥 타일은 아예 요청하지 않음 → 로딩 단축
+  M_TILE.push(L.tileLayer('/api/vworld-tile?layer=Satellite&z={z}&y={y}&x={x}', { maxZoom:19, bounds:MAP_BOUNDS, errorTileUrl:blank }).addTo(map));
+  M_TILE.push(L.tileLayer('/api/vworld-tile?layer=Hybrid&z={z}&y={y}&x={x}',    { maxZoom:19, bounds:MAP_BOUNDS, errorTileUrl:blank }).addTo(map));
   map.setView(MAP_CENTER, MAP_DEFAULT_ZOOM);
 
   M_LAYER.vacant = L.featureGroup().addTo(map);
