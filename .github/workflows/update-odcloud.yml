@@ -29,6 +29,7 @@ jobs:
         run: npm run collect-apt-geo
         env:
           VWORLD_KEY: ${{ secrets.VWORLD_KEY }}
+          BLD_SERVICE_KEY: ${{ secrets.BLD_SERVICE_KEY }}
 
       - name: Commit and push if changed
         run: |
