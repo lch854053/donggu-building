@@ -24,8 +24,9 @@ const pnuRe = /^\d{19}$/;
 const pnuForVWorld = (pnu) => pnu.startsWith("29110") ? "12210" + pnu.slice(5) : pnu;
 
 // 건축물대장(getBrTitleInfo)으로 보충 수집할 주용도 — 아파트 외 공동주택 계열
-// 국토교통부 건축HUB 표제부 mainPurpsCdNm 값 기준
-const BLD_PURPS_TARGETS = ["연립주택", "다세대주택", "오피스텔"];
+// 표제부의 mainPurpsCdNm은 항상 "공동주택"이고, 세부 종류는 etcPurps에 있음.
+// etcPurps에서 추출 가능한 종류 키워드 — 아파트는 K-apt/odcloud가 이미 커버하므로 제외.
+const BLD_KIND_KEYWORDS = ["연립", "다세대", "오피스텔", "도시형"];
 const BLD_SERVICE_KEY = process.env.BLD_SERVICE_KEY;
 const BLD_HUB = "https://apis.data.go.kr/1613000/BldRgstHubService";
 const SIGUNGU = "29110";
@@ -82,10 +83,10 @@ async function parcelGeometryByPNU(pnu) {
 }
 
 // 단지 종류 정규화 — 지도 색상 분류용.
-// codeAptNm(K-apt 원본 분류)을 우선 적용: 이미 변환된 kind 보다 원본이 신뢰.
+// codeAptNm(K-apt 원본) 또는 etcPurps(건축물대장 원본 세부용도)를 우선 적용.
 // 주상복합은 대단지 아파트(그랜드센트럴 등)인 경우가 많아 아파트로 분류.
-function normalizeKind(codeAptNm, kind) {
-  const k = (codeAptNm || kind || "").replace(/\s+/g, "");
+function normalizeKind(rawClass, kind) {
+  const k = (rawClass || kind || "").replace(/\s+/g, "");
   if (k.includes("아파트")) return "아파트";
   if (k.includes("주상복합")) return "아파트";
   if (k.includes("연립")) return "연립";
@@ -95,9 +96,9 @@ function normalizeKind(codeAptNm, kind) {
   return kind || "기타";
 }
 
-// 건축물대장 표제부(getBrTitleInfo) 동단위 페이지 조회 → titles[]
+// 건축물대장 표제부(getBrTitleInfo) 동단위 페이지 조회 → { titles, totalCount }
 async function fetchBldTitlePage(bjd, pageNo) {
-  if (!BLD_SERVICE_KEY) return [];
+  if (!BLD_SERVICE_KEY) return { titles: [], totalCount: 0 };
   const qs = new URLSearchParams({
     serviceKey: BLD_SERVICE_KEY,
     sigunguCd: SIGUNGU, bjdongCd: bjd,
@@ -114,8 +115,20 @@ async function fetchBldTitlePage(bjd, pageNo) {
   } catch { return { titles: [], totalCount: 0 }; }
 }
 
-// 동구 전체 법정동을 훑어 연립/다세대/오피스텔 필지 PNU를 수집.
-// 같은 필지(platGbCd+bun+ji)에 여러 동/표제부가 있을 수 있어 필지 단위로 중복 제거.
+// etcPurps(건축물대장 세부용도)에서 종류 키워드 추출.
+// "다세대주택,사무실" → "다세대", "공동주택(다세대주택:4세대)" → "다세대" 등.
+// 아파트/연립/다세대/오피스텔/도시형 중 첫 매칭. 대상 키워드 아니면 null.
+function kindFromEtcPurps(etcPurps) {
+  const s = String(etcPurps || "");
+  for (const kw of ["연립", "다세대", "오피스텔", "도시형", "아파트"]) {
+    if (s.includes(kw)) return normalizeKind(s.includes(kw + "주택") ? kw + "주택" : kw, "");
+  }
+  return null;
+}
+
+// 동구 전체 법정동을 훑어 연립/다세대/오피스텔/도시형 필지 PNU를 수집.
+// 표제부 mainPurpsCdNm="공동주택" + 주건축물(mainAtchGbCdNm="주건축물")만 대상.
+// 같은 필지(platGbCd+bun+ji)의 여러 동 표제부를 그룹화 → 세대수 합산, 대표 동명 선택.
 async function collectLowriseFromBuilding() {
   if (!BLD_SERVICE_KEY) {
     console.log("  [건축물대장] BLD_SERVICE_KEY 미설정 — 연립/다세대/오피스텔 보충 생략");
@@ -127,7 +140,7 @@ async function collectLowriseFromBuilding() {
   const p1 = await runPool(ALL_BJD, async (bjd) => {
     const { titles, totalCount } = await fetchBldTitlePage(bjd, 1);
     return { bjd, titles, totalCount };
-  }, 5);
+  }, 3);
   const more = [];
   const all = [];
   for (const r of p1) {
@@ -142,33 +155,49 @@ async function collectLowriseFromBuilding() {
     const got = await runPool(more, async (t) => {
       const { titles } = await fetchBldTitlePage(t.bjd, t.pg);
       return titles;
-    }, 5);
+    }, 3);
     for (const ts of got) if (Array.isArray(ts)) all.push(...ts);
   }
 
-  // 주용도 필터 + 필지 단위 PNU 수집
-  const seen = new Map();   // pnu → { pnu, bjd, bun, ji, mainPurps, ... }
-  const targetSet = new Set(BLD_PURPS_TARGETS);
+  // 공동주택 + 주건축물만 필터 → etcPurps에서 종류 추출 → 필지 단위 그룹화
+  // pnuKey → { titles:[...], kind, hhld 합산 }
+  const parcels = new Map();
   for (const t of all) {
-    const purps = String(t.mainPurpsCdNm || "").trim();
-    if (!targetSet.has(purps)) continue;
+    if ((t.mainPurpsCdNm || "").trim() !== "공동주택") continue;
+    if ((t.mainAtchGbCdNm || "").trim() !== "주건축물") continue; // 경비실 등 부속 제외
+    const kind = kindFromEtcPurps(t.etcPurps);
+    if (!kind || !BLD_KIND_KEYWORDS.some(kw => kind.includes(kw))) continue;   // 아파트/기타는 스킵
     const bun = String(t.bun || "").padStart(4, "0");
     const ji  = String(t.ji  || "").padStart(4, "0");
     if (!bun || !ji) continue;
-    const platGb = String(t.platGbCd || "0");
-    const pnu = `${SIGUNGU}${t.bjdongCd || ""}${platGb}${bun}${ji}`;
-    if (!pnuRe.test(pnu) || seen.has(pnu)) continue;
-    seen.set(pnu, {
-      pnu, bjdCode: `${SIGUNGU}${t.bjdongCd || ""}`,
-      dong: t.bjdongNm || "", kind: normalizeKind(purps, ""),
-      hhld: t.hhld ? Number(t.hhld) : (t.houseHoldCnt ? Number(t.houseHoldCnt) : null),
-      useAprDay: t.useAprDay || "",
-      mainPurps: purps,
-      bldNm: t.bldNm || "",
+    // 건축물대장 platGbCd(0=대지)와 VWorld 연속지적도 platGb 자리는 매핑이 다름.
+    // VWorld는 동구 전 필지가 platGb=1(블록)로 등록되어 있어 강제 1로 정규화.
+    const pnu = `${SIGUNGU}${t.bjdongCd || ""}1${bun}${ji}`;
+    if (!pnuRe.test(pnu)) continue;
+    if (!parcels.has(pnu)) parcels.set(pnu, { titles: [], kind });
+    parcels.get(pnu).titles.push(t);
+  }
+
+  // 필지별 집계: 세대수 합산, 가장 큰 동을 대표 bldNm으로, 사용승인일은 최솟값(가장 오래된)
+  const out = [];
+  for (const [pnu, { titles, kind }] of parcels) {
+    let hhld = 0, bldNm = "", useAprDay = "", maxArea = -1;
+    for (const t of titles) {
+      hhld += Number(t.hhldCnt || 0);
+      const area = Number(t.archArea || 0);
+      if (area > maxArea) { maxArea = area; bldNm = String(t.bldNm || "").trim(); }
+      const d = String(t.useAprDay || "").trim();
+      if (d && (!useAprDay || d < useAprDay)) useAprDay = d;
+    }
+    out.push({
+      pnu, bjdCode: `${SIGUNGU}${titles[0].bjdongCd || ""}`,
+      dong: "", kind,
+      hhld: hhld || null, useAprDay,
+      bldNm, mainPurps: titles[0].etcPurps || "",
     });
   }
-  console.log(`  [건축물대장] 수집 필지: ${seen.size}건`);
-  return [...seen.values()];
+  console.log(`  [건축물대장] 수집 필지: ${out.length}건`);
+  return out;
 }
 
 async function main() {
