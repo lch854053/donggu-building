@@ -94,7 +94,7 @@ async function geocodeJibun(jibunAddr, doroAddr) {
 }
 
 // 폴리곤의 최대 폭(m) 계산 — 단독/다세대 빈집은 보통 수십 m 이하.
-// 거대 집합 필지(하천/공원 부지 등)가 잡히면 100m를 초과하므로 이를 가드로 사용.
+// 거대 집합 필지(하천/공원 부지 등)가 잡히면 한 변이 75m를 초과하므로 이를 가드로 사용.
 function polygonMaxDimM(geometry) {
   if (!geometry || !geometry.coordinates) return 0;
   const polys = geometry.type === "Polygon" ? [geometry.coordinates] : geometry.coordinates;
@@ -110,15 +110,37 @@ function polygonMaxDimM(geometry) {
   }
   return maxDim;
 }
-const POLYGON_MAX_DIM_LIMIT = 100;  // 단독/다세대 빈집 폴리곤 상한(m). 초과하면 거대 필지로 판정해 폐기
+// 단독/다세대 빈집 폴리곤 상한(m). 초과하면 거대 필지로 판정해 폐기.
+// 75m: 정상 단독(~30m)은 충분히 통과시키되, 집합 필지(학동 621-2=99m 등)는 잡는 절충값.
+const POLYGON_MAX_DIM_LIMIT = 75;
+
+// 건물 면적(tarea, ㎡) 기반 정사각형 폴리곤 생성.
+// VWorld 지적도가 거대 폴리곤만 주는 필지(학동 621-2 등)의 최후 폴백.
+// 중심 좌표 기준 sqrt(tarea) × 여유(15%) 크기의 정사각형으로, 위치는 정확하지만 필지 모양은 근사.
+function squareGeometryFromTarea(lon, lat, tarea) {
+  const area = Number(tarea) || 100;
+  const sideM = Math.sqrt(area) * 1.15;             // 한 변 길이(m)
+  const dLat = (sideM / 2) / 111000;                // 위도 반폭(degree)
+  const dLng = (sideM / 2) / (111000 * Math.cos(lat * Math.PI / 180));  // 경도 반폭
+  const ring = [
+    [lon - dLng, lat - dLat],  // SW
+    [lon + dLng, lat - dLat],  // SE
+    [lon + dLng, lat + dLat],  // NE
+    [lon - dLng, lat + dLat],  // NW
+    [lon - dLng, lat - dLat],  // close
+  ];
+  return { type: "Polygon", coordinates: [ring] };
+}
 
 // 빈집 1건 → 폴리곤. geocoder(지번→도로명 폴백) 우선, 실패/거대폴리곤 시 원본 좌표 폴백.
-// 거대 폴리곤(집합 필지 대표점)이 잡히면 폐기하고 다음 우선순위를 시도한다.
+// 모든 시도가 거대 폴리곤이면 건물 면적 기반 정사각형으로 최후 폴백 (VWorld 데이터 한계 대응).
 async function parcelForVacant(o) {
+  let lastCoord = null;  // 가장 신뢰할 수 있는 좌표 (정사각형 폴백용)
   // 1순위: geocoder(지번 → 도로명 폴백) → 정확 좌표 → POINT 조회
   if (o.jibun || o.doro) {
     const pt = await geocodeJibun(o.jibun, o.doro);
     if (pt) {
+      lastCoord = pt;
       const g = await parcelGeometryByCoord(pt.x, pt.y);
       if (g && g.geometry) {
         if (polygonMaxDimM(g.geometry) <= POLYGON_MAX_DIM_LIMIT) { g._viaGeo = true; return g; }
@@ -126,12 +148,17 @@ async function parcelForVacant(o) {
       }
     }
   }
-  // 2순위: 원본 EPSG:5181 좌표 → WGS84 변환 → POINT 조회 (거대 폴리곤이면 null)
+  // 2순위: 원본 EPSG:5181 좌표 → WGS84 변환 → POINT 조회 (거대 폴리곤이면 3순위로)
   const rx = Number(o.x) || 0, ry = Number(o.y) || 0;
   if (rx && ry) {
     const { lon, lat } = toWGS84(rx, ry);
+    if (!lastCoord) lastCoord = { x: lon, y: lat };
     const g = await parcelGeometryByCoord(lon, lat);
     if (g && g.geometry && polygonMaxDimM(g.geometry) <= POLYGON_MAX_DIM_LIMIT) return g;
+  }
+  // 3순위: 좌표는 있으나 VWorld 지적도가 거대 폴리곤만 주는 경우 → 건물 면적 기반 정사각형
+  if (lastCoord && o.tarea) {
+    return { pnu: "", geometry: squareGeometryFromTarea(lastCoord.x, lastCoord.y, o.tarea), _viaSquare: true };
   }
   return null;
 }
@@ -562,14 +589,16 @@ async function main() {
     }, GEO_CONCURRENCY);
 
     const geoOut = [];
-    let geoOk = 0, byGeo = 0, byCoord = 0;
+    let geoOk = 0, byGeo = 0, byCoord = 0, bySquare = 0;
     for (let k = 0; k < geoInput.length; k++) {
       const it = geoInput[k];
       const o = it.o;
       const g = geoResults[k];
       if (g && g.geometry) {
         geoOk++;
-        if (o.jibun && g._viaGeo) byGeo++; else byCoord++;
+        if (g._viaSquare) bySquare++;
+        else if (o.jibun && g._viaGeo) byGeo++;
+        else byCoord++;
         geoOut.push({
           pnu: g.pnu,
           dong: o.dong, hdong: o.hdong, kind: o.kind,
@@ -581,7 +610,7 @@ async function main() {
     }
     const geoPath = join(ROOT, "vacant_geo.json");
     await writeFile(geoPath, JSON.stringify(geoOut, null, " ") + "\n", "utf8");
-    console.log(`  빈집 폴리곤 수집: ${geoOk}건 / ${out.length}건 (geocoder ${byGeo} / 좌표폴백 ${byCoord})`);
+    console.log(`  빈집 폴리곤 수집: ${geoOk}건 / ${out.length}건 (geocoder ${byGeo} / 좌표폴백 ${byCoord} / 면적정사각형 ${bySquare})`);
     console.log(`  저장 경로: ${geoPath}`);
   } else {
     console.log("\nVWORLD_KEY 없음 — 빈집 폴리곤 수집 생략");
