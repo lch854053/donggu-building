@@ -3703,6 +3703,7 @@ async function initMapTab(){
     await loadMapStaticData();
     await loadMapHaengjeong();
     initMapLeaflet();
+    bindMapCardEsc();
     M_INITIALIZED = true;
   }
   // 소스 체크박스 상태에 따라 조건 섹션 노출
@@ -3825,6 +3826,9 @@ function initMapLeaflet(){
       }
     }, 350);
   });
+
+  // 빈 곳 클릭 → 상세카드 닫기 (폴리곤 클릭은 Leaflet이 지도 클릭으로 전파하지 않아 빈 곳에서만 발동)
+  map.on("click", ()=>{ closeMapCard(); });
 }
 
 // ── 검색 실행 (사이드 패널 "조회" 버튼) ──
@@ -4125,6 +4129,18 @@ function showMapDetailCard(source, data){
   card.style.display = "";
 }
 function closeMapCard(){ document.getElementById("mapCard").style.display = "none"; }
+
+// ESC 키 → 상세카드 닫기 (한 번만 등록)
+let M_ESC_BOUND = false;
+function bindMapCardEsc(){
+  if(M_ESC_BOUND) return;
+  M_ESC_BOUND = true;
+  document.addEventListener("keydown", (e)=>{
+    if(e.key !== "Escape") return;
+    const card = document.getElementById("mapCard");
+    if(card && card.style.display !== "none") closeMapCard();
+  });
+}
 function sourceLabel(s){ return s === "vacant" ? "빈집현황" : s === "apt" ? "공동주택" : "건축물"; }
 
 function renderVacantCard(d){
