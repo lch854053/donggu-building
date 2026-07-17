@@ -10,6 +10,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" crossorigin="anonymous" referrerpolicy="no-referrer">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.fullscreen/2.4.0/Control.FullScreen.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.fullscreen/2.4.0/Control.FullScreen.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -3777,7 +3779,7 @@ function initMapLeaflet(){
     attributionControl:false,
     maxBounds: MAP_BOUNDS,            // 패닝을 동구 경계로 제한
     maxBoundsViscosity: 0.9,          // 경계에서 부드럽게 멈춤
-    minZoom: 12,                      // 동구 전체가 보이는 수준까지 축소 허용
+    minZoom: 0,                       // 아래에서 동구 bounds 기반으로 재설정
     maxZoom: 19
   });
   M_MAP = map;
@@ -3786,6 +3788,26 @@ function initMapLeaflet(){
   M_TILE.push(L.tileLayer('/api/vworld-tile?layer=Satellite&z={z}&y={y}&x={x}', { maxZoom:19, bounds:MAP_BOUNDS, errorTileUrl:blank }).addTo(map));
   M_TILE.push(L.tileLayer('/api/vworld-tile?layer=Hybrid&z={z}&y={y}&x={x}',    { maxZoom:19, bounds:MAP_BOUNDS, errorTileUrl:blank }).addTo(map));
   map.setView(MAP_CENTER, MAP_DEFAULT_ZOOM);
+
+  // 동구 전체가 화면에 들어오는 줌 수준을 산출 → 그보다 1단계 넉넉하게만 축소 허용
+  // (바운더리 안에선 자유롭게 보되, 바운더리 밖 회색 여백이 크게 벌어지지 않도록)
+  const fitZoom = map.getBoundsZoom(MAP_BOUNDS, false);
+  map.setMinZoom(Math.max(0, Math.floor(fitZoom) - 1));
+
+  // 전체화면 (지도 + 사이드패널을 모두 화면에 꽉 채움, CSS 가상 전체화면 모드)
+  if(L.control.fullscreen){
+    L.control.fullscreen({
+      position:"topleft",
+      title:"전체화면",
+      titleCancel:"전체화면 종료",
+      forceSeparateButton:true,
+      forcePseudoFullscreen:true,   // 브라우저 Fullscreen API 대신 CSS로 전체화면 (권한 프롬프트 없음, 항상 pseudo 경로)
+      fullscreenElement:document.querySelector(".map-layout")   // 사이드패널+지도를 모두 전체화면
+    }).addTo(map);
+    // 진입/종료 시 타일·줌 재계산 (클래스 토글은 플러그인이 leaflet-pseudo-fullscreen로 자동 처리)
+    map.on("enterFullscreen", ()=>setTimeout(()=>map.invalidateSize(), 60));
+    map.on("exitFullscreen",  ()=>setTimeout(()=>map.invalidateSize(), 60));
+  }
 
   M_LAYER.vacant = L.featureGroup().addTo(map);
   M_LAYER.apt    = L.featureGroup().addTo(map);
@@ -4228,7 +4250,8 @@ function fitMapToResults(){
   try{
     const group = L.featureGroup(geoms.map(g => L.geoJSON(g)));
     const b = group.getBounds();
-    if(b.isValid()) M_MAP.fitBounds(b, { padding:[30,30], maxZoom:17 });
+    // 현재 줌보다 더 축소되지 않게: 결과 영역이 현재 시야보다 작으면 확대만, 클 때만 맞춤
+    if(b.isValid()) M_MAP.fitBounds(b, { padding:[30,30], maxZoom: Math.max(17, M_MAP.getZoom()) });
   }catch(e){}
 }
 
