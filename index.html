@@ -3827,7 +3827,7 @@ function initMapLeaflet(){
     }, 350);
   });
 
-  // 빈 곳 클릭 → 상세카드 닫기 (폴리곤 클릭은 Leaflet이 지도 클릭으로 전파하지 않아 빈 곳에서만 발동)
+  // 빈 곳 클릭 → 상세카드 닫기 (폴리곤 클릭 핸들러에서 stopPropagation 하므로 빈 곳에서만 발동)
   map.on("click", ()=>{ closeMapCard(); });
 }
 
@@ -4047,7 +4047,11 @@ function makeMapPolygon(geometry, source, id, data){
   const layer = L.geoJSON(geometry, {
     style: { color, weight: 2, fillColor: color, fillOpacity: 0.35 },
   });
-  layer.on("click", ()=>{ showMapDetailCard(source, data); highlightMapPolygon(layer, source); });
+  layer.on("click", (e)=>{
+    if(e.originalEvent) e.originalEvent.stopPropagation();
+    showMapDetailCard(source, data);
+    highlightMapPolygon(layer, source);
+  });
   layer._mId = id; layer._mSource = source;
   return layer;
 }
