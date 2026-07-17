@@ -3644,6 +3644,9 @@ const MAP_CENTER = [35.1595, 126.9225];
 const MAP_DEFAULT_ZOOM = 15;
 // 동구 경계 (데이터 실측값 + 여유) — 타일 로드·패닝·축소를 이 영역으로 제한해 로딩 단축
 const MAP_BOUNDS = [[35.068, 126.889], [35.185, 126.976]];
+// 조회(결과 전체 맞춤) 시 줌 하한선 — 결과가 넓게 퍼져도 이 줌보다 더 축소하지 않음
+// (maxZoom=19가 가장 확대. 15면 최대확대에서 5단계 축소한 수준)
+const MAP_SEARCH_ZOOM_FLOOR = 15;
 
 let M_MAP = null;            // Leaflet 인스턴스
 let M_TILE = [];             // 타일 레이어
@@ -4250,8 +4253,16 @@ function fitMapToResults(){
   try{
     const group = L.featureGroup(geoms.map(g => L.geoJSON(g)));
     const b = group.getBounds();
-    // 현재 줌보다 더 축소되지 않게: 결과 영역이 현재 시야보다 작으면 확대만, 클 때만 맞춤
-    if(b.isValid()) M_MAP.fitBounds(b, { padding:[30,30], maxZoom: Math.max(17, M_MAP.getZoom()) });
+    if(!b.isValid()) return;
+    // 결과 전체가 들어오는 줌을 먼저 계산 → MAP_SEARCH_ZOOM_FLOOR보다 더 축소될 것 같으면
+    // floor로 끌어올려 조회 후에도 줌이 일정 수준 이하로 내려가지 않게 함.
+    const targetZoom = M_MAP.getBoundsZoom(b, false, [30,30]);
+    if(targetZoom < MAP_SEARCH_ZOOM_FLOOR){
+      const c = b.getCenter();
+      M_MAP.setView(c, MAP_SEARCH_ZOOM_FLOOR);
+    }else{
+      M_MAP.fitBounds(b, { padding:[30,30], maxZoom:19 });
+    }
   }catch(e){}
 }
 
