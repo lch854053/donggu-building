@@ -3827,8 +3827,12 @@ function initMapLeaflet(){
     }, 350);
   });
 
-  // 빈 곳 클릭 → 상세카드 닫기 (폴리곤 클릭 핸들러에서 stopPropagation 하므로 빈 곳에서만 발동)
-  map.on("click", ()=>{ closeMapCard(); });
+  // 빈 곳 클릭 → 상세카드 닫기 (폴리곤/오버레이 클릭은 overlay-pane 안이므로 무시)
+  map.on("click", (e)=>{
+    const target = e.originalEvent?.target;
+    if(target && target.closest && target.closest('.leaflet-overlay-pane')) return;
+    closeMapCard();
+  });
 }
 
 // ── 검색 실행 (사이드 패널 "조회" 버튼) ──
@@ -4048,7 +4052,6 @@ function makeMapPolygon(geometry, source, id, data){
     style: { color, weight: 2, fillColor: color, fillOpacity: 0.35 },
   });
   layer.on("click", (e)=>{
-    e.stopPropagation();
     if(e.originalEvent) e.originalEvent.stopPropagation();
     showMapDetailCard(source, data);
     highlightMapPolygon(layer, source);
