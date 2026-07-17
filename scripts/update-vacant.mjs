@@ -60,14 +60,15 @@ async function parcelGeometryByCoord(lon, lat) {
   }
 }
 
-// VWorld geocoder(parcel) — 지번주소 → 정확한 좌표. 단독주택 좌표가 거대 집합 필지의
+// VWorld geocoder — 주소 → 정확한 좌표. 단독주택 좌표가 거대 집합 필지의
 // 대표점인 경우가 많아 좌표 기반 조회만으로는 엉뚱한 큰 폴리곤이 잡힘.
 // 지번주소를 geocoder로 변환한 좌표를 쓰면 정확한 단일 필지를 잡을 수 있음.
-async function geocodeJibun(jibunAddr) {
-  if (!VWORLD_KEY || !jibunAddr) return null;
+// parcel 타입이 실패할 때(오래된 지번/지번 체계 불일치) 도로명(road)으로 폴백.
+async function geocodeAddress(addr, type) {
+  if (!VWORLD_KEY || !addr) return null;
   const params = new URLSearchParams({
     service: "address", request: "getcoord", crs: "epsg:4326",
-    address: jibunAddr, format: "json", type: "parcel", key: VWORLD_KEY,
+    address: addr, format: "json", type, key: VWORLD_KEY,
   });
   try {
     const r = await fetchWithTimeout(`${VWORLD_GEO_URL}?${params}`, { timeout: 10000 });
@@ -82,21 +83,55 @@ async function geocodeJibun(jibunAddr) {
   }
 }
 
-// 빈집 1건 → 폴리곤. geocoder 우선, 실패/없음 시 원본 EPSG:5181 좌표 폴백.
+// 지번(parcel) 우선, 실패 시 도로명(road) 폴백. 둘 다 시도해 정확 좌표 획득 확률을 높임.
+async function geocodeJibun(jibunAddr, doroAddr) {
+  // 1순위: 지번주소 (parcel)
+  const p1 = await geocodeAddress(jibunAddr, "parcel");
+  if (p1) return p1;
+  // 2순위: 도로명주소 (road) — 지번이 오래되었거나 체계가 바뀐 경우 유효
+  if (doroAddr) return await geocodeAddress(doroAddr, "road");
+  return null;
+}
+
+// 폴리곤의 최대 폭(m) 계산 — 단독/다세대 빈집은 보통 수십 m 이하.
+// 거대 집합 필지(하천/공원 부지 등)가 잡히면 100m를 초과하므로 이를 가드로 사용.
+function polygonMaxDimM(geometry) {
+  if (!geometry || !geometry.coordinates) return 0;
+  const polys = geometry.type === "Polygon" ? [geometry.coordinates] : geometry.coordinates;
+  let maxDim = 0;
+  const COS = Math.cos(35.15 * Math.PI / 180);
+  for (const poly of polys) {
+    const ring = poly[0];
+    if (!ring || !ring.length) continue;
+    const lats = ring.map(c => c[1]), lngs = ring.map(c => c[0]);
+    const latM = (Math.max(...lats) - Math.min(...lats)) * 111000;
+    const lngM = (Math.max(...lngs) - Math.min(...lngs)) * 111000 * COS;
+    maxDim = Math.max(maxDim, latM, lngM);
+  }
+  return maxDim;
+}
+const POLYGON_MAX_DIM_LIMIT = 100;  // 단독/다세대 빈집 폴리곤 상한(m). 초과하면 거대 필지로 판정해 폐기
+
+// 빈집 1건 → 폴리곤. geocoder(지번→도로명 폴백) 우선, 실패/거대폴리곤 시 원본 좌표 폴백.
+// 거대 폴리곤(집합 필지 대표점)이 잡히면 폐기하고 다음 우선순위를 시도한다.
 async function parcelForVacant(o) {
-  // 1순위: 지번주소 geocoder → 정확 좌표 → POINT 조회
-  if (o.jibun) {
-    const pt = await geocodeJibun(o.jibun);
+  // 1순위: geocoder(지번 → 도로명 폴백) → 정확 좌표 → POINT 조회
+  if (o.jibun || o.doro) {
+    const pt = await geocodeJibun(o.jibun, o.doro);
     if (pt) {
       const g = await parcelGeometryByCoord(pt.x, pt.y);
-      if (g && g.geometry) { g._viaGeo = true; return g; }
+      if (g && g.geometry) {
+        if (polygonMaxDimM(g.geometry) <= POLYGON_MAX_DIM_LIMIT) { g._viaGeo = true; return g; }
+        // 거대 폴리곤이면 폐기 후 2순위로
+      }
     }
   }
-  // 2순위: 원본 EPSG:5181 좌표 → WGS84 변환 → POINT 조회
+  // 2순위: 원본 EPSG:5181 좌표 → WGS84 변환 → POINT 조회 (거대 폴리곤이면 null)
   const rx = Number(o.x) || 0, ry = Number(o.y) || 0;
   if (rx && ry) {
     const { lon, lat } = toWGS84(rx, ry);
-    return await parcelGeometryByCoord(lon, lat);
+    const g = await parcelGeometryByCoord(lon, lat);
+    if (g && g.geometry && polygonMaxDimM(g.geometry) <= POLYGON_MAX_DIM_LIMIT) return g;
   }
   return null;
 }
