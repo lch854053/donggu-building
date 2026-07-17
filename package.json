@@ -8,7 +8,8 @@
     "update-kapt": "node scripts/update-kapt-data.mjs",
     "update-odcloud": "node scripts/update-odcloud-apt.mjs",
     "update-vacant": "node scripts/update-vacant.mjs",
-    "collect-apt-geo": "node scripts/collect-apt-geo.mjs"
+    "collect-apt-geo": "node scripts/collect-apt-geo.mjs",
+    "update-officetel": "node scripts/update-officetel.mjs"
   },
   "engines": {
     "node": ">=18"
