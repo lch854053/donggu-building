@@ -1,14 +1,13 @@
 // scripts/merge-aptid-geo.mjs
 // collect-apt-geo.mjs 를 BLD_SERVICE_KEY 없이 실행하면 연립/다세대/오피스텔(source:bld)이
-// 전부 날아가는 문제가 있음. 이 스크립트는 기존 apt_geo.json(280건)을 그대로 둔 채
-// getAptInfo에서 보충된 아파트 PNU만 VWorld 폴리곤을 수집해 증분 병합한다.
-// 로컬(VWORLD_KEY + APT_SERVICE_KEY만 있는 환경)에서 apt_geo.json을 갱신할 때 사용.
+// 전부 날아가는 문제가 있음. 이 스크립트는 기존 apt_geo.json을 그대로 둔 채 getAptInfo로
+// 두 가지 작업을 증분 수행한다. 로컬(VWORLD_KEY + APT_SERVICE_KEY만 있는 환경)에서 사용.
 //
 // 동작:
-//   1) 한국부동산원 getAptInfo 호출 → 동구 아파트(COMPLEX_GB_CD=1) PNU 수집
-//   2) 기존 apt_geo.json에 없는 PNU만 추출(신규 보충 대상)
-//   3) VWorld 연속지적도에서 각 PNU의 폴리곤 조회
-//   4) 폴리곤이 잡힌 건만 apt_geo.json에 추가(source:"aptid")
+//   1) 한국부동산원 getAptInfo 호출 → 동구 단지(COMPLEX_GB_CD 1/2/3 = 아파트/연립/다세대) 수집
+//   2) [이름 보강] 기존 apt_geo.json 단지 중 이름이 비거나 종류명("다세대" 등)인 것을
+//      getAptInfo 단지명(고려원룸 등)으로 갱신. kind도 getAptInfo 기준으로 정규화.
+//   3) [신규 추가] 기존에 없는 PNU만 VWorld 폴리곤을 수집해 추가(source:"aptid")
 
 import { readFile, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
@@ -27,6 +26,14 @@ const DOMAIN = "https://donggu-building.vercel.app";
 const CONCURRENCY = 6;
 const pnuRe = /^\d{19}$/;
 const pnuForVWorld = (pnu) => pnu.startsWith("29110") ? "12210" + pnu.slice(5) : pnu;
+
+// COMPLEX_GB_CD → kind (collect-apt-geo.mjs 의 gbCdToKind 와 동일)
+function gbCdToKind(gbCd) {
+  if (gbCd === "1") return "아파트";
+  if (gbCd === "2") return "연립";
+  if (gbCd === "3") return "다세대";
+  return "";
+}
 
 function fetchWithTimeout(url, opts = {}) {
   const { timeout = 10000, ...rest } = opts;
@@ -71,8 +78,8 @@ async function parcelGeometryByPNU(pnu) {
   }
 }
 
-// 한국부동산원 getAptInfo → 동구 아파트(COMPLEX_GB_CD=1) 단지 배열
-async function fetchAptIdApartments() {
+// 한국부동산원 getAptInfo → 동구 단지(COMPLEX_GB_CD 1/2/3) 배열
+async function fetchAptIdComplexes() {
   const params = new URLSearchParams({ page: "1", perPage: "1000", serviceKey: APT_SERVICE_KEY });
   const url = `${APTID_BASE}/getAptInfo?${params.toString()}&cond%5BADRES%3A%3ALIKE%5D=${encodeURIComponent(APTID_SIGUNGU)}`;
   const r = await fetchWithTimeout(url, { timeout: 15000 });
@@ -82,15 +89,25 @@ async function fetchAptIdApartments() {
     throw new Error(`getAptInfo 인증/한도 오류: ${data.errMsg || data.returnAuthMsg}`);
   }
   const rows = Array.isArray(data.data) ? data.data : [];
-  return rows
-    .filter(d => String(d.COMPLEX_GB_CD || "").trim() === "1" && pnuRe.test(String(d.PNU || "")))
+  const out = rows
+    .filter(d => gbCdToKind(String(d.COMPLEX_GB_CD || "").trim()) && pnuRe.test(String(d.PNU || "")))
     .map(d => ({
       pnu: String(d.PNU).trim(),
+      kind: gbCdToKind(String(d.COMPLEX_GB_CD || "").trim()),
       complexNm: String(d.COMPLEX_NM1 || d.COMPLEX_NM2 || d.COMPLEX_NM3 || "").trim(),
       adres: String(d.ADRES || "").trim(),
       hhld: Number(d.UNIT_CNT || 0) || null,
       useAprDay: String(d.USEAPR_DT || "").trim(),
     }));
+  return out;
+}
+
+// 단지명이 "이름 없음" 상태인지 — 종류명 자리에 있거나 빈 경우(건축물대장 한계)
+function isNameless(c) {
+  const nm = String(c.complexNm || "").trim();
+  if (!nm) return true;
+  // 종류명("다세대" 등)이 단지명으로 들어간 경우
+  return ["아파트", "연립", "다세대", "오피스텔", "도시형생활주택"].includes(nm);
 }
 
 async function main() {
@@ -100,49 +117,65 @@ async function main() {
   const aptGeoPath = join(ROOT, "apt_geo.json");
   const existing = JSON.parse(await readFile(aptGeoPath, "utf8"));
   console.log(`기존 apt_geo.json: ${existing.length}건`);
-  const existingPnus = new Set(existing.map(c => String(c.pnu || "")));
 
-  console.log("getAptInfo 동구 아파트 수집 중...");
-  const apts = await fetchAptIdApartments();
-  console.log(`  아파트(COMPLEX_GB_CD=1): ${apts.length}건`);
+  console.log("getAptInfo 동구 단지 수집 중...");
+  const complexes = await fetchAptIdComplexes();
+  const kindStat = {};
+  for (const c of complexes) kindStat[c.kind] = (kindStat[c.kind] || 0) + 1;
+  console.log(`  단지(COMPLEX_GB_CD 1/2/3): ${complexes.length}건 kind별: ${JSON.stringify(kindStat)}`);
 
-  // 신규 보충 대상: 기존 apt_geo.json에 없는 PNU
-  const newApts = apts.filter(a => !existingPnus.has(a.pnu));
-  console.log(`  기존에 없는 신규 PNU: ${newApts.length}건`);
+  // getAptInfo PNU → 단지 객체 사전
+  const aptidByPnu = new Map();
+  for (const c of complexes) aptidByPnu.set(c.pnu, c);
 
-  if (!newApts.length) {
-    console.log("병합할 신규 단지가 없습니다.");
-    return;
+  // ── [1] 이름 보강: 기존 apt_geo 단지 중 이름이 없는 것을 getAptInfo로 갱신
+  // 단지명(complexNm)만 보강 — kind는 보강하지 않는다.
+  // getAptInfo의 COMPLEX_GB_CD(1/2/3)는 오피스텔/도시형생활주택을 표현 못 해서,
+  // 기존 kind(건축물대장 등에서 추출)를 getAptInfo kind로 덮어쓰면 SG빌리지(오피스텔→아파트)·
+  // 루체클래식(도시형→아파트)처럼 잘못 재분류되는 회귀가 발생하기 때문.
+  let enriched = 0;
+  for (const c of existing) {
+    const ai = aptidByPnu.get(String(c.pnu || ""));
+    if (!ai) continue;
+    if (!isNameless(c)) continue;
+    if (ai.complexNm) { c.complexNm = ai.complexNm; enriched++; }
   }
+  console.log(`  [이름 보강] ${enriched}건 단지명 갱신`);
 
-  console.log("VWorld 연속지적도 폴리곤 수집 중...");
-  const geoms = await runPool(newApts, async (a) => parcelGeometryByPNU(a.pnu), CONCURRENCY);
+  // ── [2] 신규 추가: 기존에 없는 PNU
+  const existingPnus = new Set(existing.map(c => String(c.pnu || "")));
+  const newOnes = complexes.filter(c => !existingPnus.has(c.pnu));
+  console.log(`  [신규 추가 대상] 기존에 없는 PNU: ${newOnes.length}건`);
 
   let added = 0;
-  for (let i = 0; i < newApts.length; i++) {
-    const g = geoms[i];
-    if (!g || !g.geometry) continue;
-    const a = newApts[i];
-    existing.push({
-      pnu: a.pnu, source: "aptid",
-      complexNm: a.complexNm,
-      kind: "아파트",
-      hhld: a.hhld, useAprDay: a.useAprDay,
-      adres: a.adres,
-      addr: g.addr || "", jibun: g.jibun || "",
-      geometry: g.geometry,
-    });
-    added++;
+  if (newOnes.length) {
+    console.log("VWorld 연속지적도 폴리곤 수집 중...");
+    const geoms = await runPool(newOnes, async (a) => parcelGeometryByPNU(a.pnu), CONCURRENCY);
+    for (let i = 0; i < newOnes.length; i++) {
+      const g = geoms[i];
+      if (!g || !g.geometry) continue;
+      const a = newOnes[i];
+      existing.push({
+        pnu: a.pnu, source: "aptid",
+        complexNm: a.complexNm,
+        kind: a.kind,
+        hhld: a.hhld, useAprDay: a.useAprDay,
+        adres: a.adres,
+        addr: g.addr || "", jibun: g.jibun || "",
+        geometry: g.geometry,
+      });
+      added++;
+    }
   }
 
   await writeFile(aptGeoPath, JSON.stringify(existing, null, " ") + "\n", "utf8");
-  console.log(`\n병합 완료: +${added}건 추가 → 총 ${existing.length}건`);
+  console.log(`\n병합 완료: 이름보강 ${enriched}건 + 신규 ${added}건 → 총 ${existing.length}건`);
   const srcStat = {};
   for (const c of existing) srcStat[c.source] = (srcStat[c.source] || 0) + 1;
   console.log("  source별:", JSON.stringify(srcStat));
-  const kindStat = {};
-  for (const c of existing) kindStat[c.kind] = (kindStat[c.kind] || 0) + 1;
-  console.log("  kind별:", JSON.stringify(kindStat));
+  const ks = {};
+  for (const c of existing) ks[c.kind] = (ks[c.kind] || 0) + 1;
+  console.log("  kind별:", JSON.stringify(ks));
 }
 
 main().catch(e => { console.error(e); process.exit(1); });
