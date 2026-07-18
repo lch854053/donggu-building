@@ -6,6 +6,7 @@
 //   1) aptlist_donggu.json        (K-apt 60개 단지 — kaptCode/kaptName/bass/dtl 보유)
 //   2) aptlist_odcloud_donggu.json (한국부동산원 38개 단지)
 //   3) aptlist_extra_donggu.json   (수동 추가 2개 단지)
+//   4) 한국부동산원 getAptInfo(아파트 누락 보충) + 건축물대장(연립/다세대/오피스텔/도시형 보충)
 // PNU 중복 제거 후 VWorld ?pnu= 로 폴리곤 조회. 실패 건은 스킵.
 
 import { readFile, writeFile } from "node:fs/promises";
@@ -25,12 +26,19 @@ const pnuForVWorld = (pnu) => pnu.startsWith("29110") ? "12210" + pnu.slice(5) :
 
 // 건축물대장(getBrTitleInfo)으로 보충 수집할 주용도 — 아파트 외 공동주택 계열
 // 표제부의 mainPurpsCdNm은 항상 "공동주택"이고, 세부 종류는 etcPurps에 있음.
-// etcPurps에서 추출 가능한 종류 키워드 — 아파트는 K-apt/odcloud가 이미 커버하므로 제외.
+// etcPurps에서 추출 가능한 종류 키워드 — 아파트는 K-apt/odcloud/getAptInfo가 이미 커버하므로 제외.
 const BLD_KIND_KEYWORDS = ["연립", "다세대", "오피스텔", "도시형"];
 const BLD_SERVICE_KEY = process.env.BLD_SERVICE_KEY;
 const BLD_HUB = "https://apis.data.go.kr/1613000/BldRgstHubService";
 const SIGUNGU = "29110";
 const ALL_BJD = ["10100","10200","10300","10400","10500","10600","10700","10800","10900","11000","11100","11200","11300","11400","11500","11600","11700","11800","11900","12000","12100","12200","12300","12400","12500","12600","12700","12800","12900","13000","13100","13200","13300","13400"];
+
+// 한국부동산원 공동주택 단지 식별정보(getAptInfo) — K-apt·odcloud에 미등록인
+// 구형 소규모 아파트(대명아파트 등) PNU 보충용. 공동주택 관리 탭과 동일 소스.
+// 응답의 PNU는 구 시군구코드(29110) 기준. 키는 api/aptid.js와 동일 체인.
+const APT_SERVICE_KEY = process.env.APT_SERVICE_KEY || process.env.BLD_SERVICE_KEY;
+const APTID_BASE = "https://api.odcloud.kr/api/AptIdInfoSvc/v1";
+const APTID_SIGUNGU = "광주광역시 동구";
 
 function fetchWithTimeout(url, opts = {}) {
   const { timeout = 10000, ...rest } = opts;
@@ -200,6 +208,50 @@ async function collectLowriseFromBuilding() {
   return out;
 }
 
+// 한국부동산원 공동주택 단지 식별정보(getAptInfo)에서 동구 전체 아파트(COMPLEX_GB_CD=1) 보충.
+// K-apt·odcloud·extra 정적 리스트는 구형 소규모 아파트(대명아파트 등)를 자주 누락함.
+// 공동주택 관리 탭이 사용하는 동일 라이브 소스를 보충용으로 재사용.
+// 응답의 PNU는 구코드(29110) 기준이라 별도 정규화 불필요.
+async function collectAptFromGetAptInfo() {
+  if (!APT_SERVICE_KEY) {
+    console.log("  [getAptInfo] APT_SERVICE_KEY 미설정 — 아파트 누락 보충 생략");
+    return [];
+  }
+  console.log("  [getAptInfo] 동구 전체 아파트 단지 수집 중...");
+  const params = new URLSearchParams({ page: "1", perPage: "1000", serviceKey: APT_SERVICE_KEY });
+  // cond[ADRES::LIKE] 의 [ ] · : 는 URLSearchParams 가 인코딩하지만 odcloud 는 인코딩된
+  // cond%5B...%5D 를 그대로 받으므로 수동 조립 (api/aptid.js 와 동일 패턴).
+  const url = `${APTID_BASE}/getAptInfo?${params.toString()}&cond%5BADRES%3A%3ALIKE%5D=${encodeURIComponent(APTID_SIGUNGU)}`;
+  let data;
+  try {
+    const r = await fetchWithTimeout(url, { timeout: 15000 });
+    const text = await r.text();
+    data = JSON.parse(text);
+  } catch (e) {
+    console.log(`  [getAptInfo] 호출 실패 — 보충 생략: ${String(e?.message || e).slice(0, 120)}`);
+    return [];
+  }
+  if (data?.errMsg || data?.returnAuthMsg) {
+    console.log(`  [getAptInfo] 인증/한도 오류 — 보충 생략: ${data.errMsg || data.returnAuthMsg}`);
+    return [];
+  }
+  const rows = Array.isArray(data.data) ? data.data : [];
+  // 아파트(COMPLEX_GB_CD=1)만. 연립(2)/다세대(3)는 기존 건축물대장 보충이 담당.
+  const apts = rows.filter(d => String(d.COMPLEX_GB_CD || "").trim() === "1" && /^\d{19}$/.test(String(d.PNU || "")));
+  const out = apts.map(d => ({
+    pnu: String(d.PNU).trim(),
+    bjdCode: `${SIGUNGU}${String(d.PNU).slice(5, 10)}`,
+    dong: "",
+    kind: "아파트",
+    complexNm: String(d.COMPLEX_NM1 || d.COMPLEX_NM2 || d.COMPLEX_NM3 || "").trim(),
+    hhld: Number(d.UNIT_CNT || 0) || null,
+    useAprDay: String(d.USEAPR_DT || "").trim(),
+    adres: String(d.ADRES || "").trim(),
+  }));
+  console.log(`  [getAptInfo] 수집 아파트: ${out.length}건 (전체 ${rows.length}건 중)`);
+  return out;
+}
+
 async function main() {
   if (!VWORLD_KEY) {
     console.error("VWORLD_KEY 환경변수가 설정되지 않았습니다.");
@@ -252,6 +304,21 @@ async function main() {
       hhld: r.hhld || null, useAprDay: r.useAprDay || "",
       doroAddr: r.doroAddr || "", adres: r.adres || "",
       officeTel: r.officeTel || "",
+    });
+  }
+
+  // 한국부동산원 getAptInfo에서 아파트 누락 보충 (K-apt·odcloud 미등록 구형 소규모 아파트).
+  // 정적 3소스(bld 보충 포함)보다 먼저 주입해 아파트 메타(단지명/세대수/준공일)를 우선 반영.
+  const aptid = await collectAptFromGetAptInfo();
+  for (const r of aptid) {
+    if (byPnu.has(r.pnu)) continue;   // 기존 단지 우선
+    byPnu.set(r.pnu, {
+      pnu: r.pnu, source: "aptid",
+      bjdCode: r.bjdCode || "", dong: "",
+      kind: "아파트",
+      complexNm: r.complexNm || "",
+      hhld: r.hhld || null, useAprDay: r.useAprDay || "",
+      adres: r.adres || "",
     });
   }
 
