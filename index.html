@@ -703,7 +703,7 @@ async function runPool(items, worker, concurrency, onProgress){
       try { results[i] = await worker(items[i]); }
       catch(e){ results[i] = {input:items[i], status:"err", reason:String(e?.message||e)}; }
       done = Math.min(done + 1, items.length);
-      onProgress(done, items.length);
+      if(onProgress) onProgress(done, items.length);
     }
   }
   const n = Math.min(concurrency, items.length);
