@@ -466,3 +466,37 @@ test("pickMainTitle: 빈/단일 입력", () => {
   const one = { mainPurpsCdNm:"단독주택" };
   assert.equal(f.pickMainTitle([one]), one);
 });
+
+/* ============================================================
+   matchCat — 카테고리 매칭 (용도/구조 필터)
+   ============================================================ */
+const PURPS_OPTS = ["단독주택","공동주택","제1종근린생활시설","제2종근린생활시설","판매시설","업무시설","교육연구시설","의료시설","숙박시설","문화및집회시설","노유자시설","종교시설","창고시설","자동차관련시설"];
+
+test("matchCat: sel 비었으면 전체 통과", () => {
+  assert.equal(f.matchCat("단독주택", [], PURPS_OPTS), true);
+  assert.equal(f.matchCat(" ", [], PURPS_OPTS), true);
+});
+
+test("matchCat: 알려진 값은 해당 옵션 선택 시 통과", () => {
+  assert.equal(f.matchCat("단독주택", ["단독주택"], PURPS_OPTS), true);
+  assert.equal(f.matchCat("제2종근린생활시설", ["제2종근린생활시설"], PURPS_OPTS), true);
+  // 부분문자열 매칭 — value가 sel 문자열을 포함하면 통과
+  assert.equal(f.matchCat("제1종근린생활시설", ["근린생활시설"], PURPS_OPTS), true);
+  assert.equal(f.matchCat("단독주택", ["공동주택"], PURPS_OPTS), false);
+});
+
+test("matchCat: '기타' = 알려진 어디에도 안 걸리는 실제 값", () => {
+  assert.equal(f.matchCat("공장", ["기타"], PURPS_OPTS), true);     // known 어디에도 안 걸림
+  assert.equal(f.matchCat("단독주택", ["기타"], PURPS_OPTS), false); // known에 걸림
+});
+
+test("matchCat: 공백값은 '기타'에서 제외 (금남로 193-19 회귀)", () => {
+  // 공공데이터는 부속건축물 등의 용도를 빈칸(" ")으로 준다.
+  // 이를 '기타'로 취급하면, 용도=기타 검색 시 주건축물(단독주택) 행이 필터에서
+  // 빠진 필지에서 부속(용도공백) 행만 결과에 남아 용도가 빈칸으로 표시된다.
+  assert.equal(f.matchCat(" ", ["기타"], PURPS_OPTS), false);   // ⬅ 핵심 수정
+  assert.equal(f.matchCat("", ["기타"], PURPS_OPTS), false);
+  assert.equal(f.matchCat(null, ["기타"], PURPS_OPTS), false);
+  // 공백값은 sel이 비어있을 때(전체)는 여전히 통과 — 노출 자체를 막지는 않음
+  assert.equal(f.matchCat(" ", [], PURPS_OPTS), true);
+});

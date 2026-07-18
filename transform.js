@@ -315,13 +315,17 @@ function pickMainTitle(rows){
 // 공백 제거
 function norm(s){ return String(s||"").replace(/\s/g,""); }
 
-// 카테고리 매칭: sel 비었으면 전체통과. '기타'=알려진 어디에도 안 걸리는 값
+// 카테고리 매칭: sel 비었으면 전체통과. '기타'=알려진 어디에도 안 걸리는 값.
+// 단, 값이 비어있으면(공백·누락) '기타'로 취급하지 않는다 — 공공데이터는 부속건축물 등의
+// 용도를 빈칸으로 주는 경우가 많아(전체 행의 ~27%), 빈칸을 '기타'에 포함시키면
+// 주건축물 행이 용도 필터에 걸려 빠진 필지에서 부속(용도공백) 행만 결과에 남아
+// 용도가 빈칸으로 표시되는 버그가 생긴다(예: 금남로 193-19, 용도=기타 검색).
 function matchCat(value, sel, opts){
   if(!sel.length) return true;
   const v = norm(value);
   const known = opts.map(norm);
   for(const s of sel){
-    if(s==="기타"){ if(!known.some(k=>v.includes(k))) return true; }
+    if(s==="기타"){ if(v && !known.some(k=>v.includes(k))) return true; }
     else if(v.includes(norm(s))) return true;
   }
   return false;
