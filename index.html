@@ -1281,7 +1281,7 @@ async function runConditionSearch(){
 
   // 2) 동 단위 행정동: 1페이지로 totalCount 파악 후 잔여 페이지 계산
   //    (건축HUB는 numOfRows 와 무관하게 ~100건/페이지로 응답)
-  const MAX_PAGES = 50;       // 행정동당 최대 페이지 (~100건/페이지 → 최대 5000건)
+  const MAX_PAGES = 100;   // 행정동당 최대 페이지 (~100건/페이지 → 최대 1만건, 산수동 5697건 커버)
   const more = [];
   if(pageBjds.length){
     let p1done = 0; cUpdate(0, pageBjds.length);
@@ -2563,7 +2563,7 @@ async function runHousingSearch(){
     const koreaPnus = new Set(complexes.map(c=>c.pnu));
     const bjdList = [...new Set(Object.values(HJ_H.hdong2bjd).flat())];
     const hsAll = [];
-    const MAX_PAGES = 50;
+    const MAX_PAGES = 100;   // ~100건/페이지 → 동당 최대 1만건 (산수동 5697건 커버)
     if(bjdList.length){
       hProgress.total += bjdList.length;
       updateHProgress();
@@ -3242,7 +3242,7 @@ async function runDemolSearch(){
   if(isAll) document.getElementById("mHint").textContent = "전체 검색은 시간이 걸립니다…";
 
   // 동단위 철거대장 수집 (100건/페이지, 잔여 페이지 자동 계산)
-  const MAX_PAGES = 50;
+  const MAX_PAGES = 100;   // ~100건/페이지 → 동당 최대 1만건 (산수동 5697건 커버)
   const all = [];
   let p1done = 0; mUpdate(0, bjdList.length);
   const page1 = await runPool(bjdList, async (bjd)=>{
@@ -3945,7 +3945,7 @@ async function runCondForMap(hdong){
   const selStrct = M_MS.strct ? M_MS.strct.selected() : [];
 
   // 동 단위로 표제부 페이지 조회(runPool 재사용) → 용도/구조 필터 → pnu 수집
-  const MAX_PAGES = 50;
+  const MAX_PAGES = 100;   // ~100건/페이지 → 동당 최대 1만건 (산수동 5697건 커버)
   // 1페이지로 totalCount 파악
   const p1 = await runPool(bjdList, async (bjd)=>{
     const { titles, totalCount } = await fetchDongPage(bjd, 1);
@@ -3971,13 +3971,10 @@ async function runCondForMap(hdong){
   }
 
   // 필터 + pnu 수집 (중복 pnu 제거)
-  // 같은 필지에 주건축물+부속건축물 등 여러 표제부 행이 있을 수 있다(예: 구성로 205).
-  // 응답 순서에 의존해 첫 행을 무조건 취하면 용도 공백인 부속건축물이 남을 수 있으므로,
-  // 주건축물 > 용도 값 있는 행 순으로 대표 행을 선택한다.
-  const rowScore = (r) =>
-    (String(r.mainAtchGbCdNm || "").includes("주건축물") ? 2 : 0) +
-    (String(r.mainPurpsCdNm || "").trim() ? 1 : 0);
-  const seen = new Map();
+  // 같은 필지에 주건축물+부속건축물 등 여러 표제부 행이 있을 수 있다(동구 전체 필지의 ~45%).
+  // 응답 순서에 의존해 첫 행을 취하면 용도 공백인 부속건축물이 남을 수 있으므로
+  // pickMainTitle(주건축물 > 용도 있는 행)로 대표 행을 선택한다.
+  const groups = new Map();
   for(const t of all){
     if(!matchCat(t.mainPurpsCdNm, selPurps, PURPS_OPTS)) continue;
     if(!matchCat(t.strctCdNm, selStrct, STRCT_OPTS)) continue;
@@ -3985,10 +3982,12 @@ async function runCondForMap(hdong){
     const ji  = String(t.ji || "").padStart(4,"0");
     if(!bun || !ji) continue;
     const pnu = toPNU({ sigunguCd:SIGUNGU, bjdongCd:t.bjdongCd, platGbCd:t.platGbCd || "0", bun, ji });
-    const prev = seen.get(pnu);
-    if(!prev || rowScore(t) > rowScore(prev)) seen.set(pnu, t);
+    const arr = groups.get(pnu);
+    if(arr) arr.push(t); else groups.set(pnu, [t]);
   }
-  M_RESULTS.cond = [...seen.entries()].map(([pnu, t]) => ({
+  M_RESULTS.cond = [...groups.entries()].map(([pnu, arr]) => {
+    const t = pickMainTitle(arr) || {};
+    return {
     pnu,
     bjdongCd: t.bjdongCd || pnu.slice(5,10),
     dongNm: String(t.dongNm || "").trim(),
@@ -3999,7 +3998,8 @@ async function runCondForMap(hdong){
     ugrndFlr: t.ugrndFlrCnt || "",
     useAprDay: t.useAprDay || "",
     platPlc: t.newPlatPlc || t.platPlc || "",
-  }));
+    };
+  });
   document.getElementById("mapHint").textContent = `건축물 조건검색: ${M_RESULTS.cond.length}건`;
 }
 

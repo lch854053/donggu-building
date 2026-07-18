@@ -29,7 +29,7 @@ export function loadTransform() {
       toPNU, hdongOf, fmt, esc, extractYear, fmtUseApr, norm,
       matchCat, leadNum, dongMatch, dedupeBy, bldLabel, gbLabel,
       roadMatches, geomAreaM2, geomContainsPoint,
-      stripJibunLandSuffix, shortAddr, formatJibun,
+      stripJibunLandSuffix, shortAddr, formatJibun, pickMainTitle,
     };
   `);
   return wrapper();

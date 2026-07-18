@@ -437,3 +437,32 @@ test("shortAddr: 시군구 접두사 제거", () => {
   assert.equal(f.shortAddr("계림동 1869"), "계림동 1869");
   assert.equal(f.shortAddr(null), "");
 });
+
+/* ============================================================
+   pickMainTitle — 다중 표제부 행 중 대표 행 선택
+   ============================================================ */
+test("pickMainTitle: 부속건축물이 먼저 와도 주건축물 선택 (독립로 260-5)", () => {
+  const sub  = { mainAtchGbCdNm:"부속건축물", mainPurpsCdNm:"" };
+  const main = { mainAtchGbCdNm:"주건축물",  mainPurpsCdNm:"단독주택" };
+  assert.equal(f.pickMainTitle([sub, main]), main);
+  assert.equal(f.pickMainTitle([main, sub]), main);
+});
+
+test("pickMainTitle: 주건축물 표기가 없으면 용도 있는 행 선택", () => {
+  const blank = { mainAtchGbCdNm:"", mainPurpsCdNm:"" };
+  const purps = { mainAtchGbCdNm:"", mainPurpsCdNm:"제2종근린생활시설" };
+  assert.equal(f.pickMainTitle([blank, purps]), purps);
+});
+
+test("pickMainTitle: 전부 용도 공백이면 첫 행 유지", () => {
+  const a = { mainAtchGbCdNm:"", mainPurpsCdNm:" " };
+  const b = { mainAtchGbCdNm:"", mainPurpsCdNm:"" };
+  assert.equal(f.pickMainTitle([a, b]), a);
+});
+
+test("pickMainTitle: 빈/단일 입력", () => {
+  assert.equal(f.pickMainTitle([]), null);
+  assert.equal(f.pickMainTitle(null), null);
+  const one = { mainPurpsCdNm:"단독주택" };
+  assert.equal(f.pickMainTitle([one]), one);
+});

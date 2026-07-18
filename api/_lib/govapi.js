@@ -8,6 +8,16 @@ export function toArray(x) {
   return Array.isArray(x) ? x : [x];
 }
 
+// 공공데이터는 빈 값을 " "(공백)로 주는 경우가 많다(전체 행의 ~27%).
+// 경계에서 문자열을 trim해 두면 각 소비처에서 || "-"/|| "" 폴백이 정상 동작하고,
+// " "(truthy)이 빈칸으로 렌더링되는 문제를 일괄 차단한다.
+function trimItem(item) {
+  if (item === null || typeof item !== "object") return item;
+  const out = {};
+  for (const [k, v] of Object.entries(item)) out[k] = typeof v === "string" ? v.trim() : v;
+  return out;
+}
+
 // 응답 텍스트 → { items, totalCount }. 오류면 throw.
 // resultCode "00"(정상)·"03"(데이터 없음)만 통과.
 export function unwrapGov(text, endpoint) {
@@ -37,5 +47,5 @@ export function unwrapGov(text, endpoint) {
   else if (body?.items !== undefined) rawItems = body.items;
   else if (body?.item !== undefined) rawItems = body.item;
   else rawItems = [];
-  return { items: toArray(rawItems), totalCount: Number(body?.totalCount || 0) };
+  return { items: toArray(rawItems).map(trimItem), totalCount: Number(body?.totalCount || 0) };
 }

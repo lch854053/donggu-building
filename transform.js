@@ -296,6 +296,22 @@ function fmtUseApr(s){
   return esc(s||"-");
 }
 
+// 같은 필지의 표제부 행들 중 대표 행 선택.
+// 공공데이터는 한 필지에 주건축물+부속건축물 등 다수 행을 반환하고(동구 전체 필지의 ~45%),
+// 부속건축물 행은 용도가 공백인 경우가 많아 첫 행을 무조건 취하면 용도가 빈칸이 된다.
+// 주건축물 > 용도 값 있는 행 순으로 선택. 동점이면 먼저 온 행 유지(안정 정렬).
+function pickMainTitle(rows){
+  if(!Array.isArray(rows) || !rows.length) return null;
+  const score = (r)=> (String(r?.mainAtchGbCdNm||"").includes("주건축물") ? 2 : 0)
+                    + (String(r?.mainPurpsCdNm||"").trim() ? 1 : 0);
+  let best = rows[0], bestScore = score(best);
+  for(let i=1; i<rows.length; i++){
+    const s = score(rows[i]);
+    if(s > bestScore){ best = rows[i]; bestScore = s; }
+  }
+  return best;
+}
+
 // 공백 제거
 function norm(s){ return String(s||"").replace(/\s/g,""); }
 
