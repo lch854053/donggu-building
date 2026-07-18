@@ -413,3 +413,27 @@ test("pickArchMain: 빈 배열은 null", () => {
   assert.equal(f.pickArchMain([]), null);
   assert.equal(f.pickArchMain(null), null);
 });
+
+/* ============================================================
+   stripJibunLandSuffix / shortAddr — 지도 공동주택 주소 표시
+   ============================================================ */
+test("stripJibunLandSuffix: VWorld 토지구분 접미사(대/산) 제거", () => {
+  assert.equal(f.stripJibunLandSuffix("1869 대"), "1869");
+  assert.equal(f.stripJibunLandSuffix("33 산"), "33");
+  assert.equal(f.stripJibunLandSuffix("100-11 대"), "100-11");
+});
+
+test("stripJibunLandSuffix: 접미사 없거나 빈 입력은 그대로", () => {
+  assert.equal(f.stripJibunLandSuffix("1869"), "1869");
+  assert.equal(f.stripJibunLandSuffix(""), "");
+  assert.equal(f.stripJibunLandSuffix(null), "");
+  // "대"로 끝나지만 번지 일부인 경우는 유지 (공백+단독 토큰만 제거)
+  assert.equal(f.stripJibunLandSuffix("1869대"), "1869대");
+});
+
+test("shortAddr: 시군구 접두사 제거", () => {
+  assert.equal(f.shortAddr("전남광주통합특별시 동구 계림동 1869"), "계림동 1869");
+  assert.equal(f.shortAddr("광주광역시 동구 계림동 1869"), "계림동 1869");
+  assert.equal(f.shortAddr("계림동 1869"), "계림동 1869");
+  assert.equal(f.shortAddr(null), "");
+});

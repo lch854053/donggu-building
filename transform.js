@@ -269,6 +269,16 @@ function formatJibun(addr){
   return String(addr ?? "").replace(/^광주광역시 동구\s*/u, "").trim() || "-";
 }
 
+// VWorld 연속지적도 jibun 속성의 토지구분 접미사 제거 ("1869 대"→"1869", "33 산"→"33")
+function stripJibunLandSuffix(jibun){
+  return String(jibun ?? "").replace(/\s+(대|산)$/u, "").trim();
+}
+
+// 시군구 접두사를 뗀 짧은 주소 ("전남광주통합특별시 동구 계림동 1869"→"계림동 1869")
+function shortAddr(addr){
+  return String(addr ?? "").replace(/^(전남광주통합특별시|광주광역시)\s*동구\s*/u, "").trim();
+}
+
 // 사용승인일에서 연도만 추출 ("20150911"→2015, "2015"→2015, 누락→null)
 function extractYear(useAprDay){
   if(!useAprDay || useAprDay==="-") return null;

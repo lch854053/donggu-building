@@ -4149,7 +4149,7 @@ function renderMapResults(){
     let label = "";
     let sub = "";
     if(src === "vacant"){ label = `빈집 ${d.grade||""} · ${d.kind||""}`; sub = formatJibun(d.jibun) || d.doro || ""; }
-    else if(src === "apt"){ label = d.complexNm || "공동주택"; sub = `${d.kind||""} · ${d.jibun || d.adres || d.doroAddr || ""}`; }
+    else if(src === "apt"){ label = d.complexNm || "공동주택"; sub = `${d.kind||""} · ${shortAddr(d.addr || d.adres || d.doroAddr) || stripJibunLandSuffix(d.jibun) || ""}`; }
     else { label = d.bldNm || "건축물"; sub = `${d.mainPurps||""} · ${d.dongNm||""}`; }
     row.innerHTML = `<span class="mr-dot" style="background:${color}"></span>
       <span class="mr-text"><b>${esc(label)}</b><span>${esc(sub)}</span></span>`;
@@ -4225,7 +4225,7 @@ function renderVacantCard(d){
 
 function renderAptCard(d){
   const html = `<div class="mc-title">${esc(d.complexNm || "공동주택")}</div>
-    <div class="mc-addr">${esc(d.jibun || d.adres || d.doroAddr || "—")}</div>
+    <div class="mc-addr">${esc(shortAddr(d.addr || d.adres || d.doroAddr) || stripJibunLandSuffix(d.jibun) || "—")}</div>
     <table class="mc-tbl">
       <tr><th>종류</th><td>${esc(d.kind || "—")}</td></tr>
       <tr><th>세대수</th><td>${d.hhld != null ? Number(d.hhld).toLocaleString("ko-KR") + "세대" : "—"}</td></tr>

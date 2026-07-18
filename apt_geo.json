@@ -281,7 +281,7 @@
   "useAprDay": "20250624",
   "strct": "",
   "addr": "전남광주통합특별시 동구 수기동 33",
-  "jibun": "33 대",
+  "jibun": "33",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -464,7 +464,7 @@
   "useAprDay": "20221006",
   "strct": "",
   "addr": "전남광주통합특별시 동구 계림동 1869",
-  "jibun": "1869 대",
+  "jibun": "1869",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -811,7 +811,7 @@
   "useAprDay": "20200415",
   "strct": "",
   "addr": "전남광주통합특별시 동구 계림동 1845",
-  "jibun": "1845 대",
+  "jibun": "1845",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -1361,7 +1361,7 @@
   "useAprDay": "20180430",
   "strct": "",
   "addr": "전남광주통합특별시 동구 계림동 1815",
-  "jibun": "1815 대",
+  "jibun": "1815",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -2540,7 +2540,7 @@
   "useAprDay": "20210623",
   "strct": "",
   "addr": "전남광주통합특별시 동구 산수동 730",
-  "jibun": "730 대",
+  "jibun": "730",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -2715,7 +2715,7 @@
   "useAprDay": "20190328",
   "strct": "",
   "addr": "전남광주통합특별시 동구 산수동 723",
-  "jibun": "723 대",
+  "jibun": "723",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -3138,7 +3138,7 @@
   "useAprDay": "20180105",
   "strct": "",
   "addr": "전남광주통합특별시 동구 산수동 716",
-  "jibun": "716 대",
+  "jibun": "716",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -4113,7 +4113,7 @@
   "useAprDay": "20100610",
   "strct": "",
   "addr": "전남광주통합특별시 동구 지산동 671",
-  "jibun": "671 대",
+  "jibun": "671",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -4240,7 +4240,7 @@
   "useAprDay": "20220927",
   "strct": "",
   "addr": "전남광주통합특별시 동구 소태동 1113",
-  "jibun": "1113 대",
+  "jibun": "1113",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -6182,7 +6182,7 @@
   "useAprDay": "20141117",
   "strct": "",
   "addr": "전남광주통합특별시 동구 학동 1020",
-  "jibun": "1020 대",
+  "jibun": "1020",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -6397,7 +6397,7 @@
   "useAprDay": "20170126",
   "strct": "",
   "addr": "전남광주통합특별시 동구 학동 1022",
-  "jibun": "1022 대",
+  "jibun": "1022",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -6951,7 +6951,7 @@
   "useAprDay": "20111128",
   "strct": "",
   "addr": "전남광주통합특별시 동구 학동 1012",
-  "jibun": "1012 대",
+  "jibun": "1012",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -8520,7 +8520,7 @@
   "useAprDay": "20160510",
   "strct": "",
   "addr": "전남광주통합특별시 동구 월남동 638",
-  "jibun": "638 대",
+  "jibun": "638",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -9091,7 +9091,7 @@
   "useAprDay": "20150312",
   "strct": "",
   "addr": "전남광주통합특별시 동구 월남동 620",
-  "jibun": "620 대",
+  "jibun": "620",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -9374,7 +9374,7 @@
   "useAprDay": "20231006",
   "strct": "",
   "addr": "전남광주통합특별시 동구 선교동 488",
-  "jibun": "488 대",
+  "jibun": "488",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -9537,7 +9537,7 @@
   "useAprDay": "20230224",
   "strct": "",
   "addr": "전남광주통합특별시 동구 선교동 487",
-  "jibun": "487 대",
+  "jibun": "487",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -10216,7 +10216,7 @@
   "useAprDay": "20200423",
   "strct": "",
   "addr": "전남광주통합특별시 동구 내남동 904",
-  "jibun": "904 대",
+  "jibun": "904",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -10479,7 +10479,7 @@
   "useAprDay": "20190607",
   "strct": "",
   "addr": "전남광주통합특별시 동구 내남동 902",
-  "jibun": "902 대",
+  "jibun": "902",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -10738,7 +10738,7 @@
   "useAprDay": "20220726",
   "strct": "",
   "addr": "전남광주통합특별시 동구 용산동 747",
-  "jibun": "747 대",
+  "jibun": "747",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -11077,7 +11077,7 @@
   "useAprDay": "20190531",
   "strct": "",
   "addr": "전남광주통합특별시 동구 용산동 662",
-  "jibun": "662 대",
+  "jibun": "662",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -11436,7 +11436,7 @@
   "useAprDay": "20190708",
   "strct": "",
   "addr": "전남광주통합특별시 동구 용산동 669",
-  "jibun": "669 대",
+  "jibun": "669",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -11571,7 +11571,7 @@
   "useAprDay": "20190604",
   "strct": "",
   "addr": "전남광주통합특별시 동구 용산동 663",
-  "jibun": "663 대",
+  "jibun": "663",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -11862,7 +11862,7 @@
   "useAprDay": "20190604",
   "strct": "",
   "addr": "전남광주통합특별시 동구 용산동 668",
-  "jibun": "668 대",
+  "jibun": "668",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -12310,7 +12310,7 @@
   "useAprDay": "20171013",
   "strct": "",
   "addr": "전남광주통합특별시 동구 충장로4가 34",
-  "jibun": "34 대",
+  "jibun": "34",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -12499,7 +12499,7 @@
   "doroAddr": "전남광주통합특별시 동구 천변우로 361-21",
   "adres": "전남광주통합특별시 동구 수기동 68-1",
   "addr": "전남광주통합특별시 동구 수기동 68-1",
-  "jibun": "68-1 대",
+  "jibun": "68-1",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -13223,7 +13223,7 @@
   "adres": "광주광역시 동구 필문대로123번길 5-8",
   "officeTel": "062-263-0546",
   "addr": "전남광주통합특별시 동구 산수동 128-1",
-  "jibun": "128-1 대",
+  "jibun": "128-1",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -13543,7 +13543,7 @@
   "adres": "광주광역시 동구 화산로351번길 10",
   "officeTel": "062-234-3037",
   "addr": "전남광주통합특별시 동구 용산동 636-137",
-  "jibun": "636-137 대",
+  "jibun": "636-137",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -13605,7 +13605,7 @@
   "adres": "광주광역시 동구 지호로 40",
   "officeTel": "",
   "addr": "전남광주통합특별시 동구 지산동 691-3",
-  "jibun": "691-3 대",
+  "jibun": "691-3",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -14805,7 +14805,7 @@
   "adres": "광주광역시 동구 동계로9번길 12",
   "officeTel": "062-225-0012",
   "addr": "전남광주통합특별시 동구 동명동 207-88",
-  "jibun": "207-88 대",
+  "jibun": "207-88",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -15013,7 +15013,7 @@
   "adres": "광주광역시 동구 필문대로145번길 11-12",
   "officeTel": "062-263-5664",
   "addr": "전남광주통합특별시 동구 산수동 240-14",
-  "jibun": "240-14 대",
+  "jibun": "240-14",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -16207,7 +16207,7 @@
   "adres": "광주광역시 동구 천변우로 329-10",
   "officeTel": "062-225-5009",
   "addr": "전남광주통합특별시 동구 수기동 22",
-  "jibun": "22 대",
+  "jibun": "22",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -16333,7 +16333,7 @@
   "adres": "광주광역시 동구 남문로724번길20",
   "officeTel": "062-672-5433",
   "addr": "전남광주통합특별시 동구 학동 662-34",
-  "jibun": "662-34 대",
+  "jibun": "662-34",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -16487,7 +16487,7 @@
   "adres": "광주광역시 동구 필문대로153번길 31",
   "officeTel": "062-263-1482",
   "addr": "전남광주통합특별시 동구 산수동 712",
-  "jibun": "712 대",
+  "jibun": "712",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -16761,7 +16761,7 @@
   "adres": "광주광역시 동구 의재로33번길 34",
   "officeTel": "062-236-5580",
   "addr": "전남광주통합특별시 동구 학동 1021",
-  "jibun": "1021 대",
+  "jibun": "1021",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -16955,7 +16955,7 @@
   "adres": "광주광역시 동구 태봉길13번길 13",
   "officeTel": "062-223-2203",
   "addr": "전남광주통합특별시 동구 소태동 1108",
-  "jibun": "1108 대",
+  "jibun": "1108",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -17257,7 +17257,7 @@
   "source": "bld",
   "complexNm": "장동 도시형생활주택",
   "addr": "전남광주통합특별시 동구 장동 23",
-  "jibun": "23 대",
+  "jibun": "23",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -17426,7 +17426,7 @@
   "source": "bld",
   "complexNm": "계림동 116-10  도시형생활주택(소형주택)",
   "addr": "전남광주통합특별시 동구 계림동 116-10",
-  "jibun": "116-10 대",
+  "jibun": "116-10",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -17505,7 +17505,7 @@
   "source": "bld",
   "complexNm": "SG빌리지",
   "addr": "전남광주통합특별시 동구 계림동 175-7",
-  "jibun": "175-7 대",
+  "jibun": "175-7",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -18088,7 +18088,7 @@
   "source": "bld",
   "complexNm": "루체클래식",
   "addr": "전남광주통합특별시 동구 대인동 153",
-  "jibun": "153 대",
+  "jibun": "153",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -18742,7 +18742,7 @@
   "source": "bld",
   "complexNm": "동명웰피아",
   "addr": "전남광주통합특별시 동구 동명동 159-10",
-  "jibun": "159-10 대",
+  "jibun": "159-10",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -18821,7 +18821,7 @@
   "source": "bld",
   "complexNm": "무등빌라",
   "addr": "전남광주통합특별시 동구 동명동 179-10",
-  "jibun": "179-10 대",
+  "jibun": "179-10",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -19002,7 +19002,7 @@
   "source": "bld",
   "complexNm": "다세대",
   "addr": "전남광주통합특별시 동구 동명동 207-58",
-  "jibun": "207-58 대",
+  "jibun": "207-58",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -19057,7 +19057,7 @@
   "source": "bld",
   "complexNm": "동명빌라",
   "addr": "전남광주통합특별시 동구 동명동 207-107",
-  "jibun": "207-107 대",
+  "jibun": "207-107",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -19120,7 +19120,7 @@
   "source": "bld",
   "complexNm": "동명동파르테논빌라",
   "addr": "전남광주통합특별시 동구 동명동 228-21",
-  "jibun": "228-21 대",
+  "jibun": "228-21",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -19230,7 +19230,7 @@
   "source": "bld",
   "complexNm": "연립주택",
   "addr": "전남광주통합특별시 동구 계림동 292-8",
-  "jibun": "292-8 대",
+  "jibun": "292-8",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -19360,7 +19360,7 @@
   "source": "bld",
   "complexNm": "대신스위트빌",
   "addr": "전남광주통합특별시 동구 계림동 485-46",
-  "jibun": "485-46 대",
+  "jibun": "485-46",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -19411,7 +19411,7 @@
   "source": "bld",
   "complexNm": "도나우타워",
   "addr": "전남광주통합특별시 동구 계림동 485-47",
-  "jibun": "485-47 대",
+  "jibun": "485-47",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -19454,7 +19454,7 @@
   "source": "bld",
   "complexNm": "로얄맨션",
   "addr": "전남광주통합특별시 동구 계림동 487-28",
-  "jibun": "487-28 대",
+  "jibun": "487-28",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -19517,7 +19517,7 @@
   "source": "bld",
   "complexNm": "초록빌라",
   "addr": "전남광주통합특별시 동구 계림동 489-14",
-  "jibun": "489-14 대",
+  "jibun": "489-14",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -19584,7 +19584,7 @@
   "source": "bld",
   "complexNm": "선경빌라",
   "addr": "전남광주통합특별시 동구 계림동 489-21",
-  "jibun": "489-21 대",
+  "jibun": "489-21",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -19635,7 +19635,7 @@
   "source": "bld",
   "complexNm": "오크빌라",
   "addr": "전남광주통합특별시 동구 계림동 489-28",
-  "jibun": "489-28 대",
+  "jibun": "489-28",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -19694,7 +19694,7 @@
   "source": "bld",
   "complexNm": "푸른마을",
   "addr": "전남광주통합특별시 동구 계림동 555-6",
-  "jibun": "555-6 대",
+  "jibun": "555-6",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -19741,7 +19741,7 @@
   "source": "bld",
   "complexNm": "한우리빌",
   "addr": "전남광주통합특별시 동구 계림동 562-16",
-  "jibun": "562-16 대",
+  "jibun": "562-16",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -19788,7 +19788,7 @@
   "source": "bld",
   "complexNm": "샛터빌",
   "addr": "전남광주통합특별시 동구 계림동 562-20",
-  "jibun": "562-20 대",
+  "jibun": "562-20",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -19831,7 +19831,7 @@
   "source": "bld",
   "complexNm": "대신스위트빌",
   "addr": "전남광주통합특별시 동구 계림동 565-9",
-  "jibun": "565-9 대",
+  "jibun": "565-9",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -19898,7 +19898,7 @@
   "source": "bld",
   "complexNm": "태광102동",
   "addr": "전남광주통합특별시 동구 계림동 571-12",
-  "jibun": "571-12 대",
+  "jibun": "571-12",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -19941,7 +19941,7 @@
   "source": "bld",
   "complexNm": "태광101동",
   "addr": "전남광주통합특별시 동구 계림동 571-16",
-  "jibun": "571-16 대",
+  "jibun": "571-16",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -19992,7 +19992,7 @@
   "source": "bld",
   "complexNm": "(578-8)",
   "addr": "전남광주통합특별시 동구 계림동 578-8",
-  "jibun": "578-8 대",
+  "jibun": "578-8",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -20079,7 +20079,7 @@
   "source": "bld",
   "complexNm": "정원아트빌",
   "addr": "전남광주통합특별시 동구 계림동 583-7",
-  "jibun": "583-7 대",
+  "jibun": "583-7",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -20126,7 +20126,7 @@
   "source": "bld",
   "complexNm": "(584-12)",
   "addr": "전남광주통합특별시 동구 계림동 584-12",
-  "jibun": "584-12 대",
+  "jibun": "584-12",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -20181,7 +20181,7 @@
   "source": "bld",
   "complexNm": "삼정파크빌",
   "addr": "전남광주통합특별시 동구 계림동 585-14",
-  "jibun": "585-14 대",
+  "jibun": "585-14",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -20330,7 +20330,7 @@
   "source": "bld",
   "complexNm": "주석빌라B동",
   "addr": "전남광주통합특별시 동구 산수동 227-21",
-  "jibun": "227-21 대",
+  "jibun": "227-21",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -20409,7 +20409,7 @@
   "source": "bld",
   "complexNm": "녹색빌라",
   "addr": "전남광주통합특별시 동구 산수동 371-2",
-  "jibun": "371-2 대",
+  "jibun": "371-2",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -20468,7 +20468,7 @@
   "source": "bld",
   "complexNm": "행복가득",
   "addr": "전남광주통합특별시 동구 산수동 372-4",
-  "jibun": "372-4 대",
+  "jibun": "372-4",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -20531,7 +20531,7 @@
   "source": "bld",
   "complexNm": "깨보니그대빌",
   "addr": "전남광주통합특별시 동구 산수동 372-5",
-  "jibun": "372-5 대",
+  "jibun": "372-5",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -20598,7 +20598,7 @@
   "source": "bld",
   "complexNm": "태인빌라",
   "addr": "전남광주통합특별시 동구 산수동 392-2",
-  "jibun": "392-2 대",
+  "jibun": "392-2",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -21744,7 +21744,7 @@
   "source": "bld",
   "complexNm": "황금빌라",
   "addr": "전남광주통합특별시 동구 산수동 480-2",
-  "jibun": "480-2 대",
+  "jibun": "480-2",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -21795,7 +21795,7 @@
   "source": "bld",
   "complexNm": "산수빌리지A동",
   "addr": "전남광주통합특별시 동구 산수동 480-4",
-  "jibun": "480-4 대",
+  "jibun": "480-4",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -21850,7 +21850,7 @@
   "source": "bld",
   "complexNm": "산호하이빌",
   "addr": "전남광주통합특별시 동구 산수동 480-7",
-  "jibun": "480-7 대",
+  "jibun": "480-7",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -21901,7 +21901,7 @@
   "source": "bld",
   "complexNm": "산수빌리지C동",
   "addr": "전남광주통합특별시 동구 산수동 480-8",
-  "jibun": "480-8 대",
+  "jibun": "480-8",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -21956,7 +21956,7 @@
   "source": "bld",
   "complexNm": "산수빌리지B동",
   "addr": "전남광주통합특별시 동구 산수동 480-15",
-  "jibun": "480-15 대",
+  "jibun": "480-15",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -22007,7 +22007,7 @@
   "source": "bld",
   "complexNm": "(482-4)",
   "addr": "전남광주통합특별시 동구 산수동 482-4",
-  "jibun": "482-4 대",
+  "jibun": "482-4",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -22054,7 +22054,7 @@
   "source": "bld",
   "complexNm": "대창빌라",
   "addr": "전남광주통합특별시 동구 산수동 483-5",
-  "jibun": "483-5 대",
+  "jibun": "483-5",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -22101,7 +22101,7 @@
   "source": "bld",
   "complexNm": "대창하이빌",
   "addr": "전남광주통합특별시 동구 산수동 483-6",
-  "jibun": "483-6 대",
+  "jibun": "483-6",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -22156,7 +22156,7 @@
   "source": "bld",
   "complexNm": "대창그린빌",
   "addr": "전남광주통합특별시 동구 산수동 490-2",
-  "jibun": "490-2 대",
+  "jibun": "490-2",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -22235,7 +22235,7 @@
   "source": "bld",
   "complexNm": "아이린",
   "addr": "전남광주통합특별시 동구 산수동 509-4",
-  "jibun": "509-4 대",
+  "jibun": "509-4",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -22310,7 +22310,7 @@
   "source": "bld",
   "complexNm": "나이스빌",
   "addr": "전남광주통합특별시 동구 산수동 522-83",
-  "jibun": "522-83 대",
+  "jibun": "522-83",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -22385,7 +22385,7 @@
   "source": "bld",
   "complexNm": "프린스베스트빌",
   "addr": "전남광주통합특별시 동구 산수동 537-21",
-  "jibun": "537-21 대",
+  "jibun": "537-21",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -22436,7 +22436,7 @@
   "source": "bld",
   "complexNm": "피닉스베스트빌",
   "addr": "전남광주통합특별시 동구 산수동 538-22",
-  "jibun": "538-22 대",
+  "jibun": "538-22",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -22793,7 +22793,7 @@
   "source": "bld",
   "complexNm": "더지산빌리 A동",
   "addr": "전남광주통합특별시 동구 지산동 116-4",
-  "jibun": "116-4 대",
+  "jibun": "116-4",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -23183,7 +23183,7 @@
   "source": "bld",
   "complexNm": "(232-25)",
   "addr": "전남광주통합특별시 동구 지산동 232-25",
-  "jibun": "232-25 대",
+  "jibun": "232-25",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -23234,7 +23234,7 @@
   "source": "bld",
   "complexNm": "민들레빌",
   "addr": "전남광주통합특별시 동구 지산동 232-26",
-  "jibun": "232-26 대",
+  "jibun": "232-26",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -23281,7 +23281,7 @@
   "source": "bld",
   "complexNm": "코스모스빌",
   "addr": "전남광주통합특별시 동구 지산동 232-27",
-  "jibun": "232-27 대",
+  "jibun": "232-27",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -23332,7 +23332,7 @@
   "source": "bld",
   "complexNm": "대온빌라",
   "addr": "전남광주통합특별시 동구 지산동 232-38",
-  "jibun": "232-38 대",
+  "jibun": "232-38",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -23375,7 +23375,7 @@
   "source": "bld",
   "complexNm": "보금빌라",
   "addr": "전남광주통합특별시 동구 지산동 232-53",
-  "jibun": "232-53 대",
+  "jibun": "232-53",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -23733,7 +23733,7 @@
   "source": "bld",
   "complexNm": "스마트빌라",
   "addr": "전남광주통합특별시 동구 지산동 342-38",
-  "jibun": "342-38 대",
+  "jibun": "342-38",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -23997,7 +23997,7 @@
   "source": "bld",
   "complexNm": "거원하이빌",
   "addr": "전남광주통합특별시 동구 지산동 430-7",
-  "jibun": "430-7 대",
+  "jibun": "430-7",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -24044,7 +24044,7 @@
   "source": "bld",
   "complexNm": "명진하이빌",
   "addr": "전남광주통합특별시 동구 지산동 431-7",
-  "jibun": "431-7 대",
+  "jibun": "431-7",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -24107,7 +24107,7 @@
   "source": "bld",
   "complexNm": "지산스카이빌",
   "addr": "전남광주통합특별시 동구 지산동 447-13",
-  "jibun": "447-13 대",
+  "jibun": "447-13",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -24178,7 +24178,7 @@
   "source": "bld",
   "complexNm": "보보스오피스텔",
   "addr": "전남광주통합특별시 동구 지산동 448-33",
-  "jibun": "448-33 대",
+  "jibun": "448-33",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -24245,7 +24245,7 @@
   "source": "bld",
   "complexNm": "준빌라",
   "addr": "전남광주통합특별시 동구 지산동 452-2",
-  "jibun": "452-2 대",
+  "jibun": "452-2",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -24304,7 +24304,7 @@
   "source": "bld",
   "complexNm": "도연",
   "addr": "전남광주통합특별시 동구 지산동 452-3",
-  "jibun": "452-3 대",
+  "jibun": "452-3",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -24347,7 +24347,7 @@
   "source": "bld",
   "complexNm": "쌍용하이빌",
   "addr": "전남광주통합특별시 동구 지산동 452-4",
-  "jibun": "452-4 대",
+  "jibun": "452-4",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -24414,7 +24414,7 @@
   "source": "bld",
   "complexNm": "지산동다세대주택",
   "addr": "전남광주통합특별시 동구 지산동 452-9",
-  "jibun": "452-9 대",
+  "jibun": "452-9",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -24461,7 +24461,7 @@
   "source": "bld",
   "complexNm": "정광하이빌",
   "addr": "전남광주통합특별시 동구 지산동 453-11",
-  "jibun": "453-11 대",
+  "jibun": "453-11",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -24504,7 +24504,7 @@
   "source": "bld",
   "complexNm": "미소빌라",
   "addr": "전남광주통합특별시 동구 지산동 457-2",
-  "jibun": "457-2 대",
+  "jibun": "457-2",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -24579,7 +24579,7 @@
   "source": "bld",
   "complexNm": "조은힐스",
   "addr": "전남광주통합특별시 동구 지산동 459-1",
-  "jibun": "459-1 대",
+  "jibun": "459-1",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -24638,7 +24638,7 @@
   "source": "bld",
   "complexNm": "정학채다세대주택",
   "addr": "전남광주통합특별시 동구 지산동 461-13",
-  "jibun": "461-13 대",
+  "jibun": "461-13",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -24689,7 +24689,7 @@
   "source": "bld",
   "complexNm": "연립주택",
   "addr": "전남광주통합특별시 동구 지산동 463-11",
-  "jibun": "463-11 대",
+  "jibun": "463-11",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -24756,7 +24756,7 @@
   "source": "bld",
   "complexNm": "내방원룸",
   "addr": "전남광주통합특별시 동구 지산동 503-4",
-  "jibun": "503-4 대",
+  "jibun": "503-4",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -24886,7 +24886,7 @@
   "source": "bld",
   "complexNm": "이지빌라B동",
   "addr": "전남광주통합특별시 동구 지산동 691-11",
-  "jibun": "691-11 대",
+  "jibun": "691-11",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -24941,7 +24941,7 @@
   "source": "bld",
   "complexNm": "이지빌라A동",
   "addr": "전남광주통합특별시 동구 지산동 691-12",
-  "jibun": "691-12 대",
+  "jibun": "691-12",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -25004,7 +25004,7 @@
   "source": "bld",
   "complexNm": "나인빌",
   "addr": "전남광주통합특별시 동구 지산동 694-8",
-  "jibun": "694-8 대",
+  "jibun": "694-8",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -25173,7 +25173,7 @@
   "source": "bld",
   "complexNm": "조은집",
   "addr": "전남광주통합특별시 동구 지산동 703-17",
-  "jibun": "703-17 대",
+  "jibun": "703-17",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -25905,7 +25905,7 @@
   "source": "bld",
   "complexNm": "플러스",
   "addr": "전남광주통합특별시 동구 서석동 94-6",
-  "jibun": "94-6 대",
+  "jibun": "94-6",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -25996,7 +25996,7 @@
   "source": "bld",
   "complexNm": "전남대학교병원명의관",
   "addr": "전남광주통합특별시 동구 서석동 97-33",
-  "jibun": "97-33 대",
+  "jibun": "97-33",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -26213,7 +26213,7 @@
   "source": "bld",
   "complexNm": "힐링하우스",
   "addr": "전남광주통합특별시 동구 서석동 429",
-  "jibun": "429 대",
+  "jibun": "429",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -26288,7 +26288,7 @@
   "source": "bld",
   "complexNm": "서석동 468-31 공동주택 (유태규)",
   "addr": "전남광주통합특별시 동구 서석동 468-31",
-  "jibun": "468-31 대",
+  "jibun": "468-31",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -26387,7 +26387,7 @@
   "source": "bld",
   "complexNm": "트라팰리스",
   "addr": "전남광주통합특별시 동구 서석동 470-23",
-  "jibun": "470-23 대",
+  "jibun": "470-23",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -27054,7 +27054,7 @@
   "source": "bld",
   "complexNm": "(772-5)",
   "addr": "전남광주통합특별시 동구 소태동 772-5",
-  "jibun": "772-5 대",
+  "jibun": "772-5",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -27303,7 +27303,7 @@
   "source": "bld",
   "complexNm": "학동 보라멘션",
   "addr": "전남광주통합특별시 동구 학동 236-1",
-  "jibun": "236-1 대",
+  "jibun": "236-1",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -27410,7 +27410,7 @@
   "source": "bld",
   "complexNm": "학운 다세대주택",
   "addr": "전남광주통합특별시 동구 학동 258",
-  "jibun": "258 대",
+  "jibun": "258",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -27497,7 +27497,7 @@
   "source": "bld",
   "complexNm": "도시형원룸",
   "addr": "전남광주통합특별시 동구 학동 522-3",
-  "jibun": "522-3 대",
+  "jibun": "522-3",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -27730,7 +27730,7 @@
   "source": "bld",
   "complexNm": "한국아델리움스위트",
   "addr": "전남광주통합특별시 동구 학동 676-10",
-  "jibun": "676-10 대",
+  "jibun": "676-10",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -27817,7 +27817,7 @@
   "source": "bld",
   "complexNm": "삼보하이츠빌",
   "addr": "전남광주통합특별시 동구 학동 716-4",
-  "jibun": "716-4 대",
+  "jibun": "716-4",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -28597,7 +28597,7 @@
   "source": "bld",
   "complexNm": "디딤돌타운",
   "addr": "전남광주통합특별시 동구 용산동 636-84",
-  "jibun": "636-84 대",
+  "jibun": "636-84",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -28941,7 +28941,7 @@
   "useAprDay": "19820519",
   "adres": "광주광역시 동구 소태동 717-5",
   "addr": "전남광주통합특별시 동구 소태동 717-5",
-  "jibun": "717-5 대",
+  "jibun": "717-5",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -29705,7 +29705,7 @@
   "useAprDay": "20120611",
   "adres": "광주광역시 동구 소태동 690",
   "addr": "전남광주통합특별시 동구 소태동 690",
-  "jibun": "690 대",
+  "jibun": "690",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -29797,7 +29797,7 @@
   "useAprDay": "20160212",
   "adres": "광주광역시 동구 용산동 270-4",
   "addr": "전남광주통합특별시 동구 용산동 270-4",
-  "jibun": "270-4 대",
+  "jibun": "270-4",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -29877,7 +29877,7 @@
   "useAprDay": "20160713",
   "adres": "광주광역시 동구 계림동 250-89",
   "addr": "전남광주통합특별시 동구 계림동 250-89",
-  "jibun": "250-89 대",
+  "jibun": "250-89",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -29961,7 +29961,7 @@
   "useAprDay": "20171026",
   "adres": "광주광역시 동구 산수동 715",
   "addr": "전남광주통합특별시 동구 산수동 715",
-  "jibun": "715 대",
+  "jibun": "715",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -30045,7 +30045,7 @@
   "useAprDay": "20230217",
   "adres": "광주광역시 동구 충장로5가 96-4",
   "addr": "전남광주통합특별시 동구 충장로5가 96-4",
-  "jibun": "96-4 대",
+  "jibun": "96-4",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -30209,7 +30209,7 @@
   "useAprDay": "20240425",
   "adres": "광주광역시 동구 궁동 66-2",
   "addr": "전남광주통합특별시 동구 궁동 66-2",
-  "jibun": "66-2 대",
+  "jibun": "66-2",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -30385,7 +30385,7 @@
   "useAprDay": "19831223",
   "adres": "광주광역시 동구 계림동 191-1",
   "addr": "전남광주통합특별시 동구 계림동 191-1",
-  "jibun": "191-1 대",
+  "jibun": "191-1",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -30989,7 +30989,7 @@
   "useAprDay": "19901103",
   "adres": "광주광역시 동구 소태동 698-23",
   "addr": "전남광주통합특별시 동구 소태동 698-23",
-  "jibun": "698-23 대",
+  "jibun": "698-23",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -31109,7 +31109,7 @@
   "useAprDay": "19830608",
   "adres": "광주광역시 동구 소태동 700-2",
   "addr": "전남광주통합특별시 동구 소태동 700-2",
-  "jibun": "700-2 대",
+  "jibun": "700-2",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -31605,7 +31605,7 @@
   "useAprDay": "20060406",
   "adres": "광주광역시 동구 지산동 232-22",
   "addr": "전남광주통합특별시 동구 지산동 232-22",
-  "jibun": "232-22 대",
+  "jibun": "232-22",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -31645,7 +31645,7 @@
   "useAprDay": "20160601",
   "adres": "광주광역시 동구 수기동 4-5",
   "addr": "전남광주통합특별시 동구 수기동 4-5",
-  "jibun": "4-5 대",
+  "jibun": "4-5",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -31717,7 +31717,7 @@
   "useAprDay": "20200310",
   "adres": "광주광역시 동구 용산동 218-2",
   "addr": "전남광주통합특별시 동구 용산동 218-2",
-  "jibun": "218-2 대",
+  "jibun": "218-2",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -31785,7 +31785,7 @@
   "useAprDay": "20220812",
   "adres": "광주광역시 동구 소태동 730",
   "addr": "전남광주통합특별시 동구 소태동 730",
-  "jibun": "730 대",
+  "jibun": "730",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -31857,7 +31857,7 @@
   "useAprDay": "20230208",
   "adres": "광주광역시 동구 소태동 729-1",
   "addr": "전남광주통합특별시 동구 소태동 729-1",
-  "jibun": "729-1 대",
+  "jibun": "729-1",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -32137,7 +32137,7 @@
   "useAprDay": "20050330",
   "adres": "광주광역시 동구 지산동 280-2",
   "addr": "전남광주통합특별시 동구 지산동 280-2",
-  "jibun": "280-2 대",
+  "jibun": "280-2",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -32197,7 +32197,7 @@
   "useAprDay": "20050119",
   "adres": "광주광역시 동구 지산동 452-1",
   "addr": "전남광주통합특별시 동구 지산동 452-1",
-  "jibun": "452-1 대",
+  "jibun": "452-1",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -32241,7 +32241,7 @@
   "useAprDay": "20050427",
   "adres": "광주광역시 동구 지산동 460-4",
   "addr": "전남광주통합특별시 동구 지산동 460-4",
-  "jibun": "460-4 대",
+  "jibun": "460-4",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -32309,7 +32309,7 @@
   "useAprDay": "20050427",
   "adres": "광주광역시 동구 지산동 460-7",
   "addr": "전남광주통합특별시 동구 지산동 460-7",
-  "jibun": "460-7 대",
+  "jibun": "460-7",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -32525,7 +32525,7 @@
   "useAprDay": "19900731",
   "adres": "광주광역시 동구 계림동 530-1",
   "addr": "전남광주통합특별시 동구 계림동 530-1",
-  "jibun": "530-1 대",
+  "jibun": "530-1",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -32577,7 +32577,7 @@
   "useAprDay": "19840223",
   "adres": "광주광역시 동구 계림동 557-1",
   "addr": "전남광주통합특별시 동구 계림동 557-1",
-  "jibun": "557-1 대",
+  "jibun": "557-1",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -32693,7 +32693,7 @@
   "useAprDay": "20030718",
   "adres": "광주광역시 동구 산수동 484-3",
   "addr": "전남광주통합특별시 동구 산수동 484-3",
-  "jibun": "484-3 대",
+  "jibun": "484-3",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -32797,7 +32797,7 @@
   "useAprDay": "20030812",
   "adres": "광주광역시 동구 산수동 537-22",
   "addr": "전남광주통합특별시 동구 산수동 537-22",
-  "jibun": "537-22 대",
+  "jibun": "537-22",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -32837,7 +32837,7 @@
   "useAprDay": "20030812",
   "adres": "광주광역시 동구 산수동 537-23",
   "addr": "전남광주통합특별시 동구 산수동 537-23",
-  "jibun": "537-23 대",
+  "jibun": "537-23",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -32949,7 +32949,7 @@
   "useAprDay": "20021002",
   "adres": "광주광역시 동구 금동 39",
   "addr": "전남광주통합특별시 동구 금동 39",
-  "jibun": "39 대",
+  "jibun": "39",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -33169,7 +33169,7 @@
   "useAprDay": "20051110",
   "adres": "광주광역시 동구 계림동 588-3",
   "addr": "전남광주통합특별시 동구 계림동 588-3",
-  "jibun": "588-3 대",
+  "jibun": "588-3",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -33273,7 +33273,7 @@
   "useAprDay": "20050831",
   "adres": "광주광역시 동구 산수동 537-20",
   "addr": "전남광주통합특별시 동구 산수동 537-20",
-  "jibun": "537-20 대",
+  "jibun": "537-20",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -33317,7 +33317,7 @@
   "useAprDay": "20050825",
   "adres": "광주광역시 동구 지산동 450-7",
   "addr": "전남광주통합특별시 동구 지산동 450-7",
-  "jibun": "450-7 대",
+  "jibun": "450-7",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -33357,7 +33357,7 @@
   "useAprDay": "20051010",
   "adres": "광주광역시 동구 지산동 452-13",
   "addr": "전남광주통합특별시 동구 지산동 452-13",
-  "jibun": "452-13 대",
+  "jibun": "452-13",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -33401,7 +33401,7 @@
   "useAprDay": "20051104",
   "adres": "광주광역시 동구 지산동 461-1",
   "addr": "전남광주통합특별시 동구 지산동 461-1",
-  "jibun": "461-1 대",
+  "jibun": "461-1",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -33461,7 +33461,7 @@
   "useAprDay": "20060825",
   "adres": "광주광역시 동구 지산동 429-7",
   "addr": "전남광주통합특별시 동구 지산동 429-7",
-  "jibun": "429-7 대",
+  "jibun": "429-7",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -33505,7 +33505,7 @@
   "useAprDay": "20120911",
   "adres": "광주광역시 동구 서석동 429-1",
   "addr": "전남광주통합특별시 동구 서석동 429-1",
-  "jibun": "429-1 대",
+  "jibun": "429-1",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -33577,7 +33577,7 @@
   "useAprDay": "20130807",
   "adres": "광주광역시 동구 서석동 468-7",
   "addr": "전남광주통합특별시 동구 서석동 468-7",
-  "jibun": "468-7 대",
+  "jibun": "468-7",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -33657,7 +33657,7 @@
   "useAprDay": "20130822",
   "adres": "광주광역시 동구 학동 730-5",
   "addr": "전남광주통합특별시 동구 학동 730-5",
-  "jibun": "730-5 대",
+  "jibun": "730-5",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -33737,7 +33737,7 @@
   "useAprDay": "20150205",
   "adres": "광주광역시 동구 소태동 508-4",
   "addr": "전남광주통합특별시 동구 소태동 508-4",
-  "jibun": "508-4 대",
+  "jibun": "508-4",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -33925,7 +33925,7 @@
   "useAprDay": "20170116",
   "adres": "광주광역시 동구 소태동 954",
   "addr": "전남광주통합특별시 동구 소태동 954",
-  "jibun": "954 대",
+  "jibun": "954",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -33985,7 +33985,7 @@
   "useAprDay": "20210809",
   "adres": "광주광역시 동구 계림동 537-13",
   "addr": "전남광주통합특별시 동구 계림동 537-13",
-  "jibun": "537-13 대",
+  "jibun": "537-13",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [
@@ -34033,7 +34033,7 @@
   "useAprDay": "20230817",
   "adres": "광주광역시 동구 학동 223-1",
   "addr": "전남광주통합특별시 동구 학동 223-1",
-  "jibun": "223-1 대",
+  "jibun": "223-1",
   "geometry": {
    "type": "MultiPolygon",
    "coordinates": [

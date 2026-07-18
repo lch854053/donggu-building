@@ -72,7 +72,8 @@ async function parcelGeometryByPNU(pnu) {
     const feats = data?.response?.result?.featureCollection?.features || [];
     if (!feats.length) return null;
     const p = feats[0].properties || {};
-    return { pnu: String(p.pnu || pnu), addr: p.addr || "", jibun: p.jibun || "", geometry: feats[0].geometry || null };
+    // VWorld jibun 속성은 "1869 대"처럼 번지+토지구분(대/산) 접미사를 포함 → 접미사 제거
+    return { pnu: String(p.pnu || pnu), addr: p.addr || "", jibun: String(p.jibun || "").replace(/\s+(대|산)$/, ""), geometry: feats[0].geometry || null };
   } catch {
     return null;
   }
