@@ -3717,16 +3717,26 @@ async function initMapTab(){
 async function loadMapHaengjeong(){
   const sel = document.getElementById("map-hdong");
   if(sel.options.length > 1) return;
-  try{
-    const r = await fetch("/haengjeong.json");
-    const { hdong2bjd } = await r.json();
-    const dongs = Object.keys(hdong2bjd || {}).sort();
-    for(const d of dongs){
-      const opt = document.createElement("option");
-      opt.value = d; opt.textContent = d;
-      sel.appendChild(opt);
-    }
-  }catch(e){ console.error("[loadMapHaengjeong]", e); }
+  // jibun2hdong(번지 단위 정확 매핑)도 필요 → HJ 전체 로드.
+  // 조건검색 탭의 loadHaengjeong 이 이미 채웠으면 재사용.
+  if(!HJ){
+    try{
+      const r = await fetch("/haengjeong.json");
+      HJ = await r.json();
+    }catch(e){ console.error("[loadMapHaengjeong]", e); return; }
+  }
+  // ALL_BJD 도 채워둬 runCondForMap("전체") 가 빈 결과를 내지 않도록(loadHaengjeong 스킵 대비).
+  if(!ALL_BJD.length){
+    const set = new Set();
+    Object.values(HJ.hdong2bjd || {}).forEach(arr => arr.forEach(c => set.add(c)));
+    ALL_BJD = [...set];
+  }
+  const dongs = Object.keys(HJ.hdong2bjd || {}).sort((a,b)=>a.localeCompare(b,"ko"));
+  for(const d of dongs){
+    const opt = document.createElement("option");
+    opt.value = d; opt.textContent = d;
+    sel.appendChild(opt);
+  }
 }
 
 // 정적 폴리곤 데이터 로드 (vacant_geo.json, apt_geo.json)
@@ -3881,8 +3891,10 @@ function filterVacantForMap(hdong){
 // ── 공동주택 필터링 (정적 apt_geo) ──
 function filterAptForMap(hdong){
   const selKind = M_MS.hkind ? M_MS.hkind.selected() : [];
-  // 행정동 매칭: apt_geo는 PNU(앞10자리=bjdongCd)를 가짐. HJ.hdong2bjd 역매핑으로
-  // bjdongCd → 행정동명을 구해 hdong과 비교. housing 탭(bjd2hd 구성 방식)과 동일.
+  // 행정동 매칭: 법정동→행정동이 1:N(계림동 10900 등 10개 법정동)이라
+  // bjdongCd 단순 역매핑은 오답. PNU에서 번지 단위 13자리 키(bjd5+번4+지4)를 만들어
+  // HJ.jibun2hdong 으로 정확 매핑(공동주택 관리 탭의 hdongFromPnu 와 동일 방식).
+  // 폴백은 기존 bjd2hd(모호 가능).
   let bjd2hd = null;
   if(hdong && HJ){
     bjd2hd = {};
@@ -3892,8 +3904,14 @@ function filterAptForMap(hdong){
   }
   M_RESULTS.apt = M_DATA.apt.filter(d => {
     if(bjd2hd){
-      const bjdCd = String(d.pnu || "").slice(5,10);
-      if((bjd2hd[bjdCd] || "") !== hdong) return false;
+      const pnu = String(d.pnu || "");
+      let bHdong = "";
+      if(pnu.length >= 19){
+        const key = pnu.slice(5,10) + pnu.slice(11,15) + pnu.slice(15,19);
+        bHdong = (HJ.jibun2hdong || {})[key] || "";
+      }
+      if(!bHdong) bHdong = bjd2hd[pnu.slice(5,10)] || "";   // 폴백
+      if(bHdong !== hdong) return false;
     }
     if(selKind.length && !selKind.includes(d.kind)) return false;
     return true;
