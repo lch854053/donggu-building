@@ -3661,7 +3661,8 @@ let M_INITIALIZED = false;
 let M_MOVE_TIMER = null;
 const COND_PNU_CACHE = new Map();  // 조건검색: pnu → geometry (뷰포트 갱신 캐시)
 const COND_CHUNK = 50;             // 조건검색 폴리곤 일괄조회 단위
-const COND_MAX_VIEWPORT = 150;     // 뷰포트 내 미수집 PNU 상한 (초과 시 줌인 안내)
+const COND_MAX_VIEWPORT = 500;     // 뷰포트 내 폴리곤 일괄표시 상한 (초과 시 상한만 먼저 표시 + 줌인 안내)
+let M_BJD_BOUNDS = null;           // bjd_bounds.json: 법정동코드(5) → { name, b:[minX,minY,maxX,maxY] }
 
 // ── 색상 정의 ──
 const M_COLOR = {
@@ -3739,7 +3740,7 @@ async function loadMapHaengjeong(){
   }
 }
 
-// 정적 폴리곤 데이터 로드 (vacant_geo.json, apt_geo.json)
+// 정적 폴리곤 데이터 로드 (vacant_geo.json, apt_geo.json, bjd_bounds.json)
 async function loadMapStaticData(){
   if(M_DATA.vacant.length === 0){
     try{
@@ -3752,6 +3753,12 @@ async function loadMapStaticData(){
       const r = await fetch("/apt_geo.json");
       if(r.ok) M_DATA.apt = await r.json();
     }catch(e){ console.error("[loadMapStaticData apt]", e); }
+  }
+  if(!M_BJD_BOUNDS){
+    try{
+      const r = await fetch("/bjd_bounds.json");
+      if(r.ok) M_BJD_BOUNDS = await r.json();
+    }catch(e){ console.error("[loadMapStaticData bjd_bounds]", e); }
   }
 }
 
@@ -3989,21 +3996,31 @@ async function runCondForMap(hdong){
 async function refreshCondViewport(){
   if(!M_MAP) return;
   const bounds = M_MAP.getBounds();
+  // 미수집 PNU는 좌표가 없어 뷰포트 판별이 불가. 법정동 경계(M_BJD_BOUNDS)로 뷰포트와
+  // 교차하는 법정동만 골라, 그 법정동에 속한 미수집 PNU만 조회 대상으로 좁힌다.
+  // 이렇게 해야 단독주택 9148건처럼 밀집한 결과도 줌인하면 해당 영역만 표시된다.
+  const bjdInView = bjdIntersectingBounds(bounds);
   const inView = M_RESULTS.cond.filter(it => {
-    // PNU로는 좌표를 알 수 없으므로, 캐시된 geometry의 bounds로 판별.
-    // 미수집건은 일단 후보로 포함(아래에서 조회 후 다음 moveend에 반영).
     const g = COND_PNU_CACHE.get(it.pnu);
-    if(g) return geoIntersectsBounds(g, bounds);
-    return true;   // 미수집 → 조회 대상
+    if(g) return geoIntersectsBounds(g, bounds);   // 캐시됨 → 정확히 뷰포트 판별
+    if(bjdInView){
+      // 미수집 → 소속 법정동이 뷰포트와 교차하는지로 대략 판별
+      return bjdInView.has(String(it.bjdongCd || "").slice(0,5));
+    }
+    return true;   // 법정동 경계 미로드 → 폴백(전부 후보)
   });
   // 미수집 PNU만 추출
-  const need = inView.filter(it => !COND_PNU_CACHE.has(it.pnu)).map(it => it.pnu);
-  if(need.length > COND_MAX_VIEWPORT){
-    document.getElementById("mapHint").textContent = `표시할 건물이 너무 많습니다(${need.length}건). 지도를 확대(줌인)하세요.`;
-    return;
+  let need = inView.filter(it => !COND_PNU_CACHE.has(it.pnu)).map(it => it.pnu);
+  const overflow = need.length > COND_MAX_VIEWPORT;
+  if(overflow){
+    // 상한 초과해도 전부 스킵하면 빈 화면이 되어 줌인해도 안 보이는 악순환이 발생.
+    // 상한만큼은 먼저 조회해 표시하고, 남은 건은 줌인 안내.
+    need = need.slice(0, COND_MAX_VIEWPORT);
   }
   if(need.length === 0){
-    document.getElementById("mapHint").textContent = "";
+    document.getElementById("mapHint").textContent = overflow
+      ? `표시할 건물이 너무 많습니다. 지도를 확대(줄인)하세요.`
+      : "";
     redrawCondLayer();
     return;
   }
@@ -4014,7 +4031,23 @@ async function refreshCondViewport(){
   }
   redrawCondLayer();
   showMapLoading(false);
-  document.getElementById("mapHint").textContent = "";
+  document.getElementById("mapHint").textContent = overflow
+    ? `결과가 많아 ${COND_MAX_VIEWPORT}건까지 표시. 더 보려면 지도를 확대(줌인)하세요.`
+    : "";
+}
+
+// 뷰포트와 교차하는 법정동코드(5자리) 집합 반환. M_BJD_BOUNDS 미로드 시 null.
+function bjdIntersectingBounds(leafletBounds){
+  if(!M_BJD_BOUNDS) return null;
+  const result = new Set();
+  for(const [bjd, info] of Object.entries(M_BJD_BOUNDS)){
+    const b = info?.b;
+    if(!b || b.length < 4) continue;
+    // [minX, minY, maxX, maxY] → Leaflet latLngBounds 와 교차 판정
+    const bjdB = L.latLngBounds([b[1], b[0]], [b[3], b[2]]);  // [minLat,minLng],[maxLat,maxLng]
+    if(leafletBounds.intersects(bjdB)) result.add(bjd);
+  }
+  return result;
 }
 
 // GeoJSON geometry가 Leaflet bounds와 교차하는지 (대략)
