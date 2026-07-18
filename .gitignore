@@ -2,3 +2,6 @@
 node_modules
 .DS_Store
 .vercel
+# 빈집 엑셀 stale 플래그: update-vacant.mjs가 매 실행마다 다시 쓰는 런타임 파일.
+# git에 추적되면 CI 커밋 단계에서 dirty tree가 되므로 추적에서 제외.
+data/.vacant-excel-stale

@@ -15,10 +15,11 @@ const ODCLOUD_ENDPOINT = "https://api.odcloud.kr/api/3034603/v1/uddi:55a66481-a9
 const JUSO_URL = "https://business.juso.go.kr/addrlink/addrLinkApi.do";
 const PER_PAGE = 1000;
 
-function fetchWithTimeout(url, { timeout = 10000 } = {}) {
+function fetchWithTimeout(url, opts = {}) {
+  const { timeout = 10000, ...rest } = opts;
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeout);
-  return fetch(url, { signal: ctrl.signal }).finally(() => clearTimeout(timer));
+  return fetch(url, { signal: ctrl.signal, ...rest }).finally(() => clearTimeout(timer));
 }
 
 function sleep(ms) {
