@@ -454,10 +454,11 @@ test("pickMainTitle: 주건축물 표기가 없으면 용도 있는 행 선택",
   assert.equal(f.pickMainTitle([blank, purps]), purps);
 });
 
-test("pickMainTitle: 전부 용도 공백이면 첫 행 유지", () => {
+test("pickMainTitle: 전부 용도 공백이면 null (결과에서 제외)", () => {
+  // 정책: 용도가 없는 행(데이터 누락)은 대표 행이 될 수 없다.
   const a = { mainAtchGbCdNm:"", mainPurpsCdNm:" " };
   const b = { mainAtchGbCdNm:"", mainPurpsCdNm:"" };
-  assert.equal(f.pickMainTitle([a, b]), a);
+  assert.equal(f.pickMainTitle([a, b]), null);
 });
 
 test("pickMainTitle: 빈/단일 입력", () => {
@@ -465,6 +466,21 @@ test("pickMainTitle: 빈/단일 입력", () => {
   assert.equal(f.pickMainTitle(null), null);
   const one = { mainPurpsCdNm:"단독주택" };
   assert.equal(f.pickMainTitle([one]), one);
+});
+
+test("pickMainTitle: 주건축 용도 공백 + 부속 용도 있음 → 부속 선택 (옵션2)", () => {
+  // 주건축물 표기가 있어도 용도가 비어있으면 후보에서 제외되고,
+  // 용도가 있는 부속 행이 대표로 선택된다.
+  const mainBlank = { mainAtchGbCdNm:"주건축물",  mainPurpsCdNm:" " };
+  const subPurps  = { mainAtchGbCdNm:"부속건축물", mainPurpsCdNm:"창고시설" };
+  assert.equal(f.pickMainTitle([mainBlank, subPurps]), subPurps);
+  assert.equal(f.pickMainTitle([subPurps, mainBlank]), subPurps);
+});
+
+test("pickMainTitle: 주건축·부속 모두 용도 공백 → null (옵션2)", () => {
+  const mainBlank = { mainAtchGbCdNm:"주건축물",  mainPurpsCdNm:" " };
+  const subBlank  = { mainAtchGbCdNm:"부속건축물", mainPurpsCdNm:"" };
+  assert.equal(f.pickMainTitle([mainBlank, subBlank]), null);
 });
 
 /* ============================================================

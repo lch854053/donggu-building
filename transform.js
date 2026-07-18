@@ -299,15 +299,22 @@ function fmtUseApr(s){
 // 같은 필지의 표제부 행들 중 대표 행 선택.
 // 공공데이터는 한 필지에 주건축물+부속건축물 등 다수 행을 반환하고(동구 전체 필지의 ~45%),
 // 부속건축물 행은 용도가 공백인 경우가 많아 첫 행을 무조건 취하면 용도가 빈칸이 된다.
-// 주건축물 > 용도 값 있는 행 순으로 선택. 동점이면 먼저 온 행 유지(안정 정렬).
+//
+// 정책: 용도(mainPurpsCdNm)가 있는 행만 후보로 삼는다(용도 공백 행은 결과에서 제외).
+//   공공데이터의 빈 용도는 "데이터 누락"이지 "기타 용도"가 아니므로, 이를 대표 행으로
+//   삼으면 상세카드에 용도가 빈칸('-')으로 표시되어 의미 없는 결과가 된다.
+//   따라서 용도 있는 행이 하나라도 있으면 그 중에서, 없으면 null(제외)을 반환한다.
+// 후보 중 선택 우선순위: 주건축물 > (나머지). 동점이면 먼저 온 행 유지(안정 정렬).
 function pickMainTitle(rows){
   if(!Array.isArray(rows) || !rows.length) return null;
-  const score = (r)=> (String(r?.mainAtchGbCdNm||"").includes("주건축물") ? 2 : 0)
-                    + (String(r?.mainPurpsCdNm||"").trim() ? 1 : 0);
-  let best = rows[0], bestScore = score(best);
-  for(let i=1; i<rows.length; i++){
-    const s = score(rows[i]);
-    if(s > bestScore){ best = rows[i]; bestScore = s; }
+  const hasPurps = (r)=> !!String(r?.mainPurpsCdNm||"").trim();
+  const candidates = rows.filter(hasPurps);
+  if(!candidates.length) return null;
+  const score = (r)=> String(r?.mainAtchGbCdNm||"").includes("주건축물") ? 1 : 0;
+  let best = candidates[0], bestScore = score(best);
+  for(let i=1; i<candidates.length; i++){
+    const s = score(candidates[i]);
+    if(s > bestScore){ best = candidates[i]; bestScore = s; }
   }
   return best;
 }
