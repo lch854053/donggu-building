@@ -80,3 +80,9 @@ npm run update-officetel # 건축인허가 기반 오피스텔 자동 발견
 - `api/_lib/*`는 Vercel이 `_` 접두 폴더를 엔드포인트로 만들지 않으므로 안전하게 import할 수 있다.
 - `transform.js`를 수정하면 `node --test`로 반드시 검증할 것. 브라우저 전역 스타일이므로 import/export 문법을 추가하지 말 것.
 - GitHub Actions가 커밋하는 JSON 파일들(`aptlist_donggu.json`, `vacantlist_donggu.json`, `apt_geo.json` 등)은 수동 편집 시 다음 실행과 충돌할 수 있으니 주의.
+
+## Coding Rules
+
+- 버그 수정 시 반드시 `debugging-protocol.md`의 6단계 프로토콜을 따릅니다
+- 원인 분석 없이 코드를 수정하지 않습니다
+- 가설 검증을 거치지 않은 수정은 허용되지 않습니다
