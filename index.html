@@ -3971,23 +3971,30 @@ async function runCondForMap(hdong){
   }
 
   // 필터 + pnu 수집 (중복 pnu 제거)
+  // 같은 필지에 주건축물+부속건축물 등 여러 표제부 행이 있을 수 있다(예: 구성로 205).
+  // 응답 순서에 의존해 첫 행을 무조건 취하면 용도 공백인 부속건축물이 남을 수 있으므로,
+  // 주건축물 > 용도 값 있는 행 순으로 대표 행을 선택한다.
+  const rowScore = (r) =>
+    (String(r.mainAtchGbCdNm || "").includes("주건축물") ? 2 : 0) +
+    (String(r.mainPurpsCdNm || "").trim() ? 1 : 0);
   const seen = new Map();
   for(const t of all){
     if(!matchCat(t.mainPurpsCdNm, selPurps, PURPS_OPTS)) continue;
     if(!matchCat(t.strctCdNm, selStrct, STRCT_OPTS)) continue;
     const bun = String(t.bun || "").padStart(4,"0");
-    const ji  = String(t.ji  || "").padStart(4,"0");
+    const ji  = String(t.ji || "").padStart(4,"0");
     if(!bun || !ji) continue;
     const pnu = toPNU({ sigunguCd:SIGUNGU, bjdongCd:t.bjdongCd, platGbCd:t.platGbCd || "0", bun, ji });
-    if(!seen.has(pnu)) seen.set(pnu, t);
+    const prev = seen.get(pnu);
+    if(!prev || rowScore(t) > rowScore(prev)) seen.set(pnu, t);
   }
   M_RESULTS.cond = [...seen.entries()].map(([pnu, t]) => ({
     pnu,
     bjdongCd: t.bjdongCd || pnu.slice(5,10),
-    dongNm: t.dongNm || "",
-    bldNm: t.bldNm || "",
-    mainPurps: t.mainPurpsCdNm || "",
-    strct: t.strctCdNm || "",
+    dongNm: String(t.dongNm || "").trim(),
+    bldNm: String(t.bldNm || "").trim(),
+    mainPurps: String(t.mainPurpsCdNm || "").trim(),
+    strct: String(t.strctCdNm || "").trim(),
     grndFlr: t.grndFlrCnt || "",
     ugrndFlr: t.ugrndFlrCnt || "",
     useAprDay: t.useAprDay || "",
