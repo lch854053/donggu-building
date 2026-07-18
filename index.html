@@ -3664,6 +3664,12 @@ const COND_CHUNK = 50;             // 조건검색 폴리곤 일괄조회 단위
 const COND_MAX_VIEWPORT = 500;     // 뷰포트 내 폴리곤 일괄표시 상한 (초과 시 상한만 먼저 표시 + 줌인 안내)
 let M_BJD_BOUNDS = null;           // bjd_bounds.json: 법정동코드(5) → { name, b:[minX,minY,maxX,maxY] }
 
+// 조건검색 폴리곤 표시 제외 PNU 블랙리스트.
+// VWorld 연속지적도 원본 폴리곤이 지적(토지) 형태상 특이하게 보이는 필지를 숨김(코드 버그 아님).
+const COND_PNU_BLACKLIST = new Set([
+  "2911011800102700003",  // 조선대2길 110 (서석동 270-3) — 폴리곤 모양이 비정상적으로 보임
+]);
+
 // ── 색상 정의 ──
 const M_COLOR = {
   vacant: {
@@ -4009,8 +4015,8 @@ async function refreshCondViewport(){
     }
     return true;   // 법정동 경계 미로드 → 폴백(전부 후보)
   });
-  // 미수집 PNU만 추출
-  let need = inView.filter(it => !COND_PNU_CACHE.has(it.pnu)).map(it => it.pnu);
+  // 미수집 PNU만 추출 (블랙리스트 PNU 제외)
+  let need = inView.filter(it => !COND_PNU_CACHE.has(it.pnu) && !COND_PNU_BLACKLIST.has(it.pnu)).map(it => it.pnu);
   const overflow = need.length > COND_MAX_VIEWPORT;
   if(overflow){
     // 상한 초과해도 전부 스킵하면 빈 화면이 되어 줌인해도 안 보이는 악순환이 발생.
@@ -4065,6 +4071,7 @@ function redrawCondLayer(){
   const bounds = M_MAP.getBounds();
   const polys = [];
   for(const it of M_RESULTS.cond){
+    if(COND_PNU_BLACKLIST.has(it.pnu)) continue;   // 표시 제외 PNU
     const g = COND_PNU_CACHE.get(it.pnu);
     if(!g) continue;
     if(!geoIntersectsBounds(g, bounds)) continue;
