@@ -4128,15 +4128,28 @@ function makeMapPolygon(geometry, source, id, data){
       color, weight: 2, fillColor: color, fillOpacity: 0.35,
     });
   }else{
+    // L.geoJSON은 MultiPolygon을 여러 sub-path로 렌더. layer.on("click")은
+    // 그룹에 거는데 일부 path에서 버블업이 누락되는 Leaflet 이슈가 있어,
+    // onEachFeature로 각 path에 직접 클릭 핸들러를 건다 → Polygon/MultiPolygon
+    // 모두 확실하게 클릭 동작.
     layer = L.geoJSON(geometry, {
       style: { color, weight: 2, fillColor: color, fillOpacity: 0.35 },
+      onEachFeature: (feat, lyr) => {
+        lyr.on("click", (e)=>{
+          if(e.originalEvent) e.originalEvent.stopPropagation();
+          showMapDetailCard(source, data);
+          highlightMapPolygon(layer, source);
+        });
+      },
     });
   }
-  layer.on("click", (e)=>{
-    if(e.originalEvent) e.originalEvent.stopPropagation();
-    showMapDetailCard(source, data);
-    highlightMapPolygon(layer, source);
-  });
+  if(isPoint){
+    layer.on("click", (e)=>{
+      if(e.originalEvent) e.originalEvent.stopPropagation();
+      showMapDetailCard(source, data);
+      highlightMapPolygon(layer, source);
+    });
+  }
   layer._mId = id; layer._mSource = source; layer._mIsPoint = isPoint;
   return layer;
 }
