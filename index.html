@@ -3807,10 +3807,9 @@ function initMapLeaflet(){
     maxBoundsViscosity: 0.9,          // 경계에서 부드럽게 멈춤
     minZoom: 0,                       // 아래에서 동구 bounds 기반으로 재설정
     maxZoom: 19,
-    // Canvas 렌더러 — SVG 기본 렌더러는 대형 폴리곤(대단지 아파트 등 수만m²)에서
-    // path 크기 한계로 클릭 영역이 깨지는 WebKit 이슈가 있음. Canvas는 픽셀 기반이라
-    // 크기 제한 없이 모든 폴리곤이 안정적으로 클릭됨.
-    preferCanvas: true,
+    // SVG 렌더러(기본값). Canvas(preferCanvas)는 대형 폴리곤(수만m² 대단지 아파트)의
+    // 내부를 Canvas에 그리지 않는 렌더링 한계가 있어 투명 → 클릭 안 됨(진단으로 확인).
+    // SVG는 대형 폴리곤도 정상 렌더 + onEachFeature 클릭 핸들러로 클릭 동작.
   });
   M_MAP = map;
   const blank = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
@@ -4134,8 +4133,7 @@ function makeMapPolygon(geometry, source, id, data){
   }else{
     // L.geoJSON은 MultiPolygon을 여러 sub-path로 렌더. onEachFeature로 각 path에
     // 직접 클릭 핸들러를 건다 → Polygon/MultiPolygon 모두 확실하게 클릭 동작.
-    // Canvas 렌더러(preferCanvas)에서는 interactive:true 와 fill:true 를 명시해야
-    // path 내부 hit-testing이 활성화된다 (SVG 기본값과 달라 명시 필수).
+    // fill/interactive 명시 — SVG 기본값이 true라 안전망 역할.
     layer = L.geoJSON(geometry, {
       style: { color, weight: 2, fillColor: color, fillOpacity: 0.35, fill: true, interactive: true },
       onEachFeature: (feat, lyr) => {
