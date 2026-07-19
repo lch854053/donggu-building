@@ -4111,24 +4111,45 @@ function renderAllMapLayers(){
 }
 
 // 폴리곤 1개 생성 + 스타일 + 클릭 핸들러
+// geometry가 Point(신축 단지 등 폴리곤 미반영)면 점 마커(CircleMarker)로 표시.
 function makeMapPolygon(geometry, source, id, data){
   const color = mapColor(source, source === "vacant" ? data.grade : (source === "apt" ? data.kind : null));
-  const layer = L.geoJSON(geometry, {
-    style: { color, weight: 2, fillColor: color, fillOpacity: 0.35 },
-  });
+  const isPoint = geometry?.type === "Point";
+  let layer;
+  if(isPoint){
+    const [lng, lat] = geometry.coordinates;
+    layer = L.layerGroup([
+      L.circleMarker([lat, lng], { radius:9, color, weight:2, fillColor:color, fillOpacity:0.9 }),
+      L.circleMarker([lat, lng], { radius:18, color, weight:1, fillColor:color, fillOpacity:0.18 }),
+    ]);
+  }else{
+    layer = L.geoJSON(geometry, {
+      style: { color, weight: 2, fillColor: color, fillOpacity: 0.35 },
+    });
+  }
   layer.on("click", (e)=>{
     if(e.originalEvent) e.originalEvent.stopPropagation();
     showMapDetailCard(source, data);
     highlightMapPolygon(layer, source);
   });
-  layer._mId = id; layer._mSource = source;
+  layer._mId = id; layer._mSource = source; layer._mIsPoint = isPoint;
   return layer;
 }
 
 let M_HIGHLIGHT = null;
 function highlightMapPolygon(layer, source){
-  if(M_HIGHLIGHT){ try{ M_HIGHLIGHT.setStyle({ weight:2, fillOpacity:0.35 }); }catch(e){} }
-  try{ layer.setStyle({ weight:4, fillOpacity:0.6 }); layer.bringToFront(); }catch(e){}
+  if(M_HIGHLIGHT && M_HIGHLIGHT !== layer){
+    try{
+      if(M_HIGHLIGHT._mIsPoint){
+        M_HIGHLIGHT.eachLayer(m => { try{ m.setStyle({ radius: m.options.radius <= 10 ? 9 : 18, weight: m.options.radius <= 10 ? 2 : 1, fillOpacity: m.options.radius <= 10 ? 0.9 : 0.18 }); }catch(e){} });
+      }else{ M_HIGHLIGHT.setStyle({ weight:2, fillOpacity:0.35 }); }
+    }catch(e){}
+  }
+  try{
+    if(layer._mIsPoint){
+      layer.eachLayer(m => { try{ m.setStyle({ radius: m.options.radius <= 10 ? 12 : 22, weight: m.options.radius <= 10 ? 3 : 2 }); }catch(e){} });
+    }else{ layer.setStyle({ weight:4, fillOpacity:0.6 }); layer.bringToFront(); }
+  }catch(e){}
   M_HIGHLIGHT = layer;
 }
 
