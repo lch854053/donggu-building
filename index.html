@@ -3774,8 +3774,9 @@ function buildMapFilters(){
   if(vacantGrades.length) M_MS.vgrade = buildMultiselect("map-ms-vgrade", vacantGrades, false);
   // 공동주택 종류
   M_MS.hkind = buildMultiselect("map-ms-hkind", HKIND_OPTS, false);
-  // 건축물 용도/구조
-  M_MS.purps = buildMultiselect("map-ms-purps", PURPS_OPTS);
+  // 건축물 용도/구조 — 지도 탭엔 별도 공동주택 소스가 있으므로 '공동주택' 용도는 제외
+  const MAP_PURPS_OPTS = PURPS_OPTS.filter(o => o !== "공동주택");
+  M_MS.purps = buildMultiselect("map-ms-purps", MAP_PURPS_OPTS);
   M_MS.strct = buildMultiselect("map-ms-strct", STRCT_OPTS);
 }
 
