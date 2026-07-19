@@ -4120,9 +4120,9 @@ function makeMapPolygon(geometry, source, id, data){
   if(isPoint){
     const [lng, lat] = geometry.coordinates;
     // 세대수 기반 대략적 대지 반경(미터) — 폴리곤 미반영 단지의 가시성 확보용.
-    // 500세대 약 60m, 1000세대 약 85m 정도로 스케일. 하한/상한으로 과소/과대 방지.
+    // 815세대 약 60m(교대역 모아엘가 기준). 하한/상한으로 과소/과대 방지.
     const hhld = Number(data.hhld) || 0;
-    const radius = Math.max(45, Math.min(110, 35 + Math.sqrt(hhld) * 1.6));
+    const radius = Math.max(35, Math.min(85, 26 + Math.sqrt(hhld) * 1.2));
     layer = L.circle([lat, lng], {
       radius,                            // 미터 단위(줌에 따라 실제 크기 유지)
       color, weight: 2, fillColor: color, fillOpacity: 0.35,
