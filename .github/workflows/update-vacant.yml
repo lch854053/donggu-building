@@ -42,6 +42,18 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Validate generated JSON (prevent empty/regressed data)
+        run: |
+          set -e
+          # vacant_geo.json이 빈 배열이거나 파싱 불가면 커밋하지 않는다
+          # (apt_geo.json 회귀 0add14c와 동일한 패턴 방지).
+          vacant_count=$(node -e "try{const d=require('./vacant_geo.json');console.log(Array.isArray(d)?d.length:-1)}catch{console.log(-1)}")
+          echo "vacant_geo.json 레코드 수: $vacant_count"
+          if [ "$vacant_count" -le 0 ] 2>/dev/null; then
+            echo "::error::vacant_geo.json이 비어 있거나 파싱 실패 ($vacant_count). 커밋 중단."
+            exit 1
+          fi
+
       - name: Commit and push if changed
         run: |
           git config user.name "github-actions[bot]"

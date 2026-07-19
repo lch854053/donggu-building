@@ -377,6 +377,25 @@ async function main() {
   }
 
   const outPath = join(ROOT, "apt_geo.json");
+
+  // ── 데이터 무결성 가드 ──
+  // VWorld 폴리곤 API가 대량 실패/차단되면 out이 비거나 급감할 수 있다.
+  // 이전 커밋에서 빈 apt_geo.json([])이 머지되어 지도 탭 공동주택 조회가 동작하지 않았던
+  // 회귀(0add14c) 재발 방지. 정상 케이스가 아니면 기존 파일을 덮어쓰지 않고 실패시킨다.
+  if (out.length === 0) {
+    console.error(`[가드] 수집 결과 0건 — VWorld 폴리곤 API 전체 실패로 추정. apt_geo.json을 덮어쓰지 않음 (complexes=${complexes.length}).`);
+    process.exit(1);
+  }
+  // 기존 파일이 있으면 급감(이전의 50% 미만)도 차단 — 부분 장애 회귀 방지
+  try {
+    const prevRaw = await readFile(outPath, "utf8");
+    const prev = JSON.parse(prevRaw);
+    if (Array.isArray(prev) && prev.length > 0 && out.length < prev.length * 0.5) {
+      console.error(`[가드] 수집 결과 급감: ${out.length}건 (이전 ${prev.length}건의 50% 미만). apt_geo.json을 덮어쓰지 않음.`);
+      process.exit(1);
+    }
+  } catch { /* 기존 파일 없음/파싱 실패 → 신규 생성 허용 */ }
+
   await writeFile(outPath, JSON.stringify(out, null, " ") + "\n", "utf8");
   console.log(`\n완료: ${ok}건 / ${complexes.length}건`);
   // 최종 kind 분포
