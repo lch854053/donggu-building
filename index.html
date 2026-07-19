@@ -4131,27 +4131,23 @@ function makeMapPolygon(geometry, source, id, data){
       color, weight: 2, fillColor: color, fillOpacity: 0.35,
     });
   }else{
-    // L.geoJSON은 MultiPolygon을 여러 sub-path로 렌더. onEachFeature로 각 path에
-    // 직접 클릭 핸들러를 건다 → Polygon/MultiPolygon 모두 확실하게 클릭 동작.
-    // fill/interactive 명시 — SVG 기본값이 true라 안전망 역할.
+    // L.geoJSON에 click 핸들러를 건다. FeatureGroup 레벨 이벤트로 자식 path의
+    // click이 버블업되어 동작 — Polygon/MultiPolygon 모두 정상.
+    // 주의: onEachFeature 는 Feature({type:"Feature",...}) 객체에만 호출되는데,
+    // 우리 geometry는 순수 geometry 객체({type:"Polygon",coordinates:...})라
+    // onEachFeature 콜백이 아예 안 불려 클릭 핸들러가 등록되지 않는 함정이 있음.
+    // 따라서 layer.on("click") 방식을 유지한다.
     layer = L.geoJSON(geometry, {
       style: { color, weight: 2, fillColor: color, fillOpacity: 0.35, fill: true, interactive: true },
-      onEachFeature: (feat, lyr) => {
-        lyr.on("click", (e)=>{
-          if(e.originalEvent) e.originalEvent.stopPropagation();
-          showMapDetailCard(source, data);
-          highlightMapPolygon(layer, source);
-        });
-      },
     });
   }
-  if(isPoint){
-    layer.on("click", (e)=>{
-      if(e.originalEvent) e.originalEvent.stopPropagation();
-      showMapDetailCard(source, data);
-      highlightMapPolygon(layer, source);
-    });
-  }
+  // 공통 click 핸들러 — Point(L.circle)와 폴리곤(L.geoJSON FeatureGroup) 모두에 적용.
+  // FeatureGroup은 자식 path의 click이 버블업되어 동작.
+  layer.on("click", (e)=>{
+    if(e.originalEvent) e.originalEvent.stopPropagation();
+    showMapDetailCard(source, data);
+    highlightMapPolygon(layer, source);
+  });
   layer._mId = id; layer._mSource = source; layer._mIsPoint = isPoint;
   return layer;
 }
