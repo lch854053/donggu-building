@@ -25,6 +25,19 @@ const pnuRe = /^\d{19}$/;
 // VWorld 연속지적도는 신규 시군구코드(12210)만 인식. 구 코드(29110) 정규화.
 const pnuForVWorld = (pnu) => pnu.startsWith("29110") ? "12210" + pnu.slice(5) : pnu;
 
+// PNU별 수동 Point 오버라이드 — 폴리곤 미반영 단지 중 위치/표시주소를 수동 보정한 경우.
+// VWorld 지오코더(도로명) 좌표가 실제 대지 중심과 어긋날 때 여기서 보정하면
+// 주간 자동 갱신이 덮어써도 보정값이 유지됨.
+const POINT_OVERRIDES = {
+  // 교대역 모아엘가 그랑데(계림동 산125): 신축 폴리곤 미반영, 도로명 좌표보
+  // 북서쪽(계림동 85-8 방면)으로 이동해 실제 단지 부지에 가깝게 표시.
+  "2911010900101250000": {
+    geometry: { type: "Point", coordinates: [126.92072568, 35.16243190] },
+    addr: "전남광주통합특별시 동구 계림동 125",   // 표시용(지번 산번지 생략)
+    jibun: "125",
+  },
+};
+
 // 건축물대장(getBrTitleInfo)으로 보충 수집할 주용도 — 아파트 외 공동주택 계열
 // 표제부의 mainPurpsCdNm은 항상 "공동주택"이고, 세부 종류는 etcPurps에 있음.
 // etcPurps에서 추출 가능한 종류 키워드 — 아파트는 K-apt/odcloud/getAptInfo가 이미 커버하므로 제외.
@@ -136,6 +149,13 @@ async function geocodeRoadAddr(roadAddr) {
 // 반환값: { geometry, addr, jibun, marker } — marker=true면 점 마커 표시용.
 const POLYGON_TOO_SMALL_M2 = 1000;  // 단지 대지치고는 비정상적으로 작은 임계
 async function resolveGeometry(c, parcelGeom) {
+  // 수동 오버라이드 최우선 — 위치/표시주소를 보정한 PNU는 하드코딩값 적용.
+  // 폴리곤이 잡혀도 오버라이드가 있으면 Point로 유지(사용자 의도).
+  if (c.pnu && POINT_OVERRIDES[c.pnu]) {
+    const ov = POINT_OVERRIDES[c.pnu];
+    console.log(`  [오버라이드] ${c.complexNm || c.pnu} → 수동 Point (${ov.geometry.coordinates.join(",")})`);
+    return { geometry: ov.geometry, addr: ov.addr || parcelGeom?.addr || "", jibun: ov.jibun || c.jibun || parcelGeom?.jibun || "", marker: true };
+  }
   const area = polygonAreaM2(parcelGeom?.geometry);
   if (parcelGeom?.geometry && area >= POLYGON_TOO_SMALL_M2) {
     return { geometry: parcelGeom.geometry, addr: parcelGeom.addr || "", jibun: parcelGeom.jibun || "", marker: false };
