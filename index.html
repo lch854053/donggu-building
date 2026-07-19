@@ -4111,17 +4111,22 @@ function renderAllMapLayers(){
 }
 
 // 폴리곤 1개 생성 + 스타일 + 클릭 핸들러
-// geometry가 Point(신축 단지 등 폴리곤 미반영)면 점 마커(CircleMarker)로 표시.
+// geometry가 Point(신축 단지 등 폴리곤 미반영)면 좌표 중심의 미터 단위 고정 반경
+// 원 폴리곤(L.circle)으로 표시. 일반 폴리곤과 동일한 클릭/강조 동작.
 function makeMapPolygon(geometry, source, id, data){
   const color = mapColor(source, source === "vacant" ? data.grade : (source === "apt" ? data.kind : null));
   const isPoint = geometry?.type === "Point";
   let layer;
   if(isPoint){
     const [lng, lat] = geometry.coordinates;
-    layer = L.layerGroup([
-      L.circleMarker([lat, lng], { radius:9, color, weight:2, fillColor:color, fillOpacity:0.9 }),
-      L.circleMarker([lat, lng], { radius:18, color, weight:1, fillColor:color, fillOpacity:0.18 }),
-    ]);
+    // 세대수 기반 대략적 대지 반경(미터) — 폴리곤 미반영 단지의 가시성 확보용.
+    // 500세대 약 60m, 1000세대 약 85m 정도로 스케일. 하한/상한으로 과소/과대 방지.
+    const hhld = Number(data.hhld) || 0;
+    const radius = Math.max(45, Math.min(110, 35 + Math.sqrt(hhld) * 1.6));
+    layer = L.circle([lat, lng], {
+      radius,                            // 미터 단위(줌에 따라 실제 크기 유지)
+      color, weight: 2, fillColor: color, fillOpacity: 0.35,
+    });
   }else{
     layer = L.geoJSON(geometry, {
       style: { color, weight: 2, fillColor: color, fillOpacity: 0.35 },
@@ -4139,17 +4144,9 @@ function makeMapPolygon(geometry, source, id, data){
 let M_HIGHLIGHT = null;
 function highlightMapPolygon(layer, source){
   if(M_HIGHLIGHT && M_HIGHLIGHT !== layer){
-    try{
-      if(M_HIGHLIGHT._mIsPoint){
-        M_HIGHLIGHT.eachLayer(m => { try{ m.setStyle({ radius: m.options.radius <= 10 ? 9 : 18, weight: m.options.radius <= 10 ? 2 : 1, fillOpacity: m.options.radius <= 10 ? 0.9 : 0.18 }); }catch(e){} });
-      }else{ M_HIGHLIGHT.setStyle({ weight:2, fillOpacity:0.35 }); }
-    }catch(e){}
+    try{ M_HIGHLIGHT.setStyle({ weight:2, fillOpacity:0.35 }); }catch(e){}
   }
-  try{
-    if(layer._mIsPoint){
-      layer.eachLayer(m => { try{ m.setStyle({ radius: m.options.radius <= 10 ? 12 : 22, weight: m.options.radius <= 10 ? 3 : 2 }); }catch(e){} });
-    }else{ layer.setStyle({ weight:4, fillOpacity:0.6 }); layer.bringToFront(); }
-  }catch(e){}
+  try{ layer.setStyle({ weight:4, fillOpacity:0.6 }); layer.bringToFront(); }catch(e){}
   M_HIGHLIGHT = layer;
 }
 
