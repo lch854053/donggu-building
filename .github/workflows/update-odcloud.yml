@@ -31,6 +31,17 @@ jobs:
           VWORLD_KEY: ${{ secrets.VWORLD_KEY }}
           BLD_SERVICE_KEY: ${{ secrets.BLD_SERVICE_KEY }}
 
+      - name: Validate generated JSON (prevent empty/regressed data)
+        run: |
+          set -e
+          # apt_geo.json이 빈 배열이거나 파싱 불가면 커밋하지 않는다 (0add14c 회귀 재발 방지).
+          apt_count=$(node -e "try{const d=require('./apt_geo.json');console.log(Array.isArray(d)?d.length:-1)}catch{console.log(-1)}")
+          echo "apt_geo.json 레코드 수: $apt_count"
+          if [ "$apt_count" -le 0 ] 2>/dev/null; then
+            echo "::error::apt_geo.json이 비어 있거나 파싱 실패 ($apt_count). 커밋 중단."
+            exit 1
+          fi
+
       - name: Commit and push if changed
         run: |
           git config user.name "github-actions[bot]"
