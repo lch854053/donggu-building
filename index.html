@@ -4132,12 +4132,12 @@ function makeMapPolygon(geometry, source, id, data){
       color, weight: 2, fillColor: color, fillOpacity: 0.35,
     });
   }else{
-    // L.geoJSON은 MultiPolygon을 여러 sub-path로 렌더. layer.on("click")은
-    // 그룹에 거는데 일부 path에서 버블업이 누락되는 Leaflet 이슈가 있어,
-    // onEachFeature로 각 path에 직접 클릭 핸들러를 건다 → Polygon/MultiPolygon
-    // 모두 확실하게 클릭 동작.
+    // L.geoJSON은 MultiPolygon을 여러 sub-path로 렌더. onEachFeature로 각 path에
+    // 직접 클릭 핸들러를 건다 → Polygon/MultiPolygon 모두 확실하게 클릭 동작.
+    // Canvas 렌더러(preferCanvas)에서는 interactive:true 와 fill:true 를 명시해야
+    // path 내부 hit-testing이 활성화된다 (SVG 기본값과 달라 명시 필수).
     layer = L.geoJSON(geometry, {
-      style: { color, weight: 2, fillColor: color, fillOpacity: 0.35 },
+      style: { color, weight: 2, fillColor: color, fillOpacity: 0.35, fill: true, interactive: true },
       onEachFeature: (feat, lyr) => {
         lyr.on("click", (e)=>{
           if(e.originalEvent) e.originalEvent.stopPropagation();
