@@ -3806,7 +3806,11 @@ function initMapLeaflet(){
     maxBounds: MAP_BOUNDS,            // 패닝을 동구 경계로 제한
     maxBoundsViscosity: 0.9,          // 경계에서 부드럽게 멈춤
     minZoom: 0,                       // 아래에서 동구 bounds 기반으로 재설정
-    maxZoom: 19
+    maxZoom: 19,
+    // Canvas 렌더러 — SVG 기본 렌더러는 대형 폴리곤(대단지 아파트 등 수만m²)에서
+    // path 크기 한계로 클릭 영역이 깨지는 WebKit 이슈가 있음. Canvas는 픽셀 기반이라
+    // 크기 제한 없이 모든 폴리곤이 안정적으로 클릭됨.
+    preferCanvas: true,
   });
   M_MAP = map;
   const blank = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
