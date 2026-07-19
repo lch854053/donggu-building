@@ -4261,10 +4261,12 @@ function renderAptCard(d){
       ${d.tarea ? `<tr><th>연면적</th><td>${Number(d.tarea).toLocaleString("ko-KR")}㎡</td></tr>` : ""}
       ${d.parking ? `<tr><th>주차</th><td>${d.parking}대</td></tr>` : ""}
       ${d.officeTel ? `<tr><th>관리사무소</th><td>${esc(d.officeTel)}</td></tr>` : ""}
-    </table>
-    <div class="mc-note" data-pnu="${esc(d.pnu)}" data-kapt="${esc(d.kaptCode||"")}">K-apt 상세 불러오는 중…</div>`;
-  // K-apt 상세는 카드 DOM에 들어간 후 lazy 로드
+    </table>`;
+  // K-apt 상세는 카드 DOM에 들어간 후 lazy 로드. kaptCode가 있는 단지(source=kapt)만
+  // 상세를 불러올 수 있으므로, 그 외(extra/odcloud/aptid/bld 등)는 로딩 메시지 자체를
+  // 표시하지 않음 — 메시지가 lazy 로드 트리거 없이 영구 남는 것을 방지.
   if(d.source === "kapt" && d.kaptCode){
+    html += `<div class="mc-note" data-pnu="${esc(d.pnu)}" data-kapt="${esc(d.kaptCode||"")}">K-apt 상세 불러오는 중…</div>`;
     setTimeout(()=>loadAptCardDetail(d.kaptCode, d.pnu), 0);
   }
   return html;
