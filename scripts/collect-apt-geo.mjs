@@ -18,6 +18,7 @@ const ROOT = join(__dirname, "..");
 
 const VWORLD_KEY = process.env.VWORLD_KEY;
 const VWORLD_URL = "https://api.vworld.kr/req/data";
+const VWORLD_GEOCODE_URL = "https://api.vworld.kr/req/address";
 const DOMAIN = "https://donggu-building.vercel.app";
 const CONCURRENCY = 6;
 const pnuRe = /^\d{19}$/;
@@ -89,6 +90,73 @@ async function parcelGeometryByPNU(pnu) {
   } catch {
     return null;
   }
+}
+
+// 폴리곤 면적(m²) 근사 계산. 신축 단지처럼 폴리곤이 실제 대지보다 지나치게 작은지 판별용.
+// 정확값이 아니어도 과소 여부(예: 391m² 폴리곤 vs 실제 단지 수천m²) 판단엔 충분.
+function polygonAreaM2(geom) {
+  if (!geom || !geom.coordinates) return 0;
+  let outer;
+  try {
+    outer = geom.type === "MultiPolygon" ? geom.coordinates[0][0] : geom.coordinates[0];
+  } catch { return 0; }
+  if (!Array.isArray(outer) || outer.length < 3) return 0;
+  const lat0 = (outer[0][1] || 35.14) * Math.PI / 180;
+  const mLng = 111320 * Math.cos(lat0);
+  const mLat = 111320;
+  let area = 0;
+  for (let i = 0; i < outer.length - 1; i++) {
+    const [x1, y1] = outer[i];
+    const [x2, y2] = outer[i + 1];
+    area += x1 * mLng * y2 * mLat - x2 * mLng * y1 * mLat;
+  }
+  return Math.abs(area) / 2;
+}
+
+// 도로명주소 → VWorld 지오코더 좌표 {x, y} | null
+// 신축 단지는 VWorld 연속지적도에 폴리곤이 없거나 잔여 필지만 잡혀 너무 작게 표시되므로,
+// 도로명주소 기준 점(Point) 마커로 폴백하기 위함.
+async function geocodeRoadAddr(roadAddr) {
+  if (!roadAddr) return null;
+  const params = new URLSearchParams({
+    service: "address", request: "getcoord", crs: "epsg:4326",
+    address: roadAddr, format: "json", type: "road", key: VWORLD_KEY,
+  });
+  try {
+    const r = await fetchWithTimeout(`${VWORLD_GEOCODE_URL}?${params}`, { timeout: 10000 });
+    if (!r.ok) return null;
+    const data = await r.json();
+    if (data?.response?.status !== "OK") return null;
+    const pt = data?.response?.result?.point;
+    return pt && pt.x && pt.y ? { x: Number(pt.x), y: Number(pt.y) } : null;
+  } catch { return null; }
+}
+
+// 폴리곤이 비었거나 비정상적으로 작으면(신축 단지 등) 도로명 좌표 Point로 폴백.
+// 반환값: { geometry, addr, jibun, marker } — marker=true면 점 마커 표시용.
+const POLYGON_TOO_SMALL_M2 = 1000;  // 단지 대지치고는 비정상적으로 작은 임계
+async function resolveGeometry(c, parcelGeom) {
+  const area = polygonAreaM2(parcelGeom?.geometry);
+  if (parcelGeom?.geometry && area >= POLYGON_TOO_SMALL_M2) {
+    return { geometry: parcelGeom.geometry, addr: parcelGeom.addr || "", jibun: parcelGeom.jibun || "", marker: false };
+  }
+  // 폴리곤 누락/과소 → 도로명으로 점 좌표 폴백
+  const roadAddr = c.doroAddr || c.adres || "";
+  if (roadAddr) {
+    const pt = await geocodeRoadAddr(roadAddr);
+    if (pt) {
+      console.log(`  [Point 폴백] ${c.complexNm || c.pnu} — 폴리곤 ${area ? area.toFixed(0) + "m²(과소)" : "없음"} → 도로명 좌표 (${pt.x.toFixed(5)},${pt.y.toFixed(5)})`);
+      return { geometry: { type: "Point", coordinates: [pt.x, pt.y] }, addr: roadAddr, jibun: c.jibun || parcelGeom?.jibun || "", marker: true };
+    }
+  }
+  // 도로명도 없으면 폴리곤이 있더라도 과소면 버리고, 정상 폴리곤이면 유지
+  if (parcelGeom?.geometry && area > 0 && area < POLYGON_TOO_SMALL_M2) {
+    console.log(`  [제외] ${c.complexNm || c.pnu} — 폴리곤 ${area.toFixed(0)}m²(과소) & 도로명 폴백 실패`);
+    return null;
+  }
+  return parcelGeom?.geometry
+    ? { geometry: parcelGeom.geometry, addr: parcelGeom.addr || "", jibun: parcelGeom.jibun || "", marker: false }
+    : null;
 }
 
 // 단지 종류 정규화 — 지도 색상 분류용.
@@ -360,7 +428,7 @@ async function main() {
 
   console.log("VWorld 연속지적도 폴리곤 수집 중...");
   const pnus = complexes.map(c => c.pnu);
-  const geoms = await runPool(pnus, async (pnu, i) => {
+  const parcels = await runPool(pnus, async (pnu, i) => {
     const g = await parcelGeometryByPNU(pnu);
     if (i % 50 === 0) console.log(`  [폴리곤] ${i + 1}/${pnus.length}`);
     return g;
@@ -370,10 +438,11 @@ async function main() {
   let ok = 0;
   for (let i = 0; i < complexes.length; i++) {
     const c = complexes[i];
-    const g = geoms[i];
-    if (!g || !g.geometry) continue;
+    const resolved = await resolveGeometry(c, parcels[i]);
+    if (!resolved || !resolved.geometry) continue;
     ok++;
-    out.push({ ...c, addr: g.addr || "", jibun: g.jibun || "", geometry: g.geometry });
+    const { geometry, addr, jibun, marker } = resolved;
+    out.push({ ...c, addr: addr || "", jibun: jibun || "", geometry, ...(marker ? { marker: true } : {}) });
   }
 
   const outPath = join(ROOT, "apt_geo.json");
