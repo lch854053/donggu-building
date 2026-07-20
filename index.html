@@ -4260,7 +4260,7 @@ function renderVacantCard(d){
 }
 
 function renderAptCard(d){
-  const html = `<div class="mc-title">${esc(d.complexNm || "공동주택")}</div>
+  let html = `<div class="mc-title">${esc(d.complexNm || "공동주택")}</div>
     <div class="mc-addr">${esc(shortAddr(d.addr || d.adres || d.doroAddr) || stripJibunLandSuffix(d.jibun) || "—")}</div>
     <table class="mc-tbl">
       <tr><th>종류</th><td>${esc(d.kind || "—")}</td></tr>
