@@ -1,4 +1,4 @@
-// /api/vworld-bld?pnu=2911011200101420006   (PNU → GIS건물통합정보 1건: 윤곽선+속성)
+// /api/vworld-bld?pnu=2911011200101420006   (PNU → GIS건물통합정보: 건물 윤곽선+속성)
 // VWorld NED GIS건물통합정보 WFS(getBldgisSpceWFS) 프록시.
 // 연속지적도(필지)와 달리 '건물 단위' 도형(ag_geom)과 속성(높이·용도·건물명·위반건축물 등)을 제공.
 //
@@ -9,6 +9,11 @@
 //   - 단순 pnu= GET 파라미터로 단건 필터링
 //   - WFS는 구/신규 시군구코드(29110/12210) 둘 다 수용하지만 응답 pnu는 항상 12210로 정규화됨.
 //     안전하게 두 체계를 순차 시도한다.
+//
+// 한 필지(pnu)에 건물이 여러 개일 수 있다(학교 교사 본관/별관, 단지 다동 등).
+// 이 프록시는 전체 건물을 반환하되, 카드 표시용 대표 속성 1건을 따로 골라 함께 돌려준다.
+//   - 대표 우선순위: 건물명(buld_nm)이 있는 것 → 그중 면적이 가장 큰 것(연면적 totar, 없으면 건축면적 ar)
+//   - 건물명이 아예 없으면 면적 최대 건물을 대표로
 import { guard, fetchWithTimeout, setSecurity, requireEnv, failJson } from "./_lib/proxy.js";
 
 const VWORLD_NED = "https://api.vworld.kr/ned/wfs/getBldgisSpceWFS";
@@ -19,12 +24,12 @@ const pnuRe = /^\d{19}$/;
 const SIGUNGU_OLD = "29110";
 const SIGUNGU_VW  = "12210";
 
-async function fetchBld(pnu, key) {
+async function fetchBldAll(pnu, key) {
   const params = new URLSearchParams({
     key, domain: DOMAIN,
     SERVICE: "WFS", VERSION: "1.1.0", REQUEST: "GetFeature",
     TYPENAME: "dt_d010", SRSNAME: "EPSG:4326",
-    OUTPUT: "application/json", MAXFEATURES: "5",
+    OUTPUT: "application/json", MAXFEATURES: "50",
     pnu,
   });
   const r = await fetchWithTimeout(`${VWORLD_NED}?${params}`);
@@ -34,8 +39,16 @@ async function fetchBld(pnu, key) {
   catch { return null; }
   const features = data?.features || [];
   if (!features.length) return null;
-  const f = features[0];
-  return { properties: f.properties || {}, geometry: f.geometry || null };
+  return features.map(f => ({ properties: f.properties || {}, geometry: f.geometry || null }));
+}
+
+// 건물 목록 → 대표 속성 1건 선택 (본관 우선).
+// 건물명이 있으면 그룹 중 면적 최대, 건물명이 전혀 없으면 전체 중 면적 최대.
+function pickMainProps(blds) {
+  const area = p => Number(p.totar) || Number(p.ar) || 0;
+  const named = blds.filter(b => String(b.properties.buld_nm || "").trim());
+  const pool = named.length ? named : blds;
+  return pool.slice().sort((a, b) => area(b.properties) - area(a.properties))[0].properties || {};
 }
 
 export default async function handler(req, res) {
@@ -55,17 +68,23 @@ export default async function handler(req, res) {
       ? [SIGUNGU_VW + pnu.slice(5), pnu]
       : [pnu, pnu.startsWith(SIGUNGU_VW) ? SIGUNGU_OLD + pnu.slice(5) : null].filter(Boolean);
 
-    let got = null;
+    let blds = null;
     for (const cand of candidates) {
-      got = await fetchBld(cand, key);
-      if (got) break;
+      blds = await fetchBldAll(cand, key);
+      if (blds) break;
     }
 
     setSecurity(res);
     res.setHeader("Cache-Control", "s-maxage=86400, stale-while-revalidate=3600");
-    if (!got) return res.status(200).json({ found: false });
+    if (!blds) return res.status(200).json({ found: false });
 
-    return res.status(200).json({ found: true, properties: got.properties, geometry: got.geometry });
+    // 도형이 있는 건물만 윤곽선용으로 수집(속성만 있는 행 제외).
+    const geometries = blds.map(b => b.geometry).filter(Boolean);
+    return res.status(200).json({
+      found: true,
+      properties: pickMainProps(blds),   // 카드 표시용 대표 속성
+      geometries,                        // 전체 건물 윤곽선(지도 오버레이용)
+    });
   } catch (e) {
     return failJson(res, e, "vworld-bld");
   }

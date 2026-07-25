@@ -667,13 +667,13 @@ async function parcelGeomFromPNU(pnu){
   return ok && data.found ? data.geometry : null;
 }
 
-// PNU → GIS건물통합정보 1건 (vworld-bld.js)
+// PNU → GIS건물통합정보 (vworld-bld.js)
 // 연속지적도(필지)가 아닌 '건물 단위' 도형(ag_geom)과 속성(높이·용도·건물명·위반건축물)을 반환.
-// found:false 면 null. 도형·속성은 둘 다 있을 수도, 하나만 있을 수도 있어 객체째 반환.
+// 한 필지에 건물이 여럿일 수 있어 geometries(전체 윤곽선 배열) + properties(대표 속성)로 돌려줌.
 async function bldgisFromPNU(pnu){
   const { ok, data } = await api("vworld-bld", { pnu });
   if(!ok || !data.found) return null;
-  return { geometry: data.geometry || null, properties: data.properties || {} };
+  return { geometries: Array.isArray(data.geometries) ? data.geometries : [], properties: data.properties || {} };
 }
 
 // 단건 상세조회용 GIS prefetch — PNU가 19자리일 때만 조회, 그 외 null.
@@ -1988,9 +1988,10 @@ async function renderMap(panel, dongNm){
   // GIS건물통합정보(WFS) — 건물 윤곽선(ag_geom) 오버레이.
   // 필지(지적도)와 달리 '건물 자체' 도형이라 노랑 필지 위에 빨강으로 덮어그려 건물 위치를 명확히 함.
   // 속성(높이·위반건축물)은 카드 본문에 이미 통합표시됐으므로 여기서는 도형만. D_BLDGIS 재사용(추가 호출 없음).
-  if(D_BLDGIS && D_BLDGIS.geometry){
+  // 한 필지에 건물이 여럿이면(학교 본관/별관 등) 전체 윤곽선을 그린다.
+  if(D_BLDGIS && Array.isArray(D_BLDGIS.geometries) && D_BLDGIS.geometries.length){
     L.featureGroup(
-      [D_BLDGIS.geometry].map(g => L.geoJSON(g, { style:{ color:"#ff4444", weight:2.5, fillColor:"#ff4444", fillOpacity:0.22 } }))
+      D_BLDGIS.geometries.map(g => L.geoJSON(g, { style:{ color:"#ff4444", weight:2.5, fillColor:"#ff4444", fillOpacity:0.22 } }))
     ).addTo(map);
   }
 
