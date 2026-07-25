@@ -1877,7 +1877,7 @@ async function loadLda(panel){
   if(!raw){
     panel.innerHTML = `<div class="d-panel-hint">대지권 불러오는 중…</div>`;
     const pnu = D_CAND ? toPNU(D_CAND) : "";
-    const { ok, status, data, error } = await api("ned-lda", { pnu });
+    const { ok, status, data, error } = await api("vworld-bld", { pnu, op: "lda" });
     if(!ok){ panel.innerHTML = `<div class="d-panel-hint err">${esc(status?`서버 오류 ${status}`:(error||"오류"))}</div>`; return; }
     if(data.error){ panel.innerHTML = `<div class="d-panel-hint err">${esc(data.error)}</div>`; return; }
     raw = data; D_CACHE["lda"] = raw;

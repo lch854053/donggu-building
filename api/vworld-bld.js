@@ -1,4 +1,5 @@
 // /api/vworld-bld?pnu=2911011200101420006   (PNU → GIS건물통합정보 속성)
+// /api/vworld-bld?pnu=...&op=lda            (PNU → 대지권등록정보, NED buldSnList)
 // VWorld NED GIS건물통합정보 WFS(getBldgisSpceWFS) 프록시.
 // 건축물대장에 없는 보조 속성(높이 hg·위반건축물 violt_bild 등)을 카드에 보강 표시하기 위함.
 // 건물 윤곽선(ag_geom) 오버레이는 이익보다 리스크가 커 철회했으므로 도형은 다루지 않는다.
@@ -16,6 +17,7 @@
 import { guard, fetchWithTimeout, setSecurity, requireEnv, failJson } from "./_lib/proxy.js";
 
 const VWORLD_NED = "https://api.vworld.kr/ned/wfs/getBldgisSpceWFS";
+const NED_LDA    = "https://api.vworld.kr/ned/data/buldSnList";
 const DOMAIN = "https://donggu-building.vercel.app";
 const pnuRe = /^\d{19}$/;
 
@@ -41,6 +43,51 @@ async function fetchBldProps(pnu, key) {
   return features.map(f => f.properties || {});
 }
 
+// --- op=lda: NED buldSnList 대지권등록정보 ---
+// 주의: 조회 0건은 '대지권 없음'이 아니라 '미등록'일 수 있다(세대별 등기 기반).
+function mapLdaItem(it) {
+  const clean = v => { const s = String(v ?? "").trim(); return s && !/^0+$/.test(s) ? s : ""; };
+  return {
+    dong:  clean(it.buldDongNm),
+    floor: clean(it.buldFloorNm),
+    ho:    clean(it.buldHoNm),
+    rate:  String(it.ldaQotaRate || "").trim(),
+    bldNm: String(it.buldNm || "").trim(),
+    regstrSe: String(it.regstrSeCodeNm || "").trim(),   // 토지대장/걸물등기부 등
+    closed: String(it.clsSeCode || "") !== "0",          // 0=현재, 그 외 말소
+    baseDate: String(it.lastUpdtDt || "").trim(),
+  };
+}
+
+async function handleLda(pnu, res, key) {
+  if (pnu.startsWith(SIGUNGU_VW)) pnu = SIGUNGU_OLD + pnu.slice(5);
+  try {
+    const params = new URLSearchParams({
+      key, domain: DOMAIN, pnu, format: "json", numOfRows: "1000", pageNo: "1",
+    });
+    const r = await fetchWithTimeout(`${NED_LDA}?${params}`);
+    if (!r.ok) throw new Error(`upstream ${r.status}`);
+    const data = await r.json();
+
+    setSecurity(res);
+    res.setHeader("Cache-Control", "s-maxage=86400, stale-while-revalidate=3600");
+
+    const L = data?.ldaregVOList;
+    if (!L) return res.status(200).json({ found: false, total: 0, items: [] });
+
+    const raw = L.ldaregVOList;
+    const list = Array.isArray(raw) ? raw : raw ? [raw] : [];
+    const items = list.map(mapLdaItem);
+    return res.status(200).json({
+      found: items.length > 0,
+      total: Number(L.totalCount || items.length),
+      items,
+    });
+  } catch (e) {
+    return failJson(res, e, "vworld-bld:lda");
+  }
+}
+
 // 건물 속성 목록 → 대표 1건 선택 (본관 우선).
 // 건물명(buld_nm)이 있으면 그중 면적 최대, 건물명이 전혀 없으면 전체 중 면적 최대.
 function pickMainProps(propsList) {
@@ -59,6 +106,9 @@ export default async function handler(req, res) {
 
   const key = requireEnv(res, "VWORLD_KEY");
   if (!key) return;
+
+  // op=lda: 대지권등록정보 (buldSnList). 이 API는 구 코드(29110)만 인식.
+  if ((req.query.op || "") === "lda") return handleLda(pnu, res, key);
 
   try {
     // 구코드(29110)면 신규(12210)로 정규화하여 먼저 시도, 비어있으면 원본 PNU로 재시도.
