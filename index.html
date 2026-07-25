@@ -673,7 +673,7 @@ async function parcelGeomFromPNU(pnu){
 async function bldgisFromPNU(pnu){
   const { ok, data } = await api("vworld-bld", { pnu });
   if(!ok || !data.found) return null;
-  return { properties: data.properties || {} };
+  return { properties: data.properties || {}, violtAny: data.violtAny === true };
 }
 
 // 단건 상세조회용 GIS prefetch — PNU가 19자리일 때만 조회, 그 외 null.
@@ -1663,14 +1663,24 @@ function cardHTML(t, kind){
   const _gp = (D_BLDGIS && D_BLDGIS.properties) ? D_BLDGIS.properties : {};
   const _hg = (()=>{ const n=Number(_gp.hg); return Number.isFinite(n) && n>0 ? n : null; })();
   const _viol = (()=>{ const s=String(_gp.violt_bild||"").trim(); return s ? s : null; })();
+  // 기준일(last_updt_dt) — "2026-07-09Z" 형태. 위반/정상 판정의 행정 반영 시차를
+  // 사용자가 감안할 수 있도록 배지 옆에 표기한다.
+  const _baseDate = (()=>{ const m=/^(\d{4}-\d{2}-\d{2})/.exec(String(_gp.last_updt_dt||"")); return m ? m[1] : null; })();
   const heightCell = () => _hg!=null
     ? `<div class="k">건물높이 <span class="atch sub">GIS</span></div><div class="v">${fmt(_hg)} m</div>`
     : "";
-  const violCell = () => _viol
-    ? `<div class="k">위반건축물 <span class="atch sub">GIS</span></div><div class="v">${
-        _viol==="Y" ? '<span class="badge err">위반</span>' : '<span class="badge ok">정상</span>'
-      }</div>`
-    : "";
+  // 3분기: Y=위반 / N=정상 / 값없음=정보없음(정상 오표기 방지).
+  // 대표 건축물이 N이어도 필지 내 다른 건축물이 위반이면 위반으로 표시(violtAny).
+  const violBadge = () => {
+    if (_viol === "Y" || D_BLDGIS?.violtAny)
+      return '<span class="badge err">위반</span>';
+    if (_viol === "N")
+      return '<span class="badge ok">정상</span>';
+    return '<span class="badge mute">정보없음</span>';
+  };
+  const violCell = () => `<div class="k">위반건축물 <span class="atch sub">GIS</span></div><div class="v">${
+      violBadge()
+    }${_baseDate ? ` <span class="age">${_baseDate} 기준 · 시정 반영 시차 있음</span>` : ""}</div>`;
   return `
   <div class="card d-card">
     <div class="card-head">

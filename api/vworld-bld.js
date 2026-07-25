@@ -76,7 +76,10 @@ export default async function handler(req, res) {
     res.setHeader("Cache-Control", "s-maxage=86400, stale-while-revalidate=3600");
     if (!propsList) return res.status(200).json({ found: false });
 
-    return res.status(200).json({ found: true, properties: pickMainProps(propsList) });
+    // 대표 건축물이 정상이어도 같은 필지 내 다른 건축물이 위반일 수 있어
+    // 필지 전체 기준 위반 여부(violtAny)도 함께 반환한다.
+    const violtAny = propsList.some(p => String(p.violt_bild || "").trim() === "Y");
+    return res.status(200).json({ found: true, properties: pickMainProps(propsList), violtAny });
   } catch (e) {
     return failJson(res, e, "vworld-bld");
   }
