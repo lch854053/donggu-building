@@ -107,6 +107,8 @@ async function fetchAptIdComplexes() {
 function isNameless(c) {
   const nm = String(c.complexNm || "").trim();
   if (!nm) return true;
+  // 짧은 지역명+괄호 지번 형태(동명(166-1))도 무이름 취급
+  if (/^[가-힣]{1,3}\(\d{2,4}(?:-\d{1,4})?\)$/.test(nm)) return true;
   // 종류명("다세대" 등)이 단지명으로 들어간 경우
   return ["아파트", "연립", "다세대", "오피스텔", "도시형생활주택"].includes(nm);
 }

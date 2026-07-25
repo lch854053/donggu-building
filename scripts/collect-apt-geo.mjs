@@ -28,6 +28,14 @@ const pnuForVWorld = (pnu) => pnu.startsWith("29110") ? "12210" + pnu.slice(5) :
 // PNU별 수동 geometry 오버라이드 — 폴리곤 미반영/부정확 단지 중 위치/모양/표시주소를
 // 수동 보정한 경우. VWorld가 제공하는 좌표가 실제 대지와 어긋날 때 여기서 보정하면
 // 주간 자동 갱신이 덮어써도 보정값이 유지됨.
+// PNU별 수동 단지명 오버라이드 — 소스 데이터의 명칭 오기를 대장/대지권 기준으로 정정.
+// CI 재생성 시에도 유지되도록 코드로 관리한다.
+const NAME_OVERRIDES = {
+  // 동명동 154-93(동명로20번길 33): odcloud는 "동명아파트"로 등재돼 있으나
+  // 건축물대장·대지권등록정보 모두 "동명맨션". (동명아파트는 166-1의 명칭으로 추정 — 명칭 뒤바뀜)
+  "2911010800101540093": "동명맨션",
+};
+
 const POINT_OVERRIDES = {
   // 교대역 모아엘가 그랑데(계림동 산125): 신축(2026.05)이라 VWorld 연속지적도에
   // 대지 폴리곤이 없음 → 실제 단지 부지 모양으로 직접 지정 (WGS84, 시계방향, 약 3.67ha).
@@ -112,6 +120,7 @@ function isNamelessNm(nm) {
   const s = String(nm || "").trim();
   if (!s) return true;
   if (/^\(.*\)$/.test(s)) return true;   // "(426-24)" — 대장상 사실상 무이름
+  if (/^[가-힣]{1,3}\(\d{2,4}(?:-\d{1,4})?\)$/.test(s)) return true;   // "동명(166-1)" — 지역명+지번
   return LDA_GENERIC.has(s);
 }
 
@@ -504,6 +513,15 @@ async function main() {
   const srcStat = {};
   for (const c of complexes) srcStat[c.source] = (srcStat[c.source] || 0) + 1;
   console.log("  소스별:", JSON.stringify(srcStat));
+
+  // ── 단지명 수동 오버라이드 (소스 명칭 오기 정정)
+  for (const c of complexes) {
+    const ov = NAME_OVERRIDES[String(c.pnu || "")];
+    if (ov && c.complexNm !== ov) {
+      console.log(`  [이름 오버라이드] ${c.complexNm} → ${ov}`);
+      c.complexNm = ov;
+    }
+  }
 
   // ── 단지명 LDA 폴(fallback): 무이름 단지에 대지권등록정보의 고유 건물명 적용
   const nameless = complexes.filter(c => isNamelessNm(c.complexNm) && pnuRe.test(String(c.pnu || "")));
