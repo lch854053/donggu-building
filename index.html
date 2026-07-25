@@ -667,6 +667,15 @@ async function parcelGeomFromPNU(pnu){
   return ok && data.found ? data.geometry : null;
 }
 
+// PNU → GIS건물통합정보 1건 (vworld-bld.js)
+// 연속지적도(필지)가 아닌 '건물 단위' 도형(ag_geom)과 속성(높이·용도·건물명·위반건축물)을 반환.
+// found:false 면 null. 도형·속성은 둘 다 있을 수도, 하나만 있을 수도 있어 객체째 반환.
+async function bldgisFromPNU(pnu){
+  const { ok, data } = await api("vworld-bld", { pnu });
+  if(!ok || !data.found) return null;
+  return { geometry: data.geometry || null, properties: data.properties || {} };
+}
+
 // 주소 → (좌표 → PNU) → 건축HUB 파라미터  [juso 실패 시 폴백 경로]
 // VWorld(연속지적도)는 시군구코드로 "12210"(전남광주통합특별시 동구)을 주지만,
 // 건축HUB(국토부)는 오직 구 코드 "29110"만 인식한다. 두 코드는 같은 동구이므로
@@ -1904,7 +1913,7 @@ async function renderMap(panel, dongNm){
   let pt = addrRoad ? await geocodeAddr(addrRoad) : null;
   if(!pt && addrParcel && addrParcel !== addrRoad) pt = await geocodeAddr(addrParcel);
   if(!pt){ panel.innerHTML = '<div class="d-empty">좌표를 찾지 못해 지도를 표시할 수 없습니다</div>'; return; }
-  panel.innerHTML = `<div id="dMap" class="d-map"></div><div class="d-map-cap">항공영상·필지경계: VWorld 연속지적도 기준</div>`;
+  panel.innerHTML = `<div id="dMap" class="d-map"></div><div class="d-map-cap">필지경계: VWorld 연속지적도 / 건물윤곽·속성: GIS건물통합정보(WFS)</div><div id="dBldPanel"></div>`;
   if(D_MAP){ try{ D_MAP.remove(); }catch(e){} D_MAP=null; }
   const blank = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
   const map = L.map("dMap", { zoomControl:true, attributionControl:false });
@@ -1948,8 +1957,61 @@ async function renderMap(panel, dongNm){
     ).addTo(map);
     try{ map.fitBounds(group.getBounds(), { padding:[24,24], maxZoom:19 }); }catch(e){}
   }
-  
+
+  // GIS건물통합정보(WFS) — 건물 윤곽선(ag_geom) + 속성 오버레이.
+  // 필지(지적도)와 달리 '건물 자체' 도형이라 노랑 필지 위에 빨강으로 덮어그려 건물 위치를 명확히 함.
+  // WFS는 건물 단위라 대표지번 1건 조회면 충분. 실패(0건)해도 필지만 표시된 채 지도는 유지(Graceful).
+  if(D_CAND){
+    const pnu = toPNU(D_CAND);
+    if(/^\d{19}$/.test(pnu)){
+      const bld = await bldgisFromPNU(pnu);
+      if(bld){
+        const bldGeoms = bld.geometry ? [bld.geometry] : [];
+        if(bldGeoms.length){
+          L.featureGroup(
+            bldGeoms.map(g => L.geoJSON(g, { style:{ color:"#ff4444", weight:2.5, fillColor:"#ff4444", fillOpacity:0.22 } }))
+          ).addTo(map);
+        }
+        renderBldPanel(bld.properties);
+      }else{
+        const bp = document.getElementById("dBldPanel");
+        if(bp) bp.innerHTML = `<div class="d-map-cap">GIS건물통합정보: 해당 지번에 건물 도형이 없습니다 (나대지·공지 등)</div>`;
+      }
+    }
+  }
+
   setTimeout(()=>{ try{ map.invalidateSize(); }catch(e){} }, 120);
+}
+
+// GIS건물통합정보 속성 패널 — 건축물대장에 없는 보조값(건물명·높이·위반건축물·데이터기준일)을 표시.
+// 메인 정보는 건축물대장(카드 본문) 기준이고, 여기는 GIS 보조값만. 충돌 시 대장 우선.
+function renderBldPanel(p){
+  const panel = document.getElementById("dBldPanel");
+  if(!panel) return;
+  const v = k => { const x = p[k]; return (x===null||x===undefined||String(x).trim()==="") ? null : String(x); };
+  const num = k => { const x = Number(p[k]); return Number.isFinite(x) && x>0 ? x : null; };
+  const nm   = v("buld_nm");
+  const hg   = num("hg");
+  const viol = v("violt_bild");   // "Y" / "N"
+  const upd  = (v("last_updt_dt")||"").replace(/Z$/,"");
+  if(!nm && !hg && !viol && !upd){
+    panel.innerHTML = `<div class="d-map-cap">GIS건물통합정보: 보조 속성이 없습니다</div>`;
+    return;
+  }
+  const row = (label, val) => val!=null
+    ? `<div class="d-kv"><div class="k">${esc(label)}</div><div class="v">${esc(val)}</div></div>`
+    : "";
+  const violBadge = viol==="Y"
+    ? `<span class="badge err">위반건축물</span>`
+    : (viol==="N" ? `<span class="badge ok">정상</span>` : "");
+  panel.innerHTML = `
+    <div class="d-sec-title">GIS건물통합정보 <span class="atch sub">보조 · 참고용</span></div>
+    <div class="d-kv">
+      ${row("건물명", nm)}
+      ${hg!=null ? row("높이", hg+" m") : ""}
+      ${viol ? `<div class="k">위반건축물</div><div class="v">${violBadge}</div>` : ""}
+      ${row("데이터기준일자", upd)}
+    </div>`;
 }
 
 function clearDetail(){

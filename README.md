@@ -137,6 +137,32 @@ GitHub Actions(`update-kapt.yml`)가 매주 일요일 K-APT 갱신 후 자동 �
 - `transform.js` — `archRowToBuilding`/`pickArchMain` 순수 변환 함수
 - `api/archpms.js` — 건축인허가 프록시 엔드포인트
 
+## GIS건물통합정보(WFS) — 상세카드 지도 강화
+
+건축물 상세카드의 **지도 탭**은 기존에 필지(연속지적도) 경계만 그렸습니다. 여기에 V-World **GIS건물통합정보 WFS**(`getBldgisSpceWFS`, typename `dt_d010`)를 더해 **건물 자체 윤곽선(`ag_geom`)**을 빨강 폴리곤으로 덮어그리고, 건축물대장에 없는 **보조 속성**을 지도 아래 패널에 표시합니다.
+
+| 구분 | 소스 | 표시 |
+|---|---|---|
+| 필지 경계 | VWorld 연속지적도(`LP_PA_CBND_BUBUN`) | 노랑 폴리곤 |
+| 건물 윤곽 | GIS건물통합정보 WFS(`ag_geom`) | 빨강 폴리곤 |
+
+지도 아래 패널의 GIS 보조 속성(건축물대장에 없는 값):
+
+- 건물명(`buld_nm`), 높이(`hg`), 위반건축물여부(`violt_bild`), 데이터기준일자(`last_updt_dt`)
+
+표시 규칙:
+
+- **건축물대장 우선**: 메인 정보(규모·용도·면적·층수 등)는 카드 본문의 대장 값을 그대로 유지
+- **GIS값 보조**: 대장에 없는 건물명·높이·위반여부만 지도 아래에 '보조 · 참고용'으로 표시
+- 해당 지번에 건물 도형이 없으면(나대지·공지 등) 필지만 표시되고 지도는 정상 동작(Graceful)
+
+> 참고: WFS는 `VERSION=1.1.0`·`OUTPUT=application/json`·`domain` 파라미터가 필수이며 GeoJSON FeatureCollection으로 응답합니다. 시군구코드는 구(29110)/신규(12210) 양쪽을 수용하지만 응답 pnu는 항상 12210로 정규화됩니다. 기존 `VWORLD_KEY`를 그대로 재사용합니다.
+
+관련 파일:
+
+- `api/vworld-bld.js` — GIS건물통합정보 WFS 프록시(PNU → 윤곽선+속성 1건)
+- `index.html` — `bldgisFromPNU` 헬퍼 + `renderMap`/`renderBldPanel`의 건물 오버레이·속성 패널
+
 ## 로컬 실행
 
 Vercel CLI가 설치되어 있어야 합니다.
