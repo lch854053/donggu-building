@@ -53,7 +53,7 @@ function mapLdaItem(it) {
     ho:    clean(it.buldHoNm),
     rate:  String(it.ldaQotaRate || "").trim(),
     bldNm: String(it.buldNm || "").trim(),
-    regstrSe: String(it.regstrSeCodeNm || "").trim(),   // 토지대장/걸물등기부 등
+    regstrSe: String(it.regstrSeCodeNm || "").trim(),   // 토지대장/건물등기부 등
     closed: String(it.clsSeCode || "") !== "0",          // 0=현재, 그 외 말소
     baseDate: String(it.lastUpdtDt || "").trim(),
   };

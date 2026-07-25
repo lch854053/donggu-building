@@ -101,6 +101,44 @@ async function loadJson(p) {
   catch { return []; }
 }
 
+// ── 단지명 LDA 폴(fallback) 보조 ──────────────────────────────
+// 건축물대장 bldNm이 비어있거나 "(426-24)"·종류명("다세대")뿐인 단지에
+// 대지권등록정보(NED buldSnList)의 고유 건물명을 적용하기 위한 판별/조회.
+const LDA_GENERIC = new Set(["아파트","연립","연립주택","다세대","다세대주택","공동주택",
+  "오피스텔","도시형생활주택","주상복합","주상복합건물","단독주택","다가구주택","근린생활시설",
+  "상가","점포","주건축물","본건","별관","부속건물","창고","사무실","관리실","공장","주차장","컨테이너"]);
+
+function isNamelessNm(nm) {
+  const s = String(nm || "").trim();
+  if (!s) return true;
+  if (/^\(.*\)$/.test(s)) return true;   // "(426-24)" — 대장상 사실상 무이름
+  return LDA_GENERIC.has(s);
+}
+
+function ldaProperName(items) {
+  const names = [...new Set(items.map(it => String(it.buldNm || "").trim()).filter(Boolean))]
+    .map(n => n.replace(/\s*\([^)]*\)\s*$/, "").trim())
+    .filter(n => n && !LDA_GENERIC.has(n));
+  return names[0] || "";
+}
+
+// PNU → 대지권등록정보 속 고유 건물명. 없으면 "". 이 API는 구 코드(29110)만 인식.
+async function ldaNameByPnu(pnu) {
+  const params = new URLSearchParams({
+    key: VWORLD_KEY, domain: DOMAIN,
+    pnu: pnu.startsWith("12210") ? "29110" + pnu.slice(5) : pnu,
+    format: "json", numOfRows: "1000", pageNo: "1",
+  });
+  const r = await fetchWithTimeout(`https://api.vworld.kr/ned/data/buldSnList?${params}`, { timeout: 10000 });
+  if (!r.ok) return "";
+  const data = await r.json();
+  const L = data?.ldaregVOList;
+  const raw = L?.ldaregVOList;
+  const items = (Array.isArray(raw) ? raw : raw ? [raw] : [])
+    .filter(it => String(it.clsSeCode || "") === "0");   // 말소 제외
+  return ldaProperName(items);
+}
+
 // PNU → VWorld 연속지적도 필지 폴리곤. 없으면 null
 // attrFilter '=' 연산자는 URLSearchParams 인코딩 문제로 동작하지 않아 LIKE 사용 (PNU 19자리 고정=정확매칭)
 async function parcelGeometryByPNU(pnu) {
@@ -466,6 +504,15 @@ async function main() {
   const srcStat = {};
   for (const c of complexes) srcStat[c.source] = (srcStat[c.source] || 0) + 1;
   console.log("  소스별:", JSON.stringify(srcStat));
+
+  // ── 단지명 LDA 폴(fallback): 무이름 단지에 대지권등록정보의 고유 건물명 적용
+  const nameless = complexes.filter(c => isNamelessNm(c.complexNm) && pnuRe.test(String(c.pnu || "")));
+  let ldaFixed = 0;
+  await runPool(nameless, async (c) => {
+    const nm = await ldaNameByPnu(String(c.pnu)).catch(() => "");
+    if (nm) { c.complexNm = nm; ldaFixed++; }
+  }, CONCURRENCY);
+  if (nameless.length) console.log(`  [LDA 이름 폴(fallback)] ${nameless.length}건 중 ${ldaFixed}건 보강`);
 
   console.log("VWorld 연속지적도 폴리곤 수집 중...");
   const pnus = complexes.map(c => c.pnu);

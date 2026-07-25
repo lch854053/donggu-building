@@ -516,3 +516,19 @@ test("matchCat: 공백값은 '기타'에서 제외 (금남로 193-19 회귀)", (
   // 공백값은 sel이 비어있을 때(전체)는 여전히 통과 — 노출 자체를 막지는 않음
   assert.equal(f.matchCat(" ", [], PURPS_OPTS), true);
 });
+
+/* ============================================================
+   isGenericBldNm — 대지권 걸물명의 고유명 여부
+   ============================================================ */
+test("isGenericBldNm: 종류명·괄호설명만 있는 값은 generic", () => {
+  for (const nm of ["다세대주택", "공동주택", "공동주택(다세대주택)", "아파트",
+                    "오피스텔", "연립주택", "단독주택", "상가", "점포", "주건축물",
+                    "", "  ", null, undefined])
+    assert.equal(f.isGenericBldNm(nm), true, nm);
+});
+
+test("isGenericBldNm: 고유명은 generic이 아님", () => {
+  for (const nm of ["산수동다세대주택", "영무파라드주상복합", "학동더브이레브리티",
+                    "해피빌라", "대창빌라"])
+    assert.equal(f.isGenericBldNm(nm), false, nm);
+});

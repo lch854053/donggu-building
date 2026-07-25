@@ -683,6 +683,13 @@ async function loadBldgis(pnu){
   return await bldgisFromPNU(pnu);
 }
 
+// 단건 상세조회용 대지권 prefetch — vworld-bld?op=lda. 실패/0건이면 null.
+async function loadLdaData(pnu){
+  if(!/^\d{19}$/.test(pnu||"")) return null;
+  const { ok, data } = await api("vworld-bld", { pnu, op: "lda" });
+  return ok && data.found ? data : null;
+}
+
 // 주소 → (좌표 → PNU) → 건축HUB 파라미터  [juso 실패 시 폴백 경로]
 // VWorld(연속지적도)는 시군구코드로 "12210"(전남광주통합특별시 동구)을 주지만,
 // 건축HUB(국토부)는 오직 구 코드 "29110"만 인식한다. 두 코드는 같은 동구이므로
@@ -1485,7 +1492,8 @@ let D_SELDONG = null;  // 선택 동 dongNm
 const D_CACHE = {};    // 필지 단위 부가정보 캐시 key → raw items
 let D_DONGS = [];
 let D_MAP   = null;    // Leaflet 지도 인스턴스
-let D_BLDGIS = null;   // GIS건물통합정보(WFS) 속성 — 대표지번 1건 캐시. 위반건축물/높이/건물명 보조값.
+let D_BLDGIS = null;
+let D_LDA = null;      // 대지권등록정보(NED buldSnList) — 대표지번 1건 캐시. 등록 호실 수/건물명 폴(fallback)/대지권 서브탭 공용.   // GIS건물통합정보(WFS) 속성 — 대표지번 1건 캐시. 위반건축물/높이/건물명 보조값.
 
 const D_OPS = {
   flr:  { op:"getBrFlrOulnInfo", name:"층별개요" },
@@ -1608,6 +1616,8 @@ async function runDetail(){
     // 건축물대장에 없는 값이라 카드 본문 보강에 쓴다. 다동도 지번 공통이라 1회로 충분.
     // 실패(0건/에러)해도 카드는 대장만으로 정상 렌더링(아래 ?. 안전망).
     D_BLDGIS = await loadBldgis(toPNU(usedParams)).catch(()=>null);
+    // 대지권(NED buldSnList) — 등록 호실 수·건물명 폴(fallback)·서브탭이 공용으로 쓴다.
+    D_LDA = await loadLdaData(toPNU(usedParams)).catch(()=>null);
     renderDetail(wantDong);
   }catch(e){
     dStatus(`<span class="badge err">${esc(String(e?.message||e))}</span>`);
@@ -1651,7 +1661,14 @@ function cardHTML(t, kind){
   const m2 = v => v==null ? "-" : fmt(v)+" ㎡";
   const pc = v => v==null ? "-" : fmt(v)+"%";
   const addr = b.newPlatPlc!=="-" ? b.newPlatPlc : b.platPlc;
-  const title = bldLabel(t);
+  // 대지권(LDA) 보조값 — 등록 호실 수와 건물명 폴(fallback)에 사용. 말소 건 제외.
+  const _ldaItems = (D_LDA && Array.isArray(D_LDA.items)) ? D_LDA.items.filter(x=>!x.closed) : [];
+  // 대장에 동명·건물명이 모두 없으면 대지권 고유명(generic 종류명 제외)으로 대체 표시.
+  const _noName = !String(t.dongNm||"").trim() && !stripParens(String(t.bldNm||"").trim());
+  const _ldaName = (()=>{ if(!_noName) return null;
+    const nm=[...new Set(_ldaItems.map(x=>x.bldNm).filter(n=>n && !isGenericBldNm(n)))];
+    return nm[0] || null; })();
+  const title = _ldaName || bldLabel(t);
   // 행정동 — 대표지번(D_CAND) 기준. 다동 건물도 지번은 공통이므로 카드당 1회 표시.
   const hdong = D_CAND ? hdongOf(D_CAND, HJ) : "";
   const hdongCell = hdong ? `<div class="d-addr sub">행정동 <b>${esc(hdong)}</b></div>` : "";
@@ -1702,6 +1719,7 @@ function cardHTML(t, kind){
         <div class="k">건폐율 / 용적률</div><div class="v">${pc(b.bcRat)} / ${pc(b.vlRat)}</div>
         <div class="k">층수</div><div class="v">지상 ${fmt(b.grndFlr)} · 지하 ${fmt(b.ugrndFlr)}</div>
         ${heightCell()}
+        ${_ldaItems.length ? `<div class="k">등록 호실 <span class="atch sub">대지권</span></div><div class="v">${fmt(_ldaItems.length)} 호실</div>` : ""}
         <div class="k">사용승인일</div><div class="v">${useAprCell(b.useAprDay)}</div>
       </div>
 
@@ -1870,10 +1888,10 @@ function renderTmpHdcr({tmp, hdcr}){
 }
   
 /* ---- 대지권 (NED buldSnList = 토지대장 대지권등록정보) ---- */
-// 대지권등록정보(NED buldSnList) — 집합걸물 호실별 대지권비율.
+// 대지권등록정보(NED buldSnList) — 집합건물 호실별 대지권비율.
 // 세대별 등기 기반이라 미등록 호실은 조회되지 않으므로, 0건 = '대지권 없음'이 아님을 안내.
 async function loadLda(panel){
-  let raw = D_CACHE["lda"];
+  let raw = D_LDA || D_CACHE["lda"];
   if(!raw){
     panel.innerHTML = `<div class="d-panel-hint">대지권 불러오는 중…</div>`;
     const pnu = D_CAND ? toPNU(D_CAND) : "";

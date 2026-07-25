@@ -30,6 +30,7 @@ export function loadTransform() {
       matchCat, leadNum, dongMatch, dedupeBy, bldLabel, gbLabel,
       roadMatches, geomAreaM2, geomContainsPoint,
       stripJibunLandSuffix, shortAddr, formatJibun, pickMainTitle,
+      isGenericBldNm,
     };
   `);
   return wrapper();

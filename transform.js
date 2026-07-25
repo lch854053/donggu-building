@@ -416,6 +416,18 @@ function geomAreaM2(geom){
   return total;
 }
 
+// 대지권등록정보(buldSnList) 등의 건물명이 고유명인지 판별.
+// "다세대주택"처럼 건물 종류명만 적힌 값(또는 괄호 설명만 있는 값)은
+// 이름 폴(fallback)으로 쓰면 오히려 혼란을 주므로 generic으로 걸러낸다.
+function isGenericBldNm(nm){
+  const s = stripParens(String(nm||"").trim());
+  if(!s) return true;
+  return ["아파트","연립","연립주택","다세대","다세대주택","공동주택","오피스텔",
+    "도시형생활주택","주상복합","주상복합건물","단독주택","다가구주택",
+    "근린생활시설","공동주택(다세대)","상가","점포","주건축물","본건","별관",
+    "부속건물","창고","사무실","관리실","공장","주차장","컨테이너"].includes(s);
+}
+
 // GeoJSON 폴리곤 안에 점(lon,lat)이 포함되는가 (Ray-casting, 외곽 링 기준).
 // Polygon/MultiPolygon 모두 처리. bbox contains와 달리 실제 모양을 따져 거대 산림
 // 필지가 좌표를 bbox로만 덮을 때 오탐되는 것을 방지.
