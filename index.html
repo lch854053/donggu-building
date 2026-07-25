@@ -1718,6 +1718,7 @@ function cardHTML(t, kind){
         <button class="d-subtab" data-tab="jiji">지역지구</button>
         <button class="d-subtab" data-tab="hist">이력</button>
         <button class="d-subtab" data-tab="tmphdcr">가설·공작물</button>
+        <button class="d-subtab" data-tab="lda">대지권</button>
         <button class="d-subtab" data-tab="map">지도</button>
       </div>
       <div class="d-panel" id="dPanel"><div class="d-panel-hint">위 항목을 누르면 해당 정보를 불러옵니다</div></div>
@@ -1740,6 +1741,7 @@ async function loadSubtab(key, dongNm){
   if(key==="map"){ await renderMap(panel, dongNm); return; }   // 지도는 별도 처리
   if(key==="hist"){ await loadHistory(panel); return; }
   if(key==="tmphdcr"){ await loadTmpHdcr(panel); return; }     // 가설건축물·공작물(ArchPms 전용 op)
+  if(key==="lda"){ await loadLda(panel); return; }             // 대지권등록정보(NED buldSnList)
   if(key==="park"){ panel.innerHTML = renderParking(dongNm); return; }  // 주차: 표제부(D_TITLES) 재사용, 추가 호출 없음
   const meta = D_OPS[key]; if(!meta) return;
   let raw = D_CACHE[key];
@@ -1867,6 +1869,42 @@ function renderTmpHdcr({tmp, hdcr}){
   return html;
 }
   
+/* ---- 대지권 (NED buldSnList = 토지대장 대지권등록정보) ---- */
+// 대지권등록정보(NED buldSnList) — 집합걸물 호실별 대지권비율.
+// 세대별 등기 기반이라 미등록 호실은 조회되지 않으므로, 0건 = '대지권 없음'이 아님을 안내.
+async function loadLda(panel){
+  let raw = D_CACHE["lda"];
+  if(!raw){
+    panel.innerHTML = `<div class="d-panel-hint">대지권 불러오는 중…</div>`;
+    const pnu = D_CAND ? toPNU(D_CAND) : "";
+    const { ok, status, data, error } = await api("ned-lda", { pnu });
+    if(!ok){ panel.innerHTML = `<div class="d-panel-hint err">${esc(status?`서버 오류 ${status}`:(error||"오류"))}</div>`; return; }
+    if(data.error){ panel.innerHTML = `<div class="d-panel-hint err">${esc(data.error)}</div>`; return; }
+    raw = data; D_CACHE["lda"] = raw;
+  }
+  panel.innerHTML = renderLda(raw);
+}
+
+function renderLda(d){
+  const items = Array.isArray(d?.items) ? d.items.filter(x=>!x.closed) : [];
+  if(!items.length)
+    return `<div class="d-empty">등록된 대지권 정보가 없습니다</div>
+      <div class="d-panel-hint">집합건물이 아니거나 아직 대지권 등록이 되지 않은 경우입니다. 정확한 권리관계는 등기부등본으로 확인하세요.</div>`;
+  const rows = items.slice().sort((a,b)=>
+    String(a.dong).localeCompare(String(b.dong),"ko",{numeric:true})
+    || (Number(a.floor)||0)-(Number(b.floor)||0)
+    || String(a.ho).localeCompare(String(b.ho),"ko",{numeric:true}));
+  const baseDate = rows.find(r=>r.baseDate)?.baseDate || "";
+  const summary = `<div class="d-panel-hint">등록 호실 ${rows.length}건${baseDate?` · ${esc(baseDate)} 기준`:''} · 미표시 세대는 대지권 미등록일 수 있으니 등기부등본으로 확인하세요.</div>`;
+  return summary + miniTable([
+    { h:"동", f:r=>esc(r.dong||"-") },
+    { h:"층", f:r=>esc(r.floor||"-"), num:true },
+    { h:"호", f:r=>esc(r.ho||"-"), num:true },
+    { h:"대지권비율", f:r=>esc(r.rate||"-") },
+    { h:"건물명", f:r=>esc(r.bldNm||"-") },
+  ], rows);
+}
+
 /* ---- 이력 (건축인허가 기본개요 = 건축허가→착공→사용승인 생애주기) ---- */
 // 별도 프록시 /api/archpms 사용. 필지 단위로 D_CACHE["hist"]에 캐시(검색마다 초기화).
 async function loadHistory(panel){
