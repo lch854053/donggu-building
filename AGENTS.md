@@ -19,6 +19,7 @@ cp .env.example .env
 필수: `BLD_SERVICE_KEY`, `APT_SERVICE_KEY`, `KAKAO_REST_API_KEY`
 폴백: `ARCH_SERVICE_KEY`, `HSPMS_SERVICE_KEY`가 없으면 `BLD_SERVICE_KEY`를 사용
 빈집/오피스텔: `ODCLOUD_SERVICE_KEY`, `JUSO_CONFM_KEY`, `VWORLD_KEY`
+통계: `KOSIS_API_KEY` (update-stats 스크립트 전용)
 
 > scripts/*는 `process.env`에서 직접 읽는다. `vercel dev`의 `.env` 로딩은 별도로 확인할 것.
 
@@ -37,6 +38,7 @@ node --test
 npm run update-kapt      # K-apt 단지 기본/상세 정보
 npm run update-odcloud   # 오픈데이터 동구 아파트 (월 1회)
 npm run update-vacant    # 동구 빈집 현황 + 폴리곤 (월 1회)
+npm run update-stats     # KOSIS e-지방지표 동구 통계 (월 1회)
 npm run collect-apt-geo  # VWorld 연속지적도에서 아파트 폴리곤
 npm run update-officetel # 건축인허가 기반 오피스텔 자동 발견
 ```
@@ -52,6 +54,7 @@ npm run update-officetel # 건축인허가 기반 오피스텔 자동 발견
 - `.github/workflows/update-kapt.yml`: 매주 일요일 — K-APT + 폴리곤 + 오피스텔
 - `.github/workflows/update-odcloud.yml`: 매월 1일 — 오픈데이터 아파트 + 폴리곤
 - `.github/workflows/update-vacant.yml`: 매월 1일 — 빈집 데이터 + stale 이슈 생성
+- `.github/workflows/update-stats.yml`: 매월 1일 — KOSIS 동구 통계 (`KOSIS_API_KEY` 시크릿 필요)
 
 ## 아키텍처
 

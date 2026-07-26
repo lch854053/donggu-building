@@ -12,7 +12,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.fullscreen/2.4.0/Control.FullScreen.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.fullscreen/2.4.0/Control.FullScreen.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<link rel="stylesheet" href="styles.css?v=4">
+<link rel="stylesheet" href="styles.css?v=5">
 </head>
 <body>
 <div class="wrap">
@@ -33,6 +33,7 @@
     <button class="tab" id="tab-btn-housing" onclick="switchTab('housing')">공동주택 관리</button>
     <button class="tab" id="tab-btn-demol" onclick="switchTab('demol')">철거멸실대장</button>
     <button class="tab" id="tab-btn-vacant" onclick="switchTab('vacant')">빈집현황</button>
+    <button class="tab" id="tab-btn-stats" onclick="switchTab('stats')">통계</button>
     <button class="tab" id="tab-btn-map" onclick="switchTab('map')">지도</button>
   </div>
 
@@ -471,6 +472,16 @@
       <div id="vPager" class="cpager"></div>
     </div>
   </div><!-- /tab-vacant -->
+
+  <!-- ===== TAB 8: 통계 ===== -->
+  <div id="tab-stats" style="display:none">
+    <div class="card">
+      <div class="card-head"><h2><span class="num-tag">통</span>동구 주요 통계 지표</h2></div>
+      <div class="card-body">
+        <div id="stBody"><div class="d-panel-hint">통계 불러오는 중…</div></div>
+      </div>
+    </div>
+  </div><!-- /tab-stats -->
 
   <!-- ===== TAB 7: 지도 ===== -->
   <div id="tab-map" style="display:none">
@@ -2105,9 +2116,9 @@ document.getElementById("dInput")?.addEventListener("keydown", e=>{
 /* ---- 건축물 조회 하부 탭 상태 ---- */
 let B_SUBTAB = "bulk";
 
-/* ---- 탭 전환 (building / housing / demol / vacant / map) ---- */
+/* ---- 탭 전환 (building / housing / demol / vacant / stats / map) ---- */
 function switchTab(which){
-  const tabs = ["building","housing","demol","vacant","map"];
+  const tabs = ["building","housing","demol","vacant","stats","map"];
   if(!tabs.includes(which)) which="building";
   for(const t of tabs){
     document.getElementById("tab-"+t).style.display = (t===which)?"block":"none";
@@ -2117,6 +2128,7 @@ function switchTab(which){
   if(which==="demol"){ loadHaengjeong(); initDemolFilters(); }
   if(which==="housing") loadHousing();
   if(which==="vacant") initVacantTab();
+  if(which==="stats") initStatsTab();
   if(which==="map") initMapTab();
 }
 
@@ -3970,6 +3982,73 @@ function exportVacantExcel(){
   XLSX.utils.book_append_sheet(wb, ws, "빈집현황");
   const dongLabel = document.getElementById("vResDong").textContent || "전체";
   XLSX.writeFile(wb, `빈집현황_${dongLabel}_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
+
+/* ============================================================
+   통계 탭 (KOSIS e-지방지표 → stats_donggu.json, 월 1회 CI 갱신)
+   - 실시간 API 호출 없음. scripts/update-stats.mjs가 만든 정적 JSON만 읽는다.
+   - 지표별 카드: 최신값 + 연도별 추이(동구) + 최신 시점 광주/전국 비교
+   ============================================================ */
+let ST_DATA = null;   // stats_donggu.json 캐시
+
+async function initStatsTab(){
+  if(ST_DATA) return;
+  const body = document.getElementById("stBody");
+  try{
+    const r = await fetch("/stats_donggu.json");
+    if(!r.ok) throw new Error(`HTTP ${r.status}`);
+    ST_DATA = await r.json();
+    if(!Array.isArray(ST_DATA?.indicators)) throw new Error("형식 오류");
+  }catch(e){
+    console.error("[initStatsTab]", e);
+    body.innerHTML = `<div class="d-empty">통계 데이터를 불러오지 못했습니다</div>`;
+    return;
+  }
+  body.innerHTML = renderStats(ST_DATA);
+}
+
+// 지표값 포맷: 정수는 천단위, 소수는 최대 2자리
+function stFmt(v){
+  if(v === null || v === undefined) return "-";
+  return Number.isInteger(v) ? fmt(v) : fmt(Number(v.toFixed(2)));
+}
+
+function renderStats(d){
+  const gen = String(d.generatedAt||"").slice(0,10);
+  let html = `<div class="d-panel-hint" style="margin-bottom:10px">${esc(d.source||"")} · ${esc(d.region||"")} 기준${gen?` · 생성일 ${esc(gen)}`:""} · 원천 통계의 갱신 주기(연 1회 내외)를 따릅니다</div>`;
+  html += `<div class="st-grid">`;
+  for(const ind of d.indicators){
+    const s = Array.isArray(ind.series) ? ind.series : [];
+    if(!s.length) continue;
+    const last = s[s.length-1];
+    // 연도별 추이 (동구) — 최대값 기준 상대 막대
+    const max = Math.max(...s.map(r=>r.donggu ?? 0), 0) || 1;
+    const bars = s.map(r=>{
+      const w = r.donggu==null ? 0 : Math.max(2, r.donggu/max*100);
+      return `<div class="st-row acc"><span class="st-y">${esc(r.year)}</span><span class="st-bar"><i style="width:${w.toFixed(1)}%"></i></span><span class="st-v">${stFmt(r.donggu)}</span></div>`;
+    }).join("");
+    // 최신 시점 비교 (동구/광주/전국)
+    const cmp = [["동구", last.donggu, true],["광주", last.gwangju, false],["전국", last.nation, false]];
+    const cmax = Math.max(...cmp.map(c=>c[1] ?? 0), 0) || 1;
+    const cmpRows = cmp.map(([nm,v,hl])=>{
+      const w = v==null ? 0 : Math.max(2, v/cmax*100);
+      return `<div class="st-row${hl?" hl":""}"><span class="st-y">${nm}</span><span class="st-bar"><i style="width:${w.toFixed(1)}%"></i></span><span class="st-v">${stFmt(v)}</span></div>`;
+    }).join("");
+    html += `
+    <div class="st-card">
+      <div class="st-head">
+        <div class="st-name">${esc(ind.name)}</div>
+        <div class="st-latest"><b>${stFmt(last.donggu)}</b><span>${esc(ind.unit)}</span><em>${esc(last.year)}년</em></div>
+      </div>
+      <div class="st-sec">연도별 추이 (동구)</div>
+      ${bars}
+      <div class="st-sec">${esc(last.year)}년 광주·전국과 비교</div>
+      ${cmpRows}
+    </div>`;
+  }
+  html += `</div>`;
+  return html;
 }
 
 

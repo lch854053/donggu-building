@@ -1,0 +1,48 @@
+name: Update Donggu Stats
+
+on:
+  schedule:
+    - cron: '0 1 1 * *'  # 매월 1일 01:00 UTC (update-vacant와 시간 분산)
+  workflow_dispatch:      # 수동 실행도 가능
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Update stats data
+        run: npm run update-stats
+        env:
+          KOSIS_API_KEY: ${{ secrets.KOSIS_API_KEY }}
+
+      - name: Validate generated JSON (prevent empty/regressed data)
+        run: |
+          set -e
+          # 지표가 전부 사라지는 회귀 방지 (vacant_geo 회귀 방지와 동일 패턴)
+          ind_count=$(node -e "try{const d=require('./stats_donggu.json');console.log(Array.isArray(d.indicators)?d.indicators.length:-1)}catch{console.log(-1)}")
+          echo "stats_donggu.json 지표 수: $ind_count"
+          if [ "$ind_count" -le 0 ] 2>/dev/null; then
+            echo "::error::stats_donggu.json이 비어 있거나 파싱 실패 ($ind_count). 커밋 중단."
+            exit 1
+          fi
+
+      - name: Commit and push if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if [ -n "$(git status --porcelain)" ]; then
+            git add stats_donggu.json
+            git commit -m "chore: monthly donggu stats update"
+            git push
+          else
+            echo "No changes to commit"
+          fi

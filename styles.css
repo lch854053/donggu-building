@@ -503,3 +503,22 @@
     .map-card{width:calc(100% - 24px);right:12px;left:12px}
   }
 
+
+  /* ===== 통계 탭 ===== */
+  .st-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+  .st-card{border:1px solid var(--line);border-radius:10px;background:var(--card);padding:14px 16px}
+  .st-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:4px}
+  .st-name{font-size:13px;font-weight:700;color:var(--ink)}
+  .st-latest{text-align:right;flex:none}
+  .st-latest b{font-family:var(--mono);font-size:22px;font-weight:600;color:var(--accent)}
+  .st-latest span{font-size:12px;color:var(--ink-soft);margin-left:3px}
+  .st-latest em{display:block;font-style:normal;font-size:11px;color:var(--mute)}
+  .st-sec{font-size:11px;font-weight:600;color:var(--ink-soft);margin:10px 0 4px;border-top:1px solid var(--line);padding-top:8px}
+  .st-row{display:flex;align-items:center;gap:8px;padding:1.5px 0;font-size:12px}
+  .st-row .st-y{flex:none;width:38px;font-family:var(--mono);font-size:11px;color:var(--mute)}
+  .st-bar{flex:1;height:8px;background:var(--paper-2);border-radius:4px;overflow:hidden}
+  .st-bar i{display:block;height:100%;background:#a8bfd0;border-radius:4px}
+  .st-row .st-v{flex:none;width:70px;text-align:right;font-family:var(--mono);font-size:11px;color:var(--ink)}
+  .st-row.hl .st-y{color:var(--accent);font-weight:700}
+  .st-row.acc .st-bar i,
+  .st-row.hl .st-bar i{background:linear-gradient(90deg,var(--accent),#2f86bf)}
