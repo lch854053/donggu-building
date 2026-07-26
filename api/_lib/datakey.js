@@ -7,6 +7,7 @@
 //   - ArchPmsHubService (건축인허가)
 //   - HsPmsHubService   (주택인허가)
 //   - ShtRgstHubService (폐쇄말소대장)
+//   - MtnChkHubService  (건축물유지점검)
 //
 // 따라서 환경변수는 DATA_SERVICE_KEY 하나만 설정하면 충분하다.
 // 기존 개별 키(BLD/ARCH/HSPMS/SHT/APT)를 이미 설정해 둔 배포도 호환되도록,

@@ -1736,6 +1736,7 @@ function cardHTML(t, kind){
         <button class="d-subtab" data-tab="wclf">오수정화시설</button>
         <button class="d-subtab" data-tab="jiji">지역지구</button>
         <button class="d-subtab" data-tab="hist">이력</button>
+        <button class="d-subtab" data-tab="mchk">유지점검</button>
         <button class="d-subtab" data-tab="tmphdcr">가설·공작물</button>
         <button class="d-subtab" data-tab="lda">대지권</button>
         <button class="d-subtab" data-tab="map">지도</button>
@@ -1759,6 +1760,7 @@ async function loadSubtab(key, dongNm){
   const panel = document.getElementById("dPanel");
   if(key==="map"){ await renderMap(panel, dongNm); return; }   // 지도는 별도 처리
   if(key==="hist"){ await loadHistory(panel); return; }
+  if(key==="mchk"){ await loadMtnChk(panel); return; }         // 유지점검 정기점검이력(MtnChkHub)
   if(key==="tmphdcr"){ await loadTmpHdcr(panel); return; }     // 가설건축물·공작물(ArchPms 전용 op)
   if(key==="lda"){ await loadLda(panel); return; }             // 대지권등록정보(NED buldSnList)
   if(key==="park"){ panel.innerHTML = renderParking(dongNm); return; }  // 주차: 표제부(D_TITLES) 재사용, 추가 호출 없음
@@ -1993,7 +1995,39 @@ function renderHistory(items){
     {h:"연면적", num:true, f:r=>histArea(r.totArea)},
   ], rows);
 }
-  
+
+/* ---- 유지점검 (건축HUB 건축물유지점검 = 정기점검이력) ---- */
+// 별도 프록시 없이 /api/building?op=getMaintenanceHistory 사용 (MtnChkHubService).
+// getBr* 와 동일한 필지 파라미터라 fetchOpAll 재사용. 필지 단위로 D_CACHE["mchk"] 캐시.
+async function loadMtnChk(panel){
+  let raw = D_CACHE["mchk"];
+  if(!raw){
+    panel.innerHTML = `<div class="d-panel-hint">유지점검 이력 불러오는 중…</div>`;
+    const res = await fetchOpAll("getMaintenanceHistory", D_CAND);
+    if(res.error){ panel.innerHTML = `<div class="d-panel-hint err">${esc(res.error)}</div>`; return; }
+    raw = res.items; D_CACHE["mchk"] = raw;
+  }
+  panel.innerHTML = renderMtnChk(raw);
+}
+
+function renderMtnChk(items){
+  if(!items.length)
+    return `<div class="d-empty">유지점검 이력이 없습니다</div>
+      <div class="d-panel-hint">정기점검은 연면적·층수 등 일정 규모 이상 건축물이 대상이라 소규모 건축물은 이력이 없을 수 있습니다.</div>`;
+  // 최근 점검 먼저. 동명/건물명이 여러 값이면 구분 열 표시
+  const rows = items.slice().sort((a,b)=>String(b.chkStrtDay||"").localeCompare(String(a.chkStrtDay||"")));
+  const lab = r => String(r.dongNm||"").trim() || String(r.bldNm||"").trim();
+  const multi = new Set(rows.map(lab).filter(Boolean)).size > 1;
+  const cols = [];
+  if(multi) cols.push({h:"동/건물", f:r=>esc(lab(r)||"-")});
+  cols.push(
+    {h:"점검기관", f:r=>esc(String(r.chkCoNm||"").trim()||"-")},
+    {h:"점검시작일", f:r=>histDate(r.chkStrtDay)},
+    {h:"제출일", f:r=>histDate(r.submitDe)},
+  );
+  return `<div class="d-panel-hint">건축물 생애이력 관리시스템 등록 기준 · 정기점검 수행 시 갱신</div>` + miniTable(cols, rows);
+}
+
 /* ---- 지도 (Leaflet + VWorld 항공타일 프록시 + 연속지적도 필지경계) ---- */
 async function renderMap(panel, dongNm){
   panel.innerHTML = `<div class="d-panel-hint">지도 불러오는 중…</div>`;

@@ -61,6 +61,7 @@ npm run update-officetel # 건축인허가 기반 오피스텔 자동 발견
 - `api/*`: Vercel serverless functions
   - `api/_lib/`: 공통 라이브러리 (엔드포인트로 노출되지 않음)
   - `api/_lib/proxy.js`: GET 강제, CORS 출처 검증 (`localhost:3000` 또는 `donggu-building*.vercel.app`)
+- `api/building.js`: 건축물대장 외에 폐쇄말소대장(getSr*)·유지점검(getMaintenanceHistory/getInspectionAgency)을 op 분기로 통합 — Serverless 슬롯 절약
 - `scripts/*`: Node.js 데이터 수집/병합 스크립트 (ESM)
 - `*.json` 루트 파일: 정적 데이터 저장소 (K-APT, 빈집, 폴리곤, 행정동 매핑 등)
 
