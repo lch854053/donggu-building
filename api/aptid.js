@@ -14,10 +14,13 @@ const one = (v) => (Array.isArray(v) ? v[0] : v) ?? "";
 export default async function handler(req, res) {
   if (!guard(req, res)) return;
 
-  // 한국부동산원·K-apt 공통 키. 미설정 시 건축물대장 키로 폴백(동일 키)
-  const serviceKey = process.env.APT_SERVICE_KEY || process.env.BLD_SERVICE_KEY;
+  // odcloud(api.odcloud.kr)는 공공데이터포털(apis.data.go.kr)과 다른 인증 체계라
+  // DATA_SERVICE_KEY 로 동작하지 않는다. ODCLOUD_SERVICE_KEY 가 필요.
+  // resolveDataKey 는 DATA_SERVICE_KEY 로 폴백하지만, odcloud 전용이므로 여기서는
+  // ODCLOUD_SERVICE_KEY 만을 신뢰한다 (폴백 시 인증 오류로 이어진다).
+  const serviceKey = process.env.ODCLOUD_SERVICE_KEY;
   if (!serviceKey)
-    return res.status(500).json({ complexes: [], error: "APT_SERVICE_KEY/BLD_SERVICE_KEY 환경변수 미설정" });
+    return res.status(500).json({ complexes: [], error: "ODCLOUD_SERVICE_KEY 환경변수 미설정 (aptid는 odcloud 전용 키 필요)" });
 
   // 동구 전체 단지 1회 호출 (perPage 크게)
   const params = new URLSearchParams({
