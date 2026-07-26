@@ -5,6 +5,7 @@
 // 기존 _lib 공통모듈만 재사용하며 다른 프록시는 건드리지 않음(순수 추가)
 import { guard, fetchWithTimeout, setSecurity } from "./_lib/proxy.js";
 import { unwrapGov } from "./_lib/govapi.js";
+import { resolveDataKey } from "./_lib/datakey.js";
 
 const BASE = "https://apis.data.go.kr/1613000/HsPmsHubService";
 const FETCH_TIMEOUT_MS = 8000;
@@ -44,11 +45,10 @@ export default async function handler(req, res) {
   if (jiRaw && !numRe.test(jiRaw))
     return res.status(400).json({ items: [], error: "ji 형식 오류" });
 
-  // 주택인허가 서비스 전용 키. 미설정 시 건축물대장 키로 폴백
-  // (동일 키가 두 서비스에 모두 승인돼 있으면 폴백으로 동작)
-  const serviceKey = process.env.HSPMS_SERVICE_KEY || process.env.BLD_SERVICE_KEY;
-  if (!serviceKey)
-    return res.status(500).json({ items: [], error: "HSPMS_SERVICE_KEY 환경변수 미설정" });
+  // 주택인허가 서비스 키: HSPMS → BLD → DATA_SERVICE_KEY 자동 폴백.
+  // 동일 키가 양쪽에 승인돼 있으면 DATA_SERVICE_KEY 하나로 충분하다.
+  const serviceKey = resolveDataKey(res, "HSPMS_SERVICE_KEY", "BLD_SERVICE_KEY");
+  if (!serviceKey) return;
 
   const q = { sigunguCd, bjdongCd, _type: "json", numOfRows: req.query.numOfRows || "100", pageNo: req.query.pageNo || "1" };
   if (VALID_PLATGB.has(platGbCd)) q.platGbCd = platGbCd;
