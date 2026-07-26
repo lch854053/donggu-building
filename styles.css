@@ -522,3 +522,11 @@
   .st-row.hl .st-y{color:var(--accent);font-weight:700}
   .st-row.acc .st-bar i,
   .st-row.hl .st-bar i{background:linear-gradient(90deg,var(--accent),#2f86bf)}
+
+  /* 통계 탭 꺾은선 그래프 + 보조 수치 */
+  .st-line{width:100%;height:auto;display:block;overflow:visible}
+  .st-line polyline{fill:none;stroke:var(--accent);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+  .st-line circle{fill:var(--accent)}
+  .st-line text.pv{font-family:var(--mono);font-size:8.5px;fill:var(--ink-soft);text-anchor:middle}
+  .st-line text.py{font-family:var(--mono);font-size:8px;fill:var(--mute);text-anchor:middle}
+  .st-sub{display:block;font-size:11px;color:var(--mute);font-weight:400}

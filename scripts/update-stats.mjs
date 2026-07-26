@@ -23,29 +23,24 @@ const ROOT = join(__dirname, "..");
 
 const KOSIS_API_KEY = process.env.KOSIS_API_KEY;
 const ENDPOINT = "https://kosis.kr/openapi/Param/statisticsParameterData.do";
-const YEARS = 5;              // 최근 N개 시점
+const YEARS = 10;             // 최근 N개 시점
 const FETCH_TIMEOUT_MS = 20000;
 
 // 지역코드 체계 (표마다 다름 — 위 주석 참고)
-const CODES_A   = { nation: "00",          gwangju: "24",          donggu: "24010" };
-const CODES_HJG = { nation: "15315HJG000", gwangju: "15315HJG005", donggu: "15315HJG005001" };
+const CODES_A = { nation: "00", gwangju: "24", donggu: "24010" };
 
-// 수집 대상 지표. objL2가 있는 표만 objL2 코드 지정.
+// 수집 대상 지표.
+// - subItmId: 비율 지표의 보조 수치 (괄호 표기용, 동구만)
+// - compare:false → 광주/전국 비교 없음 (주택수처럼 규모 지표는 비교 의미 없음)
 const INDICATORS = [
-  { id: "vacant_ratio",   tblId: "DT_1YL202005",   codes: CODES_A,
-    itmId: "T10",           name: "미거주주택(빈집)비율", unit: "%" },
-  { id: "vacant_count",   tblId: "DT_1YL202005",   codes: CODES_A,
-    itmId: "T20",           name: "미거주주택(빈집)수",   unit: "호" },
-  { id: "oldhouse_ratio", tblId: "DT_1YL202004",   codes: CODES_A,
-    itmId: "T10",           name: "노후주택비율(30년 이상)", unit: "%" },
-  { id: "oldhouse_count", tblId: "DT_1YL202004",   codes: CODES_A,
-    itmId: "T20",           name: "노후주택수(30년 이상)", unit: "호" },
-  { id: "houses",         tblId: "INH_1JU1501",    codes: CODES_A,
-    itmId: "T10",           name: "주택수",               unit: "호" },
-  { id: "city_area",      tblId: "DT_1YL21291E",   codes: CODES_HJG,
-    itmId: "16315T2008_0012", name: "도시지역면적", unit: "㎢", scale: 1e-6 },
-  { id: "city_area_pp",   tblId: "DT_1YL20421E",   codes: CODES_HJG,
-    itmId: "T01", objL2: "H004", name: "1인당 도시지역면적", unit: "㎡" },
+  { id: "vacant_ratio",   tblId: "DT_1YL202005", codes: CODES_A, compare: true,
+    itmId: "T10", name: "미거주주택(빈집)비율", unit: "%",
+    subItmId: "T20", subName: "빈집", subUnit: "호" },
+  { id: "oldhouse_ratio", tblId: "DT_1YL202004", codes: CODES_A, compare: true,
+    itmId: "T10", name: "노후주택비율(30년 이상)", unit: "%",
+    subItmId: "T20", subName: "노후주택", subUnit: "호" },
+  { id: "houses",         tblId: "INH_1JU1501",  codes: CODES_A, compare: false,
+    itmId: "T10", name: "주택수", unit: "호" },
 ];
 
 function fetchWithTimeout(url, opts = {}) {
@@ -91,32 +86,38 @@ async function main() {
 
   const indicators = [];
   for (const [tblId, inds] of byTable) {
-    // 표당 1회 호출: 필요한 항목만 itmId에 묶어서
-    const probe = { ...inds[0], itmId: [...new Set(inds.map(i => i.itmId))].join(" ") };
+    // 표당 1회 호출: 필요한 항목(메인+보조)을 itmId에 묶어서
+    const itms = inds.flatMap(i => [i.itmId, i.subItmId].filter(Boolean));
+    const probe = { ...inds[0], itmId: [...new Set(itms)].join(" ") };
     const rows = await fetchKosis(probe);
     const tblNm = rows[0]?.TBL_NM || "";
     const lstChnDe = rows.map(r => r.LST_CHN_DE).filter(Boolean).sort().pop() || "";
 
     for (const ind of inds) {
-      const scale = ind.scale || 1;
-      // year → { donggu, gwangju, nation }
+      // year → { donggu, gwangju, nation, sub(보조 수치 = 동구만) }
       const byYear = new Map();
       for (const r of rows) {
-        if (r.ITM_ID !== ind.itmId) continue;
         const year = String(r.PRD_DE || "");
         const v = num(r.DT);
         if (!year || v === null) continue;
         if (!byYear.has(year)) byYear.set(year, {});
         const slot = byYear.get(year);
-        if (r.C1 === ind.codes.donggu)      slot.donggu  = v * scale;
-        else if (r.C1 === ind.codes.gwangju) slot.gwangju = v * scale;
-        else if (r.C1 === ind.codes.nation)  slot.nation  = v * scale;
+        if (r.ITM_ID === ind.itmId) {
+          if (r.C1 === ind.codes.donggu)       slot.donggu  = v;
+          else if (r.C1 === ind.codes.gwangju) slot.gwangju = v;
+          else if (r.C1 === ind.codes.nation)  slot.nation  = v;
+        } else if (ind.subItmId && r.ITM_ID === ind.subItmId && r.C1 === ind.codes.donggu) {
+          slot.sub = v;
+        }
       }
       const series = [...byYear.entries()]
+        .filter(([, v]) => v.donggu !== undefined)
         .sort(([a], [b]) => a.localeCompare(b))
-        .map(([year, v]) => ({ year, donggu: v.donggu ?? null, gwangju: v.gwangju ?? null, nation: v.nation ?? null }));
+        .map(([year, v]) => ({ year, donggu: v.donggu, gwangju: v.gwangju ?? null, nation: v.nation ?? null, sub: v.sub ?? null }));
       if (!series.length) throw new Error(`${ind.id} (${tblId}): 시계열 0건 — 코드/파라미터 확인 필요`);
-      indicators.push({ id: ind.id, name: ind.name, unit: ind.unit, tblId, tblNm, lstChnDe, series });
+      const out = { id: ind.id, name: ind.name, unit: ind.unit, compare: ind.compare !== false, tblId, tblNm, lstChnDe, series };
+      if (ind.subItmId) { out.subName = ind.subName; out.subUnit = ind.subUnit; }
+      indicators.push(out);
       console.log(`[ok] ${ind.name}: ${series.length}개 시점, 최신 ${series.at(-1).year} 동구=${series.at(-1).donggu}${ind.unit}`);
     }
   }

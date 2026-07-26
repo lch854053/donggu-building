@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-26T11:56:38.872Z",
+  "generatedAt": "2026-07-26T12:12:48.909Z",
   "region": "전남광주통합특별시 동구",
   "compare": {
     "gwangju": "광주광역시",
@@ -11,279 +11,246 @@
       "id": "vacant_ratio",
       "name": "미거주주택(빈집)비율",
       "unit": "%",
+      "compare": true,
       "tblId": "DT_1YL202005",
       "tblNm": "미거주주택(빈집)비율(시도/시/군/구)",
       "lstChnDe": "2025-07-29",
       "series": [
         {
+          "year": "2015",
+          "donggu": 5.1,
+          "gwangju": 5.5,
+          "nation": 6.5,
+          "sub": 1622
+        },
+        {
+          "year": "2016",
+          "donggu": 6.5,
+          "gwangju": 5.9,
+          "nation": 6.7,
+          "sub": 2093
+        },
+        {
+          "year": "2017",
+          "donggu": 7.5,
+          "gwangju": 6.6,
+          "nation": 7.4,
+          "sub": 2496
+        },
+        {
+          "year": "2018",
+          "donggu": 11.6,
+          "gwangju": 7.2,
+          "nation": 8.1,
+          "sub": 4056
+        },
+        {
+          "year": "2019",
+          "donggu": 11.3,
+          "gwangju": 7.5,
+          "nation": 8.4,
+          "sub": 4263
+        },
+        {
           "year": "2020",
           "donggu": 11.5,
           "gwangju": 7.7,
-          "nation": 8.2
+          "nation": 8.2,
+          "sub": 4600
         },
         {
           "year": "2021",
           "donggu": 8.5,
           "gwangju": 6.2,
-          "nation": 7.4
+          "nation": 7.4,
+          "sub": 3500
         },
         {
           "year": "2022",
           "donggu": 9.7,
           "gwangju": 7.1,
-          "nation": 7.6
+          "nation": 7.6,
+          "sub": 4207
         },
         {
           "year": "2023",
           "donggu": 10.5,
           "gwangju": 7.2,
-          "nation": 7.9
+          "nation": 7.9,
+          "sub": 4708
         },
         {
           "year": "2024",
           "donggu": 9.9,
           "gwangju": 7.9,
-          "nation": 8
+          "nation": 8,
+          "sub": 4450
         }
-      ]
-    },
-    {
-      "id": "vacant_count",
-      "name": "미거주주택(빈집)수",
-      "unit": "호",
-      "tblId": "DT_1YL202005",
-      "tblNm": "미거주주택(빈집)비율(시도/시/군/구)",
-      "lstChnDe": "2025-07-29",
-      "series": [
-        {
-          "year": "2020",
-          "donggu": 4600,
-          "gwangju": 41585,
-          "nation": 1511306
-        },
-        {
-          "year": "2021",
-          "donggu": 3500,
-          "gwangju": 33439,
-          "nation": 1395256
-        },
-        {
-          "year": "2022",
-          "donggu": 4207,
-          "gwangju": 39205,
-          "nation": 1451554
-        },
-        {
-          "year": "2023",
-          "donggu": 4708,
-          "gwangju": 40588,
-          "nation": 1534919
-        },
-        {
-          "year": "2024",
-          "donggu": 4450,
-          "gwangju": 44734,
-          "nation": 1599086
-        }
-      ]
+      ],
+      "subName": "빈집",
+      "subUnit": "호"
     },
     {
       "id": "oldhouse_ratio",
       "name": "노후주택비율(30년 이상)",
       "unit": "%",
+      "compare": true,
       "tblId": "DT_1YL202004",
       "tblNm": "노후주택비율(시도/시/군/구)",
       "lstChnDe": "2025-07-29",
       "series": [
         {
+          "year": "2015",
+          "donggu": 37.8,
+          "gwangju": 14.4,
+          "nation": 16.3,
+          "sub": 12120
+        },
+        {
+          "year": "2016",
+          "donggu": 36.1,
+          "gwangju": 14.4,
+          "nation": 16.8,
+          "sub": 11638
+        },
+        {
+          "year": "2017",
+          "donggu": 35,
+          "gwangju": 14.7,
+          "nation": 16.9,
+          "sub": 11631
+        },
+        {
+          "year": "2018",
+          "donggu": 32.8,
+          "gwangju": 15.8,
+          "nation": 17.5,
+          "sub": 11454
+        },
+        {
+          "year": "2019",
+          "donggu": 29.9,
+          "gwangju": 16.4,
+          "nation": 18.2,
+          "sub": 11247
+        },
+        {
           "year": "2020",
           "donggu": 29.7,
           "gwangju": 17.7,
-          "nation": 19.4
+          "nation": 19.4,
+          "sub": 11894
         },
         {
           "year": "2021",
           "donggu": 30.8,
           "gwangju": 19.8,
-          "nation": 21.1
+          "nation": 21.1,
+          "sub": 12606
         },
         {
           "year": "2022",
           "donggu": 30.3,
           "gwangju": 23.4,
-          "nation": 23.5
+          "nation": 23.5,
+          "sub": 13097
         },
         {
           "year": "2023",
           "donggu": 30,
           "gwangju": 25.4,
-          "nation": 25.8
+          "nation": 25.8,
+          "sub": 13488
         },
         {
           "year": "2024",
           "donggu": 33.3,
           "gwangju": 28.9,
-          "nation": 28
+          "nation": 28,
+          "sub": 14967
         }
-      ]
-    },
-    {
-      "id": "oldhouse_count",
-      "name": "노후주택수(30년 이상)",
-      "unit": "호",
-      "tblId": "DT_1YL202004",
-      "tblNm": "노후주택비율(시도/시/군/구)",
-      "lstChnDe": "2025-07-29",
-      "series": [
-        {
-          "year": "2020",
-          "donggu": 11894,
-          "gwangju": 95408,
-          "nation": 3596661
-        },
-        {
-          "year": "2021",
-          "donggu": 12606,
-          "gwangju": 107453,
-          "nation": 3974580
-        },
-        {
-          "year": "2022",
-          "donggu": 13097,
-          "gwangju": 129980,
-          "nation": 4492064
-        },
-        {
-          "year": "2023",
-          "donggu": 13488,
-          "gwangju": 142277,
-          "nation": 5044681
-        },
-        {
-          "year": "2024",
-          "donggu": 14967,
-          "gwangju": 164329,
-          "nation": 5574280
-        }
-      ]
+      ],
+      "subName": "노후주택",
+      "subUnit": "호"
     },
     {
       "id": "houses",
       "name": "주택수",
       "unit": "호",
+      "compare": false,
       "tblId": "INH_1JU1501",
       "tblNm": "주택수(시도/시/군/구)",
       "lstChnDe": "2025-07-24",
       "series": [
         {
+          "year": "2015",
+          "donggu": 32068,
+          "gwangju": 486527,
+          "nation": 16367006,
+          "sub": null
+        },
+        {
+          "year": "2016",
+          "donggu": 32210,
+          "gwangju": 494547,
+          "nation": 16692230,
+          "sub": null
+        },
+        {
+          "year": "2017",
+          "donggu": 33266,
+          "gwangju": 505471,
+          "nation": 17122573,
+          "sub": null
+        },
+        {
+          "year": "2018",
+          "donggu": 34905,
+          "gwangju": 514767,
+          "nation": 17633327,
+          "sub": null
+        },
+        {
+          "year": "2019",
+          "donggu": 37639,
+          "gwangju": 526161,
+          "nation": 18126954,
+          "sub": null
+        },
+        {
           "year": "2020",
           "donggu": 40108,
           "gwangju": 538275,
-          "nation": 18525844
+          "nation": 18525844,
+          "sub": null
         },
         {
           "year": "2021",
           "donggu": 40956,
           "gwangju": 542703,
-          "nation": 18811627
+          "nation": 18811627,
+          "sub": null
         },
         {
           "year": "2022",
           "donggu": 43254,
           "gwangju": 555185,
-          "nation": 19155585
+          "nation": 19155585,
+          "sub": null
         },
         {
           "year": "2023",
           "donggu": 44979,
           "gwangju": 560550,
-          "nation": 19546299
+          "nation": 19546299,
+          "sub": null
         },
         {
           "year": "2024",
           "donggu": 44958,
           "gwangju": 567994,
-          "nation": 19872674
-        }
-      ]
-    },
-    {
-      "id": "city_area",
-      "name": "도시지역면적",
-      "unit": "㎢",
-      "tblId": "DT_1YL21291E",
-      "tblNm": "도시지역면적(시도/시/군/구)",
-      "lstChnDe": "",
-      "series": [
-        {
-          "year": "2020",
-          "donggu": 49.312363999999995,
-          "gwangju": 480.081726,
-          "nation": 17769.13537
-        },
-        {
-          "year": "2021",
-          "donggu": 49.314065,
-          "gwangju": 479.978979,
-          "nation": 17786.546574
-        },
-        {
-          "year": "2022",
-          "donggu": 49.319444,
-          "gwangju": 479.89009599999997,
-          "nation": 17791.754999
-        },
-        {
-          "year": "2023",
-          "donggu": 49.317265,
-          "gwangju": 479.83804899999996,
-          "nation": 17589.843385
-        },
-        {
-          "year": "2024",
-          "donggu": 49.318585,
-          "gwangju": 479.818783,
-          "nation": 17639.470771
-        }
-      ]
-    },
-    {
-      "id": "city_area_pp",
-      "name": "1인당 도시지역면적",
-      "unit": "㎡",
-      "tblId": "DT_1YL20421E",
-      "tblNm": "1인당 도시지역면적 현황(시도/시/군/구)",
-      "lstChnDe": "",
-      "series": [
-        {
-          "year": "2020",
-          "donggu": 102.97,
-          "gwangju": 84.41,
-          "nation": 89.84
-        },
-        {
-          "year": "2021",
-          "donggu": 103.17,
-          "gwangju": 84.97,
-          "nation": 91.2
-        },
-        {
-          "year": "2022",
-          "donggu": 100.79,
-          "gwangju": 85.74,
-          "nation": 91.96
-        },
-        {
-          "year": "2023",
-          "donggu": 99.6,
-          "gwangju": 86.85,
-          "nation": 92.5
-        },
-        {
-          "year": "2024",
-          "donggu": 100.51,
-          "gwangju": 87.59,
-          "nation": 93.51
+          "nation": 19872674,
+          "sub": null
         }
       ]
     }
