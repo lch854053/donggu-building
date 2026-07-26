@@ -332,6 +332,11 @@
   .empty{padding:54px 20px;text-align:center;color:var(--mute);font-size:14px}
   .empty .big{font-size:15px;color:var(--ink-soft);margin-bottom:6px;font-weight:500}
 
+  /* 철거멸실 탭 — 클릭 가능한 행 (행 클릭 → 폐쇄말소대장 상세카드) */
+  tr.row-clickable{cursor:pointer;transition:background .12s}
+  tr.row-clickable:hover{background:rgba(29,94,140,.05)}
+  tr.row-clickable.active{background:rgba(29,94,140,.09)}
+
   .footnote{margin-top:26px;font-size:12px;color:var(--mute);line-height:1.7;border-top:1px solid var(--line);padding-top:16px}
   .footnote code{font-family:var(--mono);background:var(--paper-2);padding:1px 6px;border-radius:3px;color:var(--ink-soft)}
   /* ===== 단건 상세조회 ===== */

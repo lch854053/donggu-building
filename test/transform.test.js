@@ -532,3 +532,93 @@ test("isGenericBldNm: 고유명은 generic이 아님", () => {
                     "해피빌라", "대창빌라"])
     assert.equal(f.isGenericBldNm(nm), false, nm);
 });
+
+/* ============================================================
+   shtRowToBuilding / pickShtTitle
+   폐쇄말소대장(getSrTitleInfo) — 철거·멸실된 건물의 과거 대장.
+   실제 데이터: 대인동 16-6 (두 번 말소된 이력)
+     - 2006-08-08 일부말소: 숙박시설 / 일반목구조 / 연면적 70.74
+     - 2014-09-26 전부말소: 단독주택 / 블록구조 / 연면적 86.57
+   ============================================================ */
+test("shtRowToBuilding: 폐쇄말소 행 → mergeBuilding 호환 + 메타 (대인동 16-6)", () => {
+  // 실제 getSrTitleInfo 응답(요약) — 2014년 전부말소된 단독주택 행
+  const item = {
+    platPlc: "광주광역시 동구 대인동 16-6번지",
+    newPlatPlc: "광주광역시 동구 독립로264번길 17-4 (대인동)",
+    bldNm: " ",
+    mainAtchGbCdNm: "주건축물",
+    mainPurpsCdNm: "단독주택",
+    strctCdNm: "블록구조",
+    platArea: 128.9, archArea: 86.57, totArea: 86.57,
+    bcRat: 67.16, vlRat: 67.16,
+    grndFlrCnt: 1, ugrndFlrCnt: 0, useAprDay: "20040426",
+    shterGbCdNm: "말소", shterDay: "20140926",
+  };
+  const b = f.shtRowToBuilding(item);
+  // mergeBuilding 호환 필드
+  assert.equal(b.mainPurps, "단독주택");
+  assert.equal(b.strct, "블록구조");
+  assert.equal(b.totArea, 86.57);
+  assert.equal(b.useAprDay, "20040426");
+  assert.equal(b.atchGb, "주건축물");
+  // 폐쇄말소 전용 메타
+  assert.equal(b.shterGb, "말소");
+  assert.equal(b.shterDay, "20140926");
+  // 도로명(newPlatPlc)은 그대로 유지(값이 있으므로)
+  assert.ok(b.newPlatPlc.includes("독립로264번길"));
+});
+
+test("shtRowToBuilding: 빈 도로명(' ')은 platPlc로 폴백 (옛 데이터)", () => {
+  // 2006년 일부말소 행 — 도로명이 ' '(공백)
+  const item = {
+    platPlc: "광주광역시 동구 대인동 16-6번지",
+    newPlatPlc: " ",   // 옛 데이터는 도로명 비어있음
+    mainPurpsCdNm: "숙박시설",
+    shterGbCdNm: "일부말소", shterDay: "20060808",
+  };
+  const b = f.shtRowToBuilding(item);
+  assert.equal(b.newPlatPlc, "광주광역시 동구 대인동 16-6번지");  // platPlc 폴백
+  assert.equal(b.shterGb, "일부말소");
+});
+
+test("shtRowToBuilding: null/빈 입력은 안전하게 빈 building", () => {
+  const b = f.shtRowToBuilding(null);
+  assert.equal(b.mainPurps, "-");
+  assert.equal(b.shterGb, "-");
+  assert.equal(b.shterDay, "");
+});
+
+test("pickShtTitle: 같은 필지 다수 말소 이력 → 가장 최근 말소일 행 선택 (대인동 16-6)", () => {
+  // 2006(일부말소) vs 2014(전부말소) → 2014 행이 대표
+  const items = [
+    { platPlc:"대인동 16-6", mainPurpsCdNm:"숙박시설", mainAtchGbCdNm:"주건축물",
+      shterGbCdNm:"일부말소", shterDay:"20060808" },
+    { platPlc:"대인동 16-6", mainPurpsCdNm:"단독주택", mainAtchGbCdNm:"주건축물",
+      shterGbCdNm:"말소", shterDay:"20140926" },
+  ];
+  const main = f.pickShtTitle(items);
+  assert.equal(main.shterDay, "20140926");   // 최근
+  assert.equal(main.mainPurpsCdNm, "단독주택");
+});
+
+test("pickShtTitle: 말소일 같으면 주건축물 우선", () => {
+  const items = [
+    { mainAtchGbCdNm:"부속건축물", shterGbCdNm:"말소", shterDay:"20140926" },
+    { mainAtchGbCdNm:"주건축물",  shterGbCdNm:"말소", shterDay:"20140926" },
+  ];
+  assert.equal(f.pickShtTitle(items).mainAtchGbCdNm, "주건축물");
+  // 순서 바뀌어도 동일
+  assert.equal(f.pickShtTitle([items[1], items[0]]).mainAtchGbCdNm, "주건축물");
+});
+
+test("pickShtTitle: 말소일 없는 옛 데이터도 후보 (공백 날짜)", () => {
+  const items = [
+    { mainAtchGbCdNm:"주건축물", shterGbCdNm:"말소", shterDay:" " },
+  ];
+  assert.equal(f.pickShtTitle(items).mainAtchGbCdNm, "주건축물");
+});
+
+test("pickShtTitle: 빈 배열은 null", () => {
+  assert.equal(f.pickShtTitle([]), null);
+  assert.equal(f.pickShtTitle(null), null);
+});

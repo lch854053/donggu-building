@@ -244,6 +244,46 @@ function pickArchMain(items){
   return items[0];
 }
 
+// 폐쇄말소대장 표제부(getSrTitleInfo) → mergeBuilding 호환 building 객체 + 폐쇄말소 메타.
+// 응답 필드 구조는 getBrTitleInfo(건축물대장)과 거의 동일하나:
+//   - totPkngCnt(총주차) 필드가 없음 → totalParking의 항목별 합산 폴백이 0을 반환
+//   - newPlatPlc(도로명)이 ' '(공백)인 옛 데이터가 많음 → 빈값은 platPlc로 폴백
+// 폐쇄말소 전용 정보(말소구분·말소일)는 별도 키로 보존해 카드에서 표시한다.
+// 한 지번에 말소 이력이 여럿(재건축으로 구 대장 말소 후 신 대장 말소 등)일 수 있어
+// 호출측에서 어느 행을 고를지 결정한다(pickShtTitle).
+function shtRowToBuilding(item){
+  const b = mergeBuilding(item || {});
+  return {
+    ...b,
+    // 빈 도로명(' ')은 platPlc로 폴백 — 옛 폐쇄말소 데이터는 도로명이 비어있는 경우가 많음
+    newPlatPlc: (b.newPlatPlc && b.newPlatPlc !== "-") ? b.newPlatPlc : b.platPlc,
+    // 폐쇄말소 전용 메타
+    shterGb:   String(item?.shterGbCdNm || "").trim() || "-",   // 전부말소/일부말소/말소
+    shterDay:  String(item?.shterDay || "").trim(),             // 말소일(YYYYMMDD)
+  };
+}
+
+// 폐쇄말소 표제부 행이 여럿일 때 대표 1건을 고른다.
+// 한 지번에 여러 말소 이력이 있을 때 "가장 마지막에 사라진 건물"을 기준으로 표시하기 위해
+// 말소일(shterDay)이 가장 최신인 행을, 말소일이 같거나 없으면 주건축물을 우선한다.
+// 빈 배열이면 null 반환.
+function pickShtTitle(items){
+  if(!items || !items.length) return null;
+  const day = r => { const d = String(r.shterDay||"").replace(/\D/g,""); return d && !/^0+$/.test(d) ? d : ""; };
+  const isMain = r => String(r.mainAtchGbCdNm||"").includes("주건축물");
+  const score = r => (day(r) ? 1 : 0);   // 말소일 있는 행 우선
+  let best = items[0], bestDay = day(best), bestMain = isMain(best), bestScore = score(best);
+  for(let i=1; i<items.length; i++){
+    const d = day(items[i]), m = isMain(items[i]), s = score(items[i]);
+    if(s > bestScore
+       || (s === bestScore && d > bestDay)
+       || (s === bestScore && d === bestDay && m && !bestMain)){
+      best = items[i]; bestDay = d; bestMain = m; bestScore = s;
+    }
+  }
+  return best;
+}
+
 // 필지 파라미터 → PNU 19자리 (vworld-parcel.js 의 platGbCd 역변환과 일치)
 function toPNU(p){
   const san = p.platGbCd === "1" ? "2" : "1";   // 1=산, 0/일반=대지

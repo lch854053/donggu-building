@@ -17,6 +17,7 @@ cp .env.example .env
 | `KAKAO_REST_API_KEY` | 카카오 REST API 키 | ✅ (공동주택명 보정용) |
 | `ARCH_SERVICE_KEY` | 공공데이터포털 건축인허가 서비스키 | (미설정 시 `BLD_SERVICE_KEY` 폴백) |
 | `HSPMS_SERVICE_KEY` | 공공데이터포털 주택인허가 서비스키 | (미설정 시 `BLD_SERVICE_KEY` 폴백) |
+| `SHT_SERVICE_KEY` | 공공데이터포털 폐쇄말소대장 서비스키 | (미설정 시 `BLD_SERVICE_KEY` 폴백) |
 
 서비스키는 공공데이터포털의 **디코딩된 키**를 입력해야 합니다.
 
