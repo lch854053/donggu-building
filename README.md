@@ -19,7 +19,7 @@ cp .env.example .env
 | 변수 | 설명 | 필수 |
 |---|---|---|
 | `DATA_SERVICE_KEY` | 공공데이터포털 통합 서비스키 (위 5개 서비스 공용) | ✅ |
-| `ODCLOUD_SERVICE_KEY` | odcloud(K-APT 단지코드·동구 건축허가현황) — 별도 인증 체계 | ✅ |
+| `ODCLOUD_SERVICE_KEY` | odcloud(공동주택 단지목록 aptid · 동구 건축허가현황) — 별도 인증 체계, `DATA_SERVICE_KEY`로 동작 안 함 | ✅ |
 | `VWORLD_KEY` | V-World (필지/지도/GIS건물정보) | ✅ |
 | `KAKAO_REST_API_KEY` | 카카오 REST API 키 (공동주택명 보정용) | ✅ |
 | `JUSO_CONFM_KEY` | 행안부 도로명주소 API 키 (스크립트 PNU 보강용) | (워크플로우만) |
