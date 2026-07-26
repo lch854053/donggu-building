@@ -72,6 +72,10 @@ export default async function handler(req, res) {
   if (jiRaw && !numRe.test(jiRaw))
     return res.status(400).json({ titles: [], error: "ji 형식 오류" });
 
+  // op 화이트리스트 검증. (getSr*=폐쇄말소, getBr*=일반 건축물대장, 그 외 기본=getBrTitleInfo)
+  const opRaw = one(req.query.op).trim();
+  const op = ALLOWED_OPS.has(opRaw) ? opRaw : "getBrTitleInfo";
+
   // 서비스키: getSr*(폐쇄말소)면 SHT_SERVICE_KEY 우선, 아니면 BLD_SERVICE_KEY.
   // 동일 키가 양쪽에 승인돼 있으면 어느 쪽이든 동작한다.
   // DATA_SERVICE_KEY 단일 키로 통합 설정해도 호환 (resolveDataKey가 자동 폴백).
@@ -89,9 +93,6 @@ export default async function handler(req, res) {
 
   const rows = Math.min(Math.max(parseInt(one(req.query.numOfRows), 10) || 100, 1), MAX_ROWS);
   const page = Math.max(parseInt(one(req.query.pageNo), 10) || 1, 1);
-
-  const opRaw = one(req.query.op).trim();
-  const op = ALLOWED_OPS.has(opRaw) ? opRaw : "getBrTitleInfo";
 
   const params = {
     op,
