@@ -384,7 +384,9 @@
           <tbody id="mResultBody"></tbody>
         </table>
       </div>
+      <div class="d-panel-hint" style="padding:6px 0 0 2px">행을 누르면 해당 건물의 폐쇄말소대장 상세정보를 불러옵니다.</div>
       <div id="mPager" class="cpager"></div>
+      <div id="mDetail" style="display:none"></div>
     </div>
   </div><!-- /tab-demol -->
 
@@ -3342,6 +3344,7 @@ async function runDemolSearch(){
   document.getElementById("mResultArea").style.display="none";
   document.getElementById("mStats").style.display="none";
   if(isAll) document.getElementById("mHint").textContent = "전체 검색은 시간이 걸립니다…";
+  closeDemolDetail();   // 이전 검색의 상세카드 닫기
 
   // 동단위 철거대장 수집 (100건/페이지, 잔여 페이지 자동 계산)
   const MAX_PAGES = 100;   // ~100건/페이지 → 동당 최대 1만건 (산수동 5697건 커버)
@@ -3430,6 +3433,7 @@ function renderDemolResults(scanned, dongLabel){
 
 function gotoDemolPage(p){
   M_PAGE = p;
+  closeDemolDetail();   // 페이지 이동 시 열린 상세카드 닫기
   renderDemolPage();
   const sc = document.querySelector("#mResultArea .table-scroll");
   if(sc) sc.scrollTop = 0;
@@ -3448,6 +3452,8 @@ function renderDemolPage(){
   slice.forEach((d,i)=>{
     const tr = document.createElement("tr");
     tr.style.animationDelay = (Math.min(i,40)*0.01)+"s";
+    tr.className = "row-clickable";
+    tr.dataset.idx = String(offset + i);   // MRESULTS 전체 인덱스
     tr.innerHTML = `
       <td class="num">${offset + i + 1}</td>
       <td>${esc(d.hdong)}</td>
@@ -3458,6 +3464,7 @@ function renderDemolPage(){
       <td>${esc(d.strct)}</td>
       <td class="num">${d.totArea!=null?fmt(d.totArea):"-"}</td>
       <td class="num">${d.bldCnt!=null?fmt(d.bldCnt):"-"}</td>`;
+    tr.addEventListener("click", ()=>toggleDemolDetail(Number(tr.dataset.idx), tr));
     frag.appendChild(tr);
   });
   body.appendChild(frag);
@@ -3483,6 +3490,7 @@ function clearDemol(){
   document.getElementById("mResultArea").style.display = "none";
   document.getElementById("mStats").style.display = "none";
   document.getElementById("mHint").textContent = "";
+  closeDemolDetail();
 }
 
 function exportDemolExcel(){
@@ -3508,6 +3516,203 @@ function exportDemolExcel(){
   XLSX.utils.book_append_sheet(wb, ws, "철거멸실대장");
   const dongLabel = document.getElementById("mResDong").textContent || "전체";
   XLSX.writeFile(wb, `철거멸실대장_${dongLabel}_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
+
+/* ============================================================
+   철거멸실 탭 — 행 클릭 → 폐쇄말소대장 상세카드
+   인허가(getApDemolExtngMgmRgstInfo) 행의 bun/ji로 폐쇄말소대장(ShtRgstHubService)
+   표제부를 보강 조회해 cardHTML 파이프라인으로 렌더링한다.
+   단건조회 탭의 D_CAND/D_CACHE와 상태가 섞이지 않도록 M_DET* 별도 상태 사용.
+   ============================================================ */
+let M_DET_IDX = -1;          // 현재 펼쳐진 행의 MRESULTS 인덱스 (-1=없음)
+let M_DET_TITLES = [];       // 폐쇄말소 표제부 rows
+const M_DET_CACHE = {};      // 부가정보 캐시 (flr/wclf/jiji)
+
+// 행 클릭 토글: 같은 행 다시 클릭 → 닫기. 다른 행 → 이전 닫고 새로 열기.
+async function toggleDemolDetail(idx, tr){
+  // 같은 행 재클릭이면 닫기
+  if(M_DET_IDX === idx){
+    closeDemolDetail();
+    return;
+  }
+  // 이미 열려있던 행 강조 해제
+  document.querySelectorAll("#mResultBody tr.row-clickable").forEach(r=>r.classList.remove("active"));
+  tr.classList.add("active");
+  M_DET_IDX = idx;
+
+  const area = document.getElementById("mDetail");
+  area.style.display = "block";
+  area.innerHTML = `<div class="card d-card"><div class="card-body"><div class="d-panel-hint">폐쇄말소대장 불러오는 중…</div></div></div>`;
+  // 상세카드가 행 바로 아래에 보이도록 스크롤
+  setTimeout(()=>{ area.scrollIntoView({behavior:"smooth", block:"nearest"}); }, 30);
+
+  const d = MRESULTS[idx];
+  await loadDemolDetail(d, area);
+}
+
+function closeDemolDetail(){
+  M_DET_IDX = -1;
+  M_DET_TITLES = [];
+  Object.keys(M_DET_CACHE).forEach(k=>delete M_DET_CACHE[k]);
+  document.querySelectorAll("#mResultBody tr.row-clickable").forEach(r=>r.classList.remove("active"));
+  const area = document.getElementById("mDetail");
+  area.style.display = "none";
+  area.innerHTML = "";
+}
+
+// 폐쇄말소 표제부 조회 → 대표 행 선택 → 상세카드 렌더링.
+// 인허가 행의 bun/ji(이미 mergeDemol에서 4자리 패딩)로 폐쇄말소대장을 찾는다.
+// 폐쇄말소 0건(단순 멸실 등 대장 미생성)이면 안내만 표시.
+async function loadDemolDetail(d, area){
+  const params = { sigunguCd:SIGUNGU, bjdongCd:d.bjd, platGbCd:"0", bun:d.bun, ji:d.ji };
+  const { ok, data, status } = await api("shtbld", { op:"getSrTitleInfo", ...params, numOfRows:"200", pageNo:"1" });
+  if(!ok || data.error){
+    area.innerHTML = `<div class="card d-card"><div class="card-body">
+      <div class="d-empty">폐쇄말소대장을 불러오지 못했습니다${data?.error?` (${esc(data.error)})`:""}</div>
+    </div></div>`;
+    return;
+  }
+  const titles = Array.isArray(data.items) ? data.items : [];
+  M_DET_TITLES = titles;
+  if(!titles.length){
+    area.innerHTML = `<div class="card d-card"><div class="card-body">
+      <div class="d-empty">이 건물의 폐쇄말소대장 정보가 없습니다</div>
+      <div class="d-panel-hint">단순 멸실·가설건축물 철거 등은 폐쇄말소대장이 생성되지 않을 수 있습니다. 위 표의 철거·멸실 이력(건축인허가 기준)만 확인할 수 있습니다.</div>
+    </div></div>`;
+    return;
+  }
+  const main = pickShtTitle(titles);
+  area.innerHTML = shtCardHTML(main, titles, d);
+  wireDemolSubtabs();
+}
+
+// 폐쇄말소 상세카드 — cardHTML의 규모·용도·안전 섹션을 재사용하되:
+//   (1) 말소구분/말소일 배지를 헤더에 표시
+//   (2) 부가 서브탭은 폐쇄말소 op(getSr*)을 사용하도록 M_DET_CACHE로 격리
+//   (3) 현존 건물 전용 서브탭(이력/가설공작물/대지권/지도)은 제외
+function shtCardHTML(t, titles, demolRow){
+  const b = shtRowToBuilding(t);
+  const m2 = v => v==null ? "-" : fmt(v)+" ㎡";
+  const pc = v => v==null ? "-" : fmt(v)+"%";
+  const addr = b.newPlatPlc!=="-" ? b.newPlatPlc : b.platPlc;
+  const title = bldLabel(t) || demolRow.platPlc;
+  // 헤더 배지: 말소구분(전부/일부/말소) + 말소일
+  const shterBadge = (()=>{
+    const gb = String(b.shterGb||"").trim();
+    const cls = gb.includes("일부") ? "mute" : (gb && gb !== "-" ? "warn" : "none");
+    const day = histDate(b.shterDay);
+    return `<span class="badge ${cls}">${esc(gb||"말소")}</span>${day!=="-" ? ` <span class="age">${day} 말소</span>` : ""}`;
+  })();
+  // 폐쇄말소 이력이 여러 행이면 그 개수 안내
+  const histCnt = titles.length > 1
+    ? ` <span class="d-kind">같은 필지 말소 이력 ${titles.length}건</span>` : "";
+  return `
+  <div class="card d-card">
+    <div class="card-head">
+      <h2><span class="num-tag">폐</span>${esc(title)} <span class="d-kind">${esc(demolRow.demolGb)}</span></h2>
+      ${shterBadge}
+    </div>
+    <div class="card-body">
+      <div class="d-addr">${esc(addr)}</div>
+      <div class="d-addr sub">${esc(b.platPlc)}</div>
+      ${demolRow.hdong ? `<div class="d-addr sub">행정동 <b>${esc(demolRow.hdong)}</b></div>` : ""}
+      <div class="d-map-cap" style="margin-bottom:8px">이 자리에 있던 건물의 폐쇄말소대장(과거 대장)입니다.${histCnt}</div>
+
+      <div class="d-sec-title">규모 · 용도</div>
+      <div class="d-kv">
+        <div class="k">주용도</div><div class="v">${esc(b.mainPurps)}</div>
+        <div class="k">주구조</div><div class="v">${esc(b.strct)}</div>
+        <div class="k">대지면적</div><div class="v">${m2(b.platArea)}</div>
+        <div class="k">건축면적</div><div class="v">${m2(b.archArea)}</div>
+        <div class="k">연면적</div><div class="v">${m2(b.totArea)}</div>
+        <div class="k">건폐율 / 용적률</div><div class="v">${pc(b.bcRat)} / ${pc(b.vlRat)}</div>
+        <div class="k">층수</div><div class="v">지상 ${fmt(b.grndFlr)} · 지하 ${fmt(b.ugrndFlr)}</div>
+        <div class="k">사용승인일</div><div class="v">${fmtUseApr(b.useAprDay)}</div>
+      </div>
+
+      <div class="d-subtabs">
+        <button class="d-subtab" data-tab="flr">층별개요</button>
+        <button class="d-subtab" data-tab="park">주차</button>
+        <button class="d-subtab" data-tab="wclf">오수정화시설</button>
+        <button class="d-subtab" data-tab="jiji">지역지구</button>
+      </div>
+      <div class="d-panel" id="mPanel"><div class="d-panel-hint">위 항목을 누르면 해당 정보를 불러옵니다</div></div>
+    </div>
+  </div>`;
+}
+
+// 폐쇄말소 카드 서브탭 — 현존 건물용 wireSubtabs와 동일 UI, op는 getSr* 사용.
+function wireDemolSubtabs(){
+  document.querySelectorAll("#mDetail .d-subtab").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      document.querySelectorAll("#mDetail .d-subtab").forEach(b=>b.classList.remove("active"));
+      btn.classList.add("active");
+      loadDemolSubtab(btn.dataset.tab);
+    });
+  });
+}
+
+async function loadDemolSubtab(key){
+  const panel = document.getElementById("mPanel");
+  if(!panel) return;
+  // 주차는 폐쇄말소 표제부(M_DET_TITLES)에 항목별 주차 필드가 있어 추가 호출 없음
+  if(key==="park"){ panel.innerHTML = renderDemolParking(); return; }
+  const OPS = {
+    flr:  { op:"getSrFlrOulnInfo",  name:"층별개요" },
+    wclf: { op:"getSrWclfInfo",     name:"오수정화시설" },
+    jiji: { op:"getSrJijiguInfo",   name:"지역지구" },
+  };
+  const meta = OPS[key]; if(!meta) return;
+  let raw = M_DET_CACHE[key];
+  if(!raw){
+    panel.innerHTML = `<div class="d-panel-hint">${esc(meta.name)} 불러오는 중…</div>`;
+    const d = MRESULTS[M_DET_IDX];
+    const res = await fetchShtOpAll(meta.op, { sigunguCd:SIGUNGU, bjdongCd:d.bjd, platGbCd:"0", bun:d.bun, ji:d.ji });
+    if(res.error){ panel.innerHTML = `<div class="d-panel-hint err">${esc(res.error)}</div>`; return; }
+    raw = res.items; M_DET_CACHE[key] = raw;
+  }
+  // 층별개요 렌더링은 renderSubtab("flr",...)를 그대로 재사용 (필드 구조 동일)
+  panel.innerHTML = renderSubtab(key, raw);
+}
+
+// 주차 — 폐쇄말소 표제부(M_DET_TITLES) 기반. renderParking과 동일 로직이나
+// 별도 상태를 써 단건조회 탭(D_TITLES)과 섞이지 않는다.
+function renderDemolParking(){
+  let rows = M_DET_TITLES;
+  if(!rows.length) return `<div class="d-empty">주차 정보가 없습니다</div>`;
+  const lab = r => bldLabel(r);
+  const labels = [...new Set(rows.map(lab))];
+  const multi = labels.length > 1;
+  const cnt = v => { const n = Number(v||0); return n>0 ? fmt(n) : "-"; };
+  const cols = [];
+  if(multi) cols.push({h:"동/건물", f:r=>esc(lab(r))});
+  cols.push(
+    {h:"총 주차", num:true, f:r=>{ const n=totalParking(r); return n>0?fmt(n):"-"; }},
+    {h:"옥내 자주식", num:true, f:r=>cnt(r.indrAutoUtcnt)},
+    {h:"옥외 자주식", num:true, f:r=>cnt(r.oudrAutoUtcnt)},
+    {h:"옥내 기계식", num:true, f:r=>cnt(r.indrMechUtcnt)},
+    {h:"옥외 기계식", num:true, f:r=>cnt(r.oudrMechUtcnt)},
+  );
+  return miniTable(cols, rows);
+}
+
+// 폐쇄말소대장 전체 페이지 수집 (fetchOpAll의 shtbld 버전)
+async function fetchShtOpAll(op, p){
+  const all=[]; let page=1; const MAXP=10;
+  while(page<=MAXP){
+    const { ok, data, status } = await api("shtbld", {
+      op, ...p, numOfRows:"100", pageNo:String(page)
+    });
+    if(!ok) return { items:[], error:`서버 오류 ${status}` };
+    if(data.error) return { items:[], error:data.error };
+    const items = Array.isArray(data.items) ? data.items : [];
+    const total = Number(data.totalCount||0);
+    all.push(...items);
+    if(items.length<100 || all.length>=total) break;
+    page++;
+  }
+  return { items: all };
 }
 
 
