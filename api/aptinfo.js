@@ -5,6 +5,7 @@
 // 응답: { info:{...} } / 오류 시 { info:null, error }
 import { guard, fetchWithTimeout, setSecurity } from "./_lib/proxy.js";
 import { unwrapGov } from "./_lib/govapi.js";
+import { resolveDataKey } from "./_lib/datakey.js";
 
 const BASE = "https://apis.data.go.kr/1613000/AptBasisInfoServiceV4";
 const FETCH_TIMEOUT_MS = 8000;
@@ -25,10 +26,10 @@ export default async function handler(req, res) {
   if (!kaptCode || !codeRe.test(kaptCode))
     return res.status(400).json({ info: null, error: "kaptCode 누락/형식 오류" });
 
-  // 공동주택 기본정보 서비스 전용 키. 미설정 시 기존 키로 폴백
-  const serviceKey = process.env.APT_SERVICE_KEY || process.env.BLD_SERVICE_KEY;
-  if (!serviceKey)
-    return res.status(500).json({ info: null, error: "APT_SERVICE_KEY/BLD_SERVICE_KEY 환경변수 미설정" });
+  // 공동주택 기본정보 서비스 키: APT → BLD → DATA_SERVICE_KEY 자동 폴백.
+  // 동일 키가 양쪽에 승인돼 있으면 DATA_SERVICE_KEY 하나로 충분하다.
+  const serviceKey = resolveDataKey(res, "APT_SERVICE_KEY", "BLD_SERVICE_KEY");
+  if (!serviceKey) return;
 
   const qs = new URLSearchParams({ kaptCode, _type: "json" });
   // serviceKey 는 '디코딩 키'를 환경변수에 넣고 여기서 1회만 인코딩

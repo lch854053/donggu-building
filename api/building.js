@@ -7,6 +7,7 @@
 // 응답: { titles:[...], totalCount } / 오류 시 { titles:[], error }
 import { guard, fetchWithTimeout, setSecurity } from "./_lib/proxy.js";
 import { unwrapGov } from "./_lib/govapi.js";
+import { resolveDataKey } from "./_lib/datakey.js";
 
 const HUB        = "https://apis.data.go.kr/1613000/BldRgstHubService";
 const HUB_CLOSED = "https://apis.data.go.kr/1613000/ShtRgstHubService";
@@ -73,12 +74,12 @@ export default async function handler(req, res) {
 
   // 서비스키: getSr*(폐쇄말소)면 SHT_SERVICE_KEY 우선, 아니면 BLD_SERVICE_KEY.
   // 동일 키가 양쪽에 승인돼 있으면 어느 쪽이든 동작한다.
+  // DATA_SERVICE_KEY 단일 키로 통합 설정해도 호환 (resolveDataKey가 자동 폴백).
   const isClosed = op.startsWith("getSr");
   const serviceKey = isClosed
-    ? (process.env.SHT_SERVICE_KEY || process.env.BLD_SERVICE_KEY)
-    : process.env.BLD_SERVICE_KEY;
-  if (!serviceKey)
-    return res.status(500).json({ titles: [], error: `${isClosed ? "SHT" : "BLD"}_SERVICE_KEY 환경변수 미설정` });
+    ? resolveDataKey(res, "SHT_SERVICE_KEY", "BLD_SERVICE_KEY")
+    : resolveDataKey(res, "BLD_SERVICE_KEY");
+  if (!serviceKey) return;
 
   // 엔드포인트: getSr* → 폐쇄말소대장 HUB, 그 외 → 일반 건축물대장 HUB
   const endpoint = isClosed ? HUB_CLOSED : HUB;

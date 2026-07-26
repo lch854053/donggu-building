@@ -10,14 +10,21 @@
 cp .env.example .env
 ```
 
+### 공공데이터포털(apis.data.go.kr) — 단일 키 통합
+
+검증(2026-07) 결과 하나의 일반 인증키가 여러 서비스에 공용 승인되어, 아래 5개 서비스는 **`DATA_SERVICE_KEY` 하나로 모두 동작**합니다.
+
+- 건축물대장(BldRgstHubService) · 건축인허가(ArchPmsHubService) · 주택인허가(HsPmsHubService) · 폐쇄말소대장(ShtRgstHubService) · K-APT 공동주택 기본정보(AptBasisInfoServiceV4)
+
 | 변수 | 설명 | 필수 |
 |---|---|---|
-| `BLD_SERVICE_KEY` | 공공데이터포털 건축HUB 서비스키 | ✅ |
-| `APT_SERVICE_KEY` | 공공데이터포털 공동주택 서비스키 | ✅ |
-| `KAKAO_REST_API_KEY` | 카카오 REST API 키 | ✅ (공동주택명 보정용) |
-| `ARCH_SERVICE_KEY` | 공공데이터포털 건축인허가 서비스키 | (미설정 시 `BLD_SERVICE_KEY` 폴백) |
-| `HSPMS_SERVICE_KEY` | 공공데이터포털 주택인허가 서비스키 | (미설정 시 `BLD_SERVICE_KEY` 폴백) |
-| `SHT_SERVICE_KEY` | 공공데이터포털 폐쇄말소대장 서비스키 | (미설정 시 `BLD_SERVICE_KEY` 폴백) |
+| `DATA_SERVICE_KEY` | 공공데이터포털 통합 서비스키 (위 5개 서비스 공용) | ✅ |
+| `ODCLOUD_SERVICE_KEY` | odcloud(K-APT 단지코드·동구 건축허가현황) — 별도 인증 체계 | ✅ |
+| `VWORLD_KEY` | V-World (필지/지도/GIS건물정보) | ✅ |
+| `KAKAO_REST_API_KEY` | 카카오 REST API 키 (공동주택명 보정용) | ✅ |
+| `JUSO_CONFM_KEY` | 행안부 도로명주소 API 키 (스크립트 PNU 보강용) | (워크플로우만) |
+
+> **레거시 호환**: 이미 서비스별 개별 키(`BLD`/`ARCH`/`HSPMS`/`SHT`/`APT_SERVICE_KEY`)를 설정해 둔 배포도 그대로 동작합니다. 각 api 핸들러는 개별 키가 있으면 우선 사용하고, 없으면 `DATA_SERVICE_KEY`로 자동 폴백합니다.
 
 서비스키는 공공데이터포털의 **디코딩된 키**를 입력해야 합니다.
 
