@@ -3566,14 +3566,14 @@ function closeDemolDetail(){
 // 폐쇄말소 0건(단순 멸실 등 대장 미생성)이면 안내만 표시.
 async function loadDemolDetail(d, area){
   const params = { sigunguCd:SIGUNGU, bjdongCd:d.bjd, platGbCd:"0", bun:d.bun, ji:d.ji };
-  const { ok, data, status } = await api("shtbld", { op:"getSrTitleInfo", ...params, numOfRows:"200", pageNo:"1" });
+  const { ok, data, status } = await api("building", { op:"getSrTitleInfo", ...params, numOfRows:"200", pageNo:"1" });
   if(!ok || data.error){
     area.innerHTML = `<div class="card d-card"><div class="card-body">
       <div class="d-empty">폐쇄말소대장을 불러오지 못했습니다${data?.error?` (${esc(data.error)})`:""}</div>
     </div></div>`;
     return;
   }
-  const titles = Array.isArray(data.items) ? data.items : [];
+  const titles = Array.isArray(data.titles) ? data.titles : [];
   M_DET_TITLES = titles;
   if(!titles.length){
     area.innerHTML = `<div class="card d-card"><div class="card-body">
@@ -3697,16 +3697,16 @@ function renderDemolParking(){
   return miniTable(cols, rows);
 }
 
-// 폐쇄말소대장 전체 페이지 수집 (fetchOpAll의 shtbld 버전)
+// 폐쇄말소대장 전체 페이지 수집 (fetchOpAll의 building getSr* 버전)
 async function fetchShtOpAll(op, p){
   const all=[]; let page=1; const MAXP=10;
   while(page<=MAXP){
-    const { ok, data, status } = await api("shtbld", {
+    const { ok, data, status } = await api("building", {
       op, ...p, numOfRows:"100", pageNo:String(page)
     });
     if(!ok) return { items:[], error:`서버 오류 ${status}` };
     if(data.error) return { items:[], error:data.error };
-    const items = Array.isArray(data.items) ? data.items : [];
+    const items = Array.isArray(data.titles) ? data.titles : [];
     const total = Number(data.totalCount||0);
     all.push(...items);
     if(items.length<100 || all.length>=total) break;
