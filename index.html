@@ -386,7 +386,6 @@
       </div>
       <div class="d-panel-hint" style="padding:6px 0 0 2px">행을 누르면 해당 건물의 폐쇄말소대장 상세정보를 불러옵니다.</div>
       <div id="mPager" class="cpager"></div>
-      <div id="mDetail" style="display:none"></div>
     </div>
   </div><!-- /tab-demol -->
 
@@ -3532,23 +3531,25 @@ const M_DET_CACHE = {};      // 부가정보 캐시 (flr/wclf/jiji)
 // 행 클릭 토글: 같은 행 다시 클릭 → 닫기. 다른 행 → 이전 닫고 새로 열기.
 async function toggleDemolDetail(idx, tr){
   // 같은 행 재클릭이면 닫기
-  if(M_DET_IDX === idx){
+  const next = tr.nextElementSibling;
+  if(M_DET_IDX === idx && next && next.classList.contains("h-detail-row")){
     closeDemolDetail();
     return;
   }
-  // 이미 열려있던 행 강조 해제
-  document.querySelectorAll("#mResultBody tr.row-clickable").forEach(r=>r.classList.remove("active"));
+  // 이미 열린 인라인 상세 닫기
+  closeDemolDetail();
   tr.classList.add("active");
   M_DET_IDX = idx;
 
-  const area = document.getElementById("mDetail");
-  area.style.display = "block";
-  area.innerHTML = `<div class="card d-card"><div class="card-body"><div class="d-panel-hint">폐쇄말소대장 불러오는 중…</div></div></div>`;
-  // 상세카드가 행 바로 아래에 보이도록 스크롤
-  setTimeout(()=>{ area.scrollIntoView({behavior:"smooth", block:"nearest"}); }, 30);
+  // 상세 행을 클릭한 행 바로 다음에 삽입 (철거멸실 테이블은 9열)
+  const detailRow = document.createElement("tr");
+  detailRow.className = "h-detail-row";
+  detailRow.innerHTML = `<td colspan="9"><div class="h-detail-loading">폐쇄말소대장 불러오는 중…</div></td>`;
+  tr.after(detailRow);
+  detailRow.scrollIntoView({behavior:"smooth", block:"nearest"});
 
   const d = MRESULTS[idx];
-  await loadDemolDetail(d, area);
+  await loadDemolDetail(d, detailRow.querySelector("td"));
 }
 
 function closeDemolDetail(){
@@ -3556,9 +3557,7 @@ function closeDemolDetail(){
   M_DET_TITLES = [];
   Object.keys(M_DET_CACHE).forEach(k=>delete M_DET_CACHE[k]);
   document.querySelectorAll("#mResultBody tr.row-clickable").forEach(r=>r.classList.remove("active"));
-  const area = document.getElementById("mDetail");
-  area.style.display = "none";
-  area.innerHTML = "";
+  document.querySelectorAll("#mResultBody tr.h-detail-row").forEach(r=>r.remove());
 }
 
 // 폐쇄말소 표제부 조회 → 대표 행 선택 → 상세카드 렌더링.
@@ -3644,9 +3643,9 @@ function shtCardHTML(t, titles, demolRow){
 
 // 폐쇄말소 카드 서브탭 — 현존 건물용 wireSubtabs와 동일 UI, op는 getSr* 사용.
 function wireDemolSubtabs(){
-  document.querySelectorAll("#mDetail .d-subtab").forEach(btn=>{
+  document.querySelectorAll("#mResultBody .d-subtab").forEach(btn=>{
     btn.addEventListener("click", ()=>{
-      document.querySelectorAll("#mDetail .d-subtab").forEach(b=>b.classList.remove("active"));
+      document.querySelectorAll("#mResultBody .d-subtab").forEach(b=>b.classList.remove("active"));
       btn.classList.add("active");
       loadDemolSubtab(btn.dataset.tab);
     });
