@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-26T12:12:48.909Z",
+  "generatedAt": "2026-08-01T04:24:18.719Z",
   "region": "전남광주통합특별시 동구",
   "compare": {
     "gwangju": "광주광역시",
@@ -14,15 +14,8 @@
       "compare": true,
       "tblId": "DT_1YL202005",
       "tblNm": "미거주주택(빈집)비율(시도/시/군/구)",
-      "lstChnDe": "2025-07-29",
+      "lstChnDe": "2026-07-31",
       "series": [
-        {
-          "year": "2015",
-          "donggu": 5.1,
-          "gwangju": 5.5,
-          "nation": 6.5,
-          "sub": 1622
-        },
         {
           "year": "2016",
           "donggu": 6.5,
@@ -85,6 +78,13 @@
           "gwangju": 7.9,
           "nation": 8,
           "sub": 4450
+        },
+        {
+          "year": "2025",
+          "donggu": 11.1,
+          "gwangju": 8.8,
+          "nation": 8.5,
+          "sub": 4985
         }
       ],
       "subName": "빈집",
@@ -97,15 +97,8 @@
       "compare": true,
       "tblId": "DT_1YL202004",
       "tblNm": "노후주택비율(시도/시/군/구)",
-      "lstChnDe": "2025-07-29",
+      "lstChnDe": "2026-07-31",
       "series": [
-        {
-          "year": "2015",
-          "donggu": 37.8,
-          "gwangju": 14.4,
-          "nation": 16.3,
-          "sub": 12120
-        },
         {
           "year": "2016",
           "donggu": 36.1,
@@ -168,6 +161,13 @@
           "gwangju": 28.9,
           "nation": 28,
           "sub": 14967
+        },
+        {
+          "year": "2025",
+          "donggu": 35.3,
+          "gwangju": 31.1,
+          "nation": 30.6,
+          "sub": 15909
         }
       ],
       "subName": "노후주택",
@@ -180,15 +180,8 @@
       "compare": false,
       "tblId": "INH_1JU1501",
       "tblNm": "주택수(시도/시/군/구)",
-      "lstChnDe": "2025-07-24",
+      "lstChnDe": "2026-07-24",
       "series": [
-        {
-          "year": "2015",
-          "donggu": 32068,
-          "gwangju": 486527,
-          "nation": 16367006,
-          "sub": null
-        },
         {
           "year": "2016",
           "donggu": 32210,
@@ -250,6 +243,13 @@
           "donggu": 44958,
           "gwangju": 567994,
           "nation": 19872674,
+          "sub": null
+        },
+        {
+          "year": "2025",
+          "donggu": 45046,
+          "gwangju": 574203,
+          "nation": 20181352,
           "sub": null
         }
       ]
