@@ -448,7 +448,8 @@ async function main() {
       bjdCode: r.bjdCode || "", dong: r.as3 || "",
       kind: normalizeKind(r.bass?.codeAptNm, ""),
       kaptCode: r.kaptCode || "",
-      hhld: r.bass?.kaptdaCnt || null,
+      // 실제 총 세대수는 hoCnt이며, kaptdaCnt는 hoCnt가 비어 있는 구형 레코드의 폴백이다.
+      hhld: Number(r.bass?.hoCnt || 0) || Number(r.bass?.kaptdaCnt || 0) || null,
       useAprDay: r.bass?.kaptUsedate || "",
       strct: r.dtl?.struMain || r.bass?.codeStruNm || "",
       // K-apt 상세는 런타임에 lazy 로드되므로 여기선 최소값만. 상세카드에서 fetch.
