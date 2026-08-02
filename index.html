@@ -4029,8 +4029,8 @@ function stLineChart(series){
   const dots = series.map((r,i)=>{
     if(r.donggu==null) return "";
     const [cx,cy] = [x(i), y(r.donggu)];
-    // 시점이 많으면 값 라벨은 격년+마지막만 (인접 라벨 겹침 방지)
-    const showVal = n < 9 || i % 2 === 0 || i === n-1;
+    // 모든 연도의 수치를 표시해 연도별 추이를 정확히 확인할 수 있게 한다.
+    const showVal = true;
     return `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="2.4"/>`
       + (showVal ? `<text class="pv" x="${cx.toFixed(1)}" y="${(cy-5).toFixed(1)}">${stFmt(r.donggu)}</text>` : "")
       + `<text class="py" x="${cx.toFixed(1)}" y="${H-3}">${esc(String(r.year).slice(2))}</text>`;
