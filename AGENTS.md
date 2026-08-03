@@ -19,7 +19,7 @@ cp .env.example .env
 필수: `BLD_SERVICE_KEY`, `APT_SERVICE_KEY`, `KAKAO_REST_API_KEY`
 폴백: `ARCH_SERVICE_KEY`, `HSPMS_SERVICE_KEY`가 없으면 `BLD_SERVICE_KEY`를 사용
 빈집/오피스텔: `ODCLOUD_SERVICE_KEY`, `JUSO_CONFM_KEY`, `VWORLD_KEY`
-통계: `KOSIS_API_KEY` (update-stats 스크립트 전용)
+통계: `KOSIS_API_KEY` (update-stats), `SGIS_CONSUMER_KEY`·`SGIS_CONSUMER_SECRET` (update-sgis-stats)
 
 > scripts/*는 `process.env`에서 직접 읽는다. `vercel dev`의 `.env` 로딩은 별도로 확인할 것.
 
@@ -39,6 +39,7 @@ npm run update-kapt      # K-apt 단지 기본/상세 정보
 npm run update-odcloud   # 오픈데이터 동구 아파트 (월 1회)
 npm run update-vacant    # 동구 빈집 현황 + 폴리곤 (월 1회)
 npm run update-stats     # KOSIS e-지방지표 동구 통계 (월 1회)
+npm run update-sgis-stats # SGIS 인구주택총조사 주택·거처 통계 (월 1회)
 npm run collect-apt-geo  # VWorld 연속지적도에서 아파트 폴리곤
 npm run update-officetel # 건축인허가 기반 오피스텔 자동 발견
 ```
@@ -54,7 +55,7 @@ npm run update-officetel # 건축인허가 기반 오피스텔 자동 발견
 - `.github/workflows/update-kapt.yml`: 매주 일요일 — K-APT + 폴리곤 + 오피스텔
 - `.github/workflows/update-odcloud.yml`: 매월 1일 — 오픈데이터 아파트 + 폴리곤
 - `.github/workflows/update-vacant.yml`: 매월 1일 — 빈집 데이터 + stale 이슈 생성
-- `.github/workflows/update-stats.yml`: 매월 1일 — KOSIS 동구 통계 (`KOSIS_API_KEY` 시크릿 필요)
+- `.github/workflows/update-stats.yml`: 매월 1일 — KOSIS + SGIS 동구 통계 (`KOSIS_API_KEY`, `SGIS_CONSUMER_KEY`, `SGIS_CONSUMER_SECRET` 시크릿 필요)
 
 ## 아키텍처
 
@@ -67,6 +68,8 @@ npm run update-officetel # 건축인허가 기반 오피스텔 자동 발견
 - `api/building.js`: 건축물대장 외에 폐쇄말소대장(getSr*)·유지점검(getMaintenanceHistory/getInspectionAgency)을 op 분기로 통합 — Serverless 슬롯 절약
 - `scripts/*`: Node.js 데이터 수집/병합 스크립트 (ESM)
 - `*.json` 루트 파일: 정적 데이터 저장소 (K-APT, 빈집, 폴리곤, 행정동 매핑 등)
+- `stats_donggu.json`: KOSIS e-지방지표 정적 통계
+- `sgis_stats_donggu.json`: SGIS 인구주택총조사 주택·거처 정적 통계
 
 ## 핵심 데이터/코드 규칙
 
@@ -90,4 +93,3 @@ npm run update-officetel # 건축인허가 기반 오피스텔 자동 발견
 - 원인 분석 없이 코드를 수정하지 않습니다
 - 가설 검증을 거치지 않은 수정은 허용되지 않습니다
 - 버그 수정 시: 실제 데이터/API로 원인을 먼저 규명하고, 가설을 코드로 검증한 뒤 수정한다 (transform.js 순수 함수는 `node --test`로, 프론트 로직은 실제 데이터 시뮬레이션으로)
-

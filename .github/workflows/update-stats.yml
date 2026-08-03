@@ -24,6 +24,12 @@ jobs:
         env:
           KOSIS_API_KEY: ${{ secrets.KOSIS_API_KEY }}
 
+      - name: Update SGIS housing stats data
+        run: npm run update-sgis-stats
+        env:
+          SGIS_CONSUMER_KEY: ${{ secrets.SGIS_CONSUMER_KEY }}
+          SGIS_CONSUMER_SECRET: ${{ secrets.SGIS_CONSUMER_SECRET }}
+
       - name: Validate generated JSON (prevent empty/regressed data)
         run: |
           set -e
@@ -34,13 +40,19 @@ jobs:
             echo "::error::stats_donggu.json이 비어 있거나 파싱 실패 ($ind_count). 커밋 중단."
             exit 1
           fi
+          sgis_valid=$(node -e "try{const d=require('./sgis_stats_donggu.json');console.log(Array.isArray(d.houseSeries)&&d.houseSeries.length>0&&Array.isArray(d.houseSummary)&&d.houseSummary.length>0?1:0)}catch{console.log(0)}")
+          echo "sgis_stats_donggu.json 검증: $sgis_valid"
+          if [ "$sgis_valid" -ne 1 ] 2>/dev/null; then
+            echo "::error::sgis_stats_donggu.json이 비어 있거나 형식 오류. 커밋 중단."
+            exit 1
+          fi
 
       - name: Commit and push if changed
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           if [ -n "$(git status --porcelain)" ]; then
-            git add stats_donggu.json
+            git add stats_donggu.json sgis_stats_donggu.json
             git commit -m "chore: monthly donggu stats update"
             git push
           else

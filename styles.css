@@ -530,3 +530,13 @@
   .st-line text.pv{font-family:var(--mono);font-size:8.5px;fill:var(--ink-soft);text-anchor:middle}
   .st-line text.py{font-family:var(--mono);font-size:8px;fill:var(--mute);text-anchor:middle}
   .st-sub{display:block;font-size:11px;color:var(--mute);font-weight:400}
+  .st-source-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:22px 0 10px;padding-top:14px;border-top:2px solid var(--line)}
+  .st-source-title{font-size:14px;font-weight:800;color:var(--ink)}
+  .st-source-title span{font-size:11px;font-weight:500;color:var(--accent);margin-left:5px}
+  .st-source-note{font-size:11px;color:var(--mute)}
+  .st-note{margin-top:9px;font-size:10px;line-height:1.45;color:var(--mute)}
+  .st-type-list{display:flex;flex-direction:column;gap:8px}
+  .st-type-row{font-size:12px}
+  .st-type-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px}
+  .st-type-head b{font-family:var(--mono);font-size:11px;color:var(--accent)}
+  .st-type-row small{display:block;margin-top:2px;text-align:right;font-family:var(--mono);font-size:10px;color:var(--mute)}

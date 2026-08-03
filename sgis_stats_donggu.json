@@ -1,0 +1,87 @@
+{
+  "generatedAt": "2026-08-03T11:35:39.927Z",
+  "source": "SGIS 인구주택총조사 OpenAPI",
+  "region": "전남광주통합특별시 동구",
+  "admCd": "24010",
+  "admNm": "동구",
+  "houseSeries": [
+    {
+      "year": "2015",
+      "houseCnt": 30446
+    },
+    {
+      "year": "2016",
+      "houseCnt": 30117
+    },
+    {
+      "year": "2017",
+      "houseCnt": 30770
+    },
+    {
+      "year": "2018",
+      "houseCnt": 30849
+    },
+    {
+      "year": "2019",
+      "houseCnt": 33376
+    },
+    {
+      "year": "2020",
+      "houseCnt": 35508
+    },
+    {
+      "year": "2021",
+      "houseCnt": 37456
+    },
+    {
+      "year": "2022",
+      "houseCnt": 39047
+    },
+    {
+      "year": "2023",
+      "houseCnt": 40271
+    },
+    {
+      "year": "2024",
+      "houseCnt": 40508
+    }
+  ],
+  "houseSummary": [
+    {
+      "id": "apart",
+      "name": "아파트",
+      "count": 28366,
+      "ratio": 52.71
+    },
+    {
+      "id": "detachHouse",
+      "name": "단독주택",
+      "count": 17629,
+      "ratio": 32.76
+    },
+    {
+      "id": "rowHouse",
+      "name": "연립·다세대",
+      "count": 2613,
+      "ratio": 4.86
+    },
+    {
+      "id": "officetel",
+      "name": "오피스텔",
+      "count": 2404,
+      "ratio": 4.47
+    },
+    {
+      "id": "etc",
+      "name": "기타",
+      "count": 2800,
+      "ratio": 5.2
+    },
+    {
+      "id": "dormSocial",
+      "name": "기숙사·사회시설",
+      "count": 0,
+      "ratio": 0
+    }
+  ]
+}

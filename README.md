@@ -28,6 +28,17 @@ cp .env.example .env
 
 서비스키는 공공데이터포털의 **디코딩된 키**를 입력해야 합니다.
 
+### SGIS(통계지리정보서비스) 인구주택총조사
+
+통계 탭은 SGIS AccessToken을 수집 스크립트에서만 발급해 `sgis_stats_donggu.json`으로 저장합니다. 서비스 ID와 보안 Key를 브라우저에 노출하지 않습니다.
+
+| 변수 | 설명 | 필수 |
+|---|---|---|
+| `SGIS_CONSUMER_KEY` | SGIS 서비스 ID | update-sgis-stats 실행 시 ✅ |
+| `SGIS_CONSUMER_SECRET` | SGIS 보안 Key | update-sgis-stats 실행 시 ✅ |
+
+실행: `SGIS_CONSUMER_KEY=... SGIS_CONSUMER_SECRET=... npm run update-sgis-stats`
+
 ## 카카오 로컬 키워드 검색 API
 
 K-apt(공동주택관리정보시스템)의 단지명이 `'서석동 445-12 업무시설'`처럼 **행정동·지번·용도** 형태로 내려올 때, 4단계 폴백으로 실제 단지/건물명을 보정합니다.
@@ -179,4 +190,3 @@ Vercel CLI가 설치되어 있어야 합니다.
 npm i -g vercel
 vercel dev
 ```
-
