@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs";
 const page = readFileSync(new URL("../index.html", import.meta.url), "utf8");
 const stats = JSON.parse(readFileSync(new URL("../stats_donggu.json", import.meta.url), "utf8"));
 const sgis = JSON.parse(readFileSync(new URL("../sgis_stats_donggu.json", import.meta.url), "utf8"));
-const start = page.indexOf("function stLineChart(series){");
+const start = page.indexOf("function stLineChart(series, tall=false){");
 const end = page.indexOf("\n}\n\nfunction renderStats", start) + 2;
 assert.ok(start >= 0 && end > start, "stLineChart source not found");
 
@@ -32,10 +32,26 @@ test("stLineChart renders a value label for every available year", () => {
   }
 });
 
-test("renderSgisStats renders housing series and dwelling composition", () => {
-  const html = renderSgisStats(sgis);
+test("stLineChart renders the KOSIS housing chart taller", () => {
+  const houses = stats.indicators.find(indicator => indicator.id === "houses");
+  const chart = stLineChart(houses.series, true);
+  assert.match(chart, /viewBox="0 0 320 170"/);
+});
+
+test("renderSgisStats omits the duplicate housing series and zero-value types", () => {
+  const sgisWithZeroType = {
+    ...sgis,
+    houseSummary: [
+      ...sgis.houseSummary.filter(row => row.id !== "dormSocial"),
+      { id: "dormSocial", name: "기숙사·사회시설", count: 0, ratio: 0 },
+    ],
+  };
+  const html = renderSgisStats(sgisWithZeroType);
   assert.match(html, /인구주택총조사 통계/);
   assert.match(html, /거처 유형 구성/);
   assert.match(html, /28,366가구/);
-  assert.equal((html.match(/<text class="pv"/g) || []).length, sgis.houseSeries.length);
+  assert.doesNotMatch(html, /<div class="st-name">주택수<\/div>/);
+  assert.doesNotMatch(html, /기숙사·사회시설/);
+  assert.equal((html.match(/<div class="st-type-row">/g) || []).length, 5);
+  assert.equal((html.match(/<text class="pv"/g) || []).length, 0);
 });

@@ -3989,7 +3989,7 @@ function exportVacantExcel(){
    통계 탭 (KOSIS e-지방지표 + SGIS 인구주택총조사, 월 1회 CI 갱신)
    - 실시간 API 호출 없음. 수집 스크립트가 만든 정적 JSON만 읽는다.
    - KOSIS: 지표별 최신값·연도별 추이·광주/전국 비교
-   - SGIS: 인구주택총조사 주택수 시계열·거처 유형 구성
+   - SGIS: 인구주택총조사 거처 유형 구성
    ============================================================ */
 let ST_DATA = null;   // stats_donggu.json 캐시
 let ST_SGIS = null;   // sgis_stats_donggu.json 캐시
@@ -4008,7 +4008,7 @@ async function initStatsTab(){
     if(sr?.ok){
       try{
         const sgis = await sr.json();
-        if(Array.isArray(sgis?.houseSeries) && Array.isArray(sgis?.houseSummary)) ST_SGIS = sgis;
+        if(Array.isArray(sgis?.houseSummary)) ST_SGIS = sgis;
       }catch(e){ console.warn("[initStatsTab] SGIS 데이터 파싱 실패", e); }
     }
   }catch(e){
@@ -4026,8 +4026,8 @@ function stFmt(v){
 }
 
 // 연도별 꺾은선 그래프 (SVG, 외부 라이브러리 없음) — 동구 시계열 전용
-function stLineChart(series){
-  const W=320, H=110, PL=6, PR=6, PT=16, PB=16;
+function stLineChart(series, tall=false){
+  const W=320, H=tall ? 170 : 110, PL=6, PR=6, PT=16, PB=16;
   const n = series.length;
   const vals = series.map(r=>r.donggu).filter(v=>v!=null);
   if(vals.length < 2) return "";
@@ -4077,7 +4077,7 @@ function renderStats(d, sgis){
         <div class="st-latest"><b>${stFmt(last.donggu)}</b><span>${esc(ind.unit)}</span>${sub}<em>${esc(last.year)}년</em></div>
       </div>
       <div class="st-sec">연도별 추이 (동구, ${esc(s[0].year)}~${esc(last.year)})</div>
-      ${stLineChart(s)}
+      ${stLineChart(s, ind.id === "houses")}
       ${cmpHtml}
     </div>`;
   }
@@ -4088,34 +4088,20 @@ function renderStats(d, sgis){
 
 function renderSgisStats(d){
   if(!d) return "";
-  const series = Array.isArray(d.houseSeries) ? d.houseSeries : [];
   const summary = Array.isArray(d.houseSummary) ? d.houseSummary : [];
-  if(!series.length && !summary.length) return "";
+  const visibleSummary = summary.filter(row => Number(row.count) > 0 || Number(row.ratio) > 0);
+  if(!visibleSummary.length) return "";
   const fetched = d.generatedAt ? String(d.generatedAt).slice(0,10) : "";
   let html = `<div class="st-source-head">
     <div class="st-source-title">인구주택총조사 통계 <span>SGIS OpenAPI</span></div>
     <div class="st-source-note">${esc(d.admNm || "동구")}${fetched ? ` · ${esc(fetched)} 수집` : ""}</div>
   </div><div class="st-grid">`;
 
-  if(series.length){
-    const chartSeries = series.map(r => ({ year:r.year, donggu:r.houseCnt }));
-    const last = series[series.length-1];
-    html += `<div class="st-card">
-      <div class="st-head">
-        <div class="st-name">주택수</div>
-        <div class="st-latest"><b>${fmt(last.houseCnt)}</b><span>호</span><em>${esc(last.year)}년</em></div>
-      </div>
-      <div class="st-sec">연도별 추이 (동구, ${esc(series[0].year)}~${esc(last.year)})</div>
-      ${stLineChart(chartSeries)}
-      <div class="st-note">SGIS 인구주택총조사 기준 · KOSIS 주택수와 집계 기준이 다를 수 있습니다.</div>
-    </div>`;
-  }
-
-  if(summary.length){
+  if(visibleSummary.length){
     html += `<div class="st-card">
       <div class="st-name">거처 유형 구성</div>
       <div class="st-sec">거처 유형별 거주가구 비율</div>
-      <div class="st-type-list">${summary.map(row => {
+      <div class="st-type-list">${visibleSummary.map(row => {
         const ratio = Number(row.ratio) || 0;
         return `<div class="st-type-row">
           <div class="st-type-head"><span>${esc(row.name || "기타")}</span><b>${stFmt(ratio)}%</b></div>
