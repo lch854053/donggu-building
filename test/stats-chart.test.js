@@ -41,6 +41,7 @@ test("stLineChart renders the KOSIS housing chart taller", () => {
 test("renderSgisStats omits the duplicate housing series and zero-value types", () => {
   const sgisWithZeroType = {
     ...sgis,
+    houseTypeSeries: [],
     houseSummary: [
       ...sgis.houseSummary.filter(row => row.id !== "dormSocial"),
       { id: "dormSocial", name: "기숙사·사회시설", count: 0, ratio: 0 },
