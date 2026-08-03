@@ -15,11 +15,6 @@ const SGIS_BASE = "https://sgisapi.mods.go.kr/OpenAPI3";
 const SGIS_ADM_CD = "24010"; // 광주광역시 동구
 const SGIS_HOUSE_YEARS = Array.from({ length: 10 }, (_, i) => 2015 + i);
 const SGIS_SUMMARY_YEAR = String(SGIS_HOUSE_YEARS.at(-1));
-const SGIS_HOUSE_TYPES = [
-  { id: "detached", codes: ["01"], name: "단독주택" },
-  { id: "apart", codes: ["02"], name: "아파트" },
-  { id: "rowMulti", codes: ["03", "04"], name: "연립·다세대" },
-];
 const FETCH_TIMEOUT_MS = 20000;
 
 function fetchWithTimeout(url) {
@@ -89,18 +84,6 @@ async function main() {
     adm_cd: SGIS_ADM_CD,
   });
   const houseSeries = await fetchHouseSeries(accessToken);
-  const houseTypeSeries = [];
-  for (const type of SGIS_HOUSE_TYPES) {
-    const typeSeries = [];
-    for (const code of type.codes) {
-      typeSeries.push(await fetchHouseSeries(accessToken, { house_type: code }));
-    }
-    const series = SGIS_HOUSE_YEARS.map((year, i) => ({
-      year: String(year),
-      houseCnt: typeSeries.reduce((sum, rows) => sum + rows[i].houseCnt, 0),
-    }));
-    houseTypeSeries.push({ ...type, series });
-  }
 
   const summaryRow = summaryData.result?.find(item => String(item.adm_cd) === SGIS_ADM_CD);
   if (!summaryRow) throw new Error(`housesummary: ${SGIS_ADM_CD} 응답 없음`);
@@ -130,12 +113,11 @@ async function main() {
     admNm: String(summaryRow.adm_nm || "동구"),
     summaryYear: SGIS_SUMMARY_YEAR,
     houseSeries,
-    houseTypeSeries,
     houseSummary,
   };
   const file = join(ROOT, "sgis_stats_donggu.json");
   await writeFile(file, JSON.stringify(out, null, 2) + "\n", "utf8");
-  console.log(`✓ ${file} 생성 (주택 시계열 ${houseSeries.length}개, 주택 유형 ${houseTypeSeries.length}종, 거처 유형 ${houseSummary.length}개)`);
+  console.log(`✓ ${file} 생성 (주택 시계열 ${houseSeries.length}개, 거처 유형 ${houseSummary.length}개)`);
 }
 
 main().catch(e => {
