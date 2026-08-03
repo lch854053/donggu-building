@@ -507,6 +507,7 @@
   /* ===== 통계 탭 ===== */
   .st-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
   .st-card{border:1px solid var(--line);border-radius:10px;background:var(--card);padding:14px 16px}
+  .st-card-wide{grid-column:1/-1}
   .st-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:4px}
   .st-name{font-size:13px;font-weight:700;color:var(--ink)}
   .st-latest{text-align:right;flex:none}
@@ -540,3 +541,8 @@
   .st-type-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px}
   .st-type-head b{font-family:var(--mono);font-size:11px;color:var(--accent)}
   .st-type-row small{display:block;margin-top:2px;text-align:right;font-family:var(--mono);font-size:10px;color:var(--mute)}
+  .st-type-series-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px 18px}
+  .st-type-series-card{min-width:0;border-top:1px solid var(--line);padding-top:8px}
+  .st-type-series-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:12px;font-weight:700;color:var(--ink)}
+  .st-type-series-head b{font-family:var(--mono);font-size:14px;color:var(--accent)}
+  .st-type-series-head small{font-family:inherit;font-size:10px;font-weight:400;color:var(--ink-soft);margin-left:2px}

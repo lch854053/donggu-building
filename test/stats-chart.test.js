@@ -55,3 +55,22 @@ test("renderSgisStats omits the duplicate housing series and zero-value types", 
   assert.equal((html.match(/<div class="st-type-row">/g) || []).length, 5);
   assert.equal((html.match(/<text class="pv"/g) || []).length, 0);
 });
+
+test("renderSgisStats renders housing type time series", () => {
+  const houseTypeSeries = ["단독주택", "아파트"].map((name, typeIndex) => ({
+    id: typeIndex === 0 ? "detached" : "apart",
+    code: typeIndex === 0 ? "01" : "02",
+    name,
+    series: sgis.houseSeries.map((row, yearIndex) => ({
+      year: row.year,
+      houseCnt: 1000 + typeIndex * 500 + yearIndex * 10,
+    })),
+  }));
+  const html = renderSgisStats({ ...sgis, houseTypeSeries });
+  assert.match(html, /2024년 기준/);
+  assert.match(html, /주택 유형별 시계열/);
+  assert.match(html, /단독주택/);
+  assert.match(html, /아파트/);
+  assert.equal((html.match(/<div class="st-type-series-card">/g) || []).length, 2);
+  assert.equal((html.match(/<text class="pv"/g) || []).length, houseTypeSeries.length * sgis.houseSeries.length);
+});

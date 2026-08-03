@@ -1,5 +1,5 @@
 // scripts/update-sgis-stats.mjs
-// SGIS 인구주택총조사 API에서 동구 주택 시계열과 거처 유형 구성을 수집합니다.
+// SGIS 인구주택총조사 API에서 동구 주택 시계열·주택 유형별 시계열과 거처 유형 구성을 수집합니다.
 // 브라우저에는 인증정보를 노출하지 않고, 통계 탭이 읽는 정적 JSON만 갱신합니다.
 
 import { writeFile } from "node:fs/promises";
@@ -14,6 +14,15 @@ const SGIS_CONSUMER_SECRET = process.env.SGIS_CONSUMER_SECRET;
 const SGIS_BASE = "https://sgisapi.mods.go.kr/OpenAPI3";
 const SGIS_ADM_CD = "24010"; // 광주광역시 동구
 const SGIS_HOUSE_YEARS = Array.from({ length: 10 }, (_, i) => 2015 + i);
+const SGIS_SUMMARY_YEAR = String(SGIS_HOUSE_YEARS.at(-1));
+const SGIS_HOUSE_TYPES = [
+  { id: "detached", code: "01", name: "단독주택" },
+  { id: "apart", code: "02", name: "아파트" },
+  { id: "row", code: "03", name: "연립주택" },
+  { id: "multi", code: "04", name: "다세대주택" },
+  { id: "nonResidential", code: "05", name: "비거주용 건물 내 주택" },
+  { id: "nonHouse", code: "06", name: "주택 이외의 거처" },
+];
 const FETCH_TIMEOUT_MS = 20000;
 
 function fetchWithTimeout(url) {
@@ -57,27 +66,37 @@ function numberOrNull(value) {
   return Number.isFinite(n) ? n : null;
 }
 
-async function main() {
-  const accessToken = await getAccessToken();
-  const [summaryData, ...houseData] = await Promise.all([
-    fetchJson("startupbiz/housesummary.json", {
-      accessToken,
-      adm_cd: SGIS_ADM_CD,
-    }),
-    ...SGIS_HOUSE_YEARS.map(year => fetchJson("stats/house.json", {
+async function fetchHouseSeries(accessToken, extraParams = {}) {
+  const series = [];
+  for (const year of SGIS_HOUSE_YEARS) {
+    const data = await fetchJson("stats/house.json", {
       accessToken,
       year: String(year),
       adm_cd: SGIS_ADM_CD,
       low_search: "0",
-    })),
-  ]);
-
-  const houseSeries = houseData.map((data, i) => {
+      ...extraParams,
+    });
     const row = data.result?.find(item => String(item.adm_cd) === SGIS_ADM_CD) || data.result?.[0];
     const houseCnt = numberOrNull(row?.house_cnt);
-    if (houseCnt === null) throw new Error(`stats/house ${SGIS_HOUSE_YEARS[i]}: 주택수 없음`);
-    return { year: String(SGIS_HOUSE_YEARS[i]), houseCnt };
+    const typeLabel = extraParams.house_type ? ` 주택유형 ${extraParams.house_type}` : "";
+    if (houseCnt === null) throw new Error(`stats/house ${SGIS_HOUSE_YEARS[series.length]}${typeLabel}: 주택수 없음`);
+    series.push({ year: String(year), houseCnt });
+  }
+  return series;
+}
+
+async function main() {
+  const accessToken = await getAccessToken();
+  const summaryData = await fetchJson("startupbiz/housesummary.json", {
+    accessToken,
+    adm_cd: SGIS_ADM_CD,
   });
+  const houseSeries = await fetchHouseSeries(accessToken);
+  const houseTypeSeries = [];
+  for (const type of SGIS_HOUSE_TYPES) {
+    const series = await fetchHouseSeries(accessToken, { house_type: type.code });
+    houseTypeSeries.push({ ...type, series });
+  }
 
   const summaryRow = summaryData.result?.find(item => String(item.adm_cd) === SGIS_ADM_CD);
   if (!summaryRow) throw new Error(`housesummary: ${SGIS_ADM_CD} 응답 없음`);
@@ -105,12 +124,14 @@ async function main() {
     region: "전남광주통합특별시 동구",
     admCd: SGIS_ADM_CD,
     admNm: String(summaryRow.adm_nm || "동구"),
+    summaryYear: SGIS_SUMMARY_YEAR,
     houseSeries,
+    houseTypeSeries,
     houseSummary,
   };
   const file = join(ROOT, "sgis_stats_donggu.json");
   await writeFile(file, JSON.stringify(out, null, 2) + "\n", "utf8");
-  console.log(`✓ ${file} 생성 (주택 시계열 ${houseSeries.length}개, 거처 유형 ${houseSummary.length}개)`);
+  console.log(`✓ ${file} 생성 (주택 시계열 ${houseSeries.length}개, 주택 유형 ${houseTypeSeries.length}종, 거처 유형 ${houseSummary.length}개)`);
 }
 
 main().catch(e => {

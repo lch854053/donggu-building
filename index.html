@@ -3989,7 +3989,7 @@ function exportVacantExcel(){
    통계 탭 (KOSIS e-지방지표 + SGIS 인구주택총조사, 월 1회 CI 갱신)
    - 실시간 API 호출 없음. 수집 스크립트가 만든 정적 JSON만 읽는다.
    - KOSIS: 지표별 최신값·연도별 추이·광주/전국 비교
-   - SGIS: 인구주택총조사 거처 유형 구성
+   - SGIS: 인구주택총조사 주택 유형별 시계열·거처 유형 구성
    ============================================================ */
 let ST_DATA = null;   // stats_donggu.json 캐시
 let ST_SGIS = null;   // sgis_stats_donggu.json 캐시
@@ -4089,9 +4089,17 @@ function renderStats(d, sgis){
 function renderSgisStats(d){
   if(!d) return "";
   const summary = Array.isArray(d.houseSummary) ? d.houseSummary : [];
+  const typeSeries = Array.isArray(d.houseTypeSeries) ? d.houseTypeSeries : [];
   const visibleSummary = summary.filter(row => Number(row.count) > 0 || Number(row.ratio) > 0);
-  if(!visibleSummary.length) return "";
+  const visibleTypeSeries = typeSeries.map(type => ({
+    ...type,
+    series: (Array.isArray(type.series) ? type.series : [])
+      .map(row => ({ year:String(row.year), donggu:Number(row.houseCnt) }))
+      .filter(row => Number.isFinite(row.donggu)),
+  })).filter(type => type.series.length >= 2);
+  if(!visibleSummary.length && !visibleTypeSeries.length) return "";
   const fetched = d.generatedAt ? String(d.generatedAt).slice(0,10) : "";
+  const summaryYear = d.summaryYear ? String(d.summaryYear) : "";
   let html = `<div class="st-source-head">
     <div class="st-source-title">인구주택총조사 통계 <span>SGIS OpenAPI</span></div>
     <div class="st-source-note">${esc(d.admNm || "동구")}${fetched ? ` · ${esc(fetched)} 수집` : ""}</div>
@@ -4100,7 +4108,7 @@ function renderSgisStats(d){
   if(visibleSummary.length){
     html += `<div class="st-card">
       <div class="st-name">거처 유형 구성</div>
-      <div class="st-sec">거처 유형별 거주가구 비율</div>
+      <div class="st-sec">거처 유형별 거주가구 비율${summaryYear ? ` (${esc(summaryYear)}년 기준)` : ""}</div>
       <div class="st-type-list">${visibleSummary.map(row => {
         const ratio = Number(row.ratio) || 0;
         return `<div class="st-type-row">
@@ -4109,7 +4117,25 @@ function renderSgisStats(d){
           <small>${fmt(Number(row.count)||0)}가구</small>
         </div>`;
       }).join("")}</div>
-      <div class="st-note">거처 유형별 거주가구 기준 · SGIS API 최신 제공값</div>
+      <div class="st-note">${summaryYear ? `${esc(summaryYear)}년 기준 · ` : ""}거처 유형별 거주가구 기준 · SGIS API 제공값</div>
+    </div>`;
+  }
+
+  if(visibleTypeSeries.length){
+    const years = visibleTypeSeries.flatMap(type => type.series.map(row => Number(row.year))).filter(Number.isFinite);
+    const firstYear = years.length ? Math.min(...years) : "";
+    const lastYear = years.length ? Math.max(...years) : "";
+    html += `<div class="st-card st-card-wide">
+      <div class="st-name">주택 유형별 시계열</div>
+      <div class="st-sec">주택 유형별 주택수 (동구, ${esc(String(firstYear))}~${esc(String(lastYear))})</div>
+      <div class="st-type-series-grid">${visibleTypeSeries.map(type => {
+        const last = type.series[type.series.length - 1];
+        return `<div class="st-type-series-card">
+          <div class="st-type-series-head"><span>${esc(type.name || "기타")}</span><b>${fmt(last.donggu)}<small>호</small></b></div>
+          ${stLineChart(type.series)}
+        </div>`;
+      }).join("")}</div>
+      <div class="st-note">SGIS 인구주택총조사 주택유형 코드 기준 · 주택 이외의 거처 포함</div>
     </div>`;
   }
   return html + `</div>`;

@@ -6,6 +6,7 @@ const stats = JSON.parse(readFileSync(new URL("../sgis_stats_donggu.json", impor
 
 test("SGIS 동구 통계는 주택 시계열과 거처 유형 구성을 모두 포함한다", () => {
   assert.equal(stats.admCd, "24010");
+  assert.equal(stats.summaryYear, "2024");
   assert.equal(stats.houseSeries.length, 10);
   assert.equal(stats.houseSeries[0].year, "2015");
   assert.equal(stats.houseSeries.at(-1).year, "2024");
