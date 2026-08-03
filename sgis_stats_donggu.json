@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-03T11:35:39.927Z",
+  "generatedAt": "2026-08-03T12:09:19.357Z",
   "source": "SGIS 인구주택총조사 OpenAPI",
   "region": "전남광주통합특별시 동구",
   "admCd": "24010",
@@ -45,6 +45,290 @@
     {
       "year": "2024",
       "houseCnt": 40508
+    }
+  ],
+  "houseTypeSeries": [
+    {
+      "id": "detached",
+      "code": "01",
+      "name": "단독주택",
+      "series": [
+        {
+          "year": "2015",
+          "houseCnt": 13088
+        },
+        {
+          "year": "2016",
+          "houseCnt": 12263
+        },
+        {
+          "year": "2017",
+          "houseCnt": 11723
+        },
+        {
+          "year": "2018",
+          "houseCnt": 10900
+        },
+        {
+          "year": "2019",
+          "houseCnt": 10291
+        },
+        {
+          "year": "2020",
+          "houseCnt": 9752
+        },
+        {
+          "year": "2021",
+          "houseCnt": 9602
+        },
+        {
+          "year": "2022",
+          "houseCnt": 9307
+        },
+        {
+          "year": "2023",
+          "houseCnt": 9112
+        },
+        {
+          "year": "2024",
+          "houseCnt": 8851
+        }
+      ]
+    },
+    {
+      "id": "apart",
+      "code": "02",
+      "name": "아파트",
+      "series": [
+        {
+          "year": "2015",
+          "houseCnt": 13616
+        },
+        {
+          "year": "2016",
+          "houseCnt": 14214
+        },
+        {
+          "year": "2017",
+          "houseCnt": 15567
+        },
+        {
+          "year": "2018",
+          "houseCnt": 16670
+        },
+        {
+          "year": "2019",
+          "houseCnt": 19904
+        },
+        {
+          "year": "2020",
+          "houseCnt": 22634
+        },
+        {
+          "year": "2021",
+          "houseCnt": 24574
+        },
+        {
+          "year": "2022",
+          "houseCnt": 26460
+        },
+        {
+          "year": "2023",
+          "houseCnt": 27859
+        },
+        {
+          "year": "2024",
+          "houseCnt": 28353
+        }
+      ]
+    },
+    {
+      "id": "row",
+      "code": "03",
+      "name": "연립주택",
+      "series": [
+        {
+          "year": "2015",
+          "houseCnt": 842
+        },
+        {
+          "year": "2016",
+          "houseCnt": 874
+        },
+        {
+          "year": "2017",
+          "houseCnt": 846
+        },
+        {
+          "year": "2018",
+          "houseCnt": 815
+        },
+        {
+          "year": "2019",
+          "houseCnt": 817
+        },
+        {
+          "year": "2020",
+          "houseCnt": 819
+        },
+        {
+          "year": "2021",
+          "houseCnt": 862
+        },
+        {
+          "year": "2022",
+          "houseCnt": 866
+        },
+        {
+          "year": "2023",
+          "houseCnt": 896
+        },
+        {
+          "year": "2024",
+          "houseCnt": 922
+        }
+      ]
+    },
+    {
+      "id": "multi",
+      "code": "04",
+      "name": "다세대주택",
+      "series": [
+        {
+          "year": "2015",
+          "houseCnt": 2027
+        },
+        {
+          "year": "2016",
+          "houseCnt": 1941
+        },
+        {
+          "year": "2017",
+          "houseCnt": 1755
+        },
+        {
+          "year": "2018",
+          "houseCnt": 1650
+        },
+        {
+          "year": "2019",
+          "houseCnt": 1580
+        },
+        {
+          "year": "2020",
+          "houseCnt": 1556
+        },
+        {
+          "year": "2021",
+          "houseCnt": 1682
+        },
+        {
+          "year": "2022",
+          "houseCnt": 1692
+        },
+        {
+          "year": "2023",
+          "houseCnt": 1694
+        },
+        {
+          "year": "2024",
+          "houseCnt": 1690
+        }
+      ]
+    },
+    {
+      "id": "nonResidential",
+      "code": "05",
+      "name": "비거주용 건물 내 주택",
+      "series": [
+        {
+          "year": "2015",
+          "houseCnt": 873
+        },
+        {
+          "year": "2016",
+          "houseCnt": 825
+        },
+        {
+          "year": "2017",
+          "houseCnt": 879
+        },
+        {
+          "year": "2018",
+          "houseCnt": 814
+        },
+        {
+          "year": "2019",
+          "houseCnt": 784
+        },
+        {
+          "year": "2020",
+          "houseCnt": 747
+        },
+        {
+          "year": "2021",
+          "houseCnt": 736
+        },
+        {
+          "year": "2022",
+          "houseCnt": 722
+        },
+        {
+          "year": "2023",
+          "houseCnt": 710
+        },
+        {
+          "year": "2024",
+          "houseCnt": 692
+        }
+      ]
+    },
+    {
+      "id": "nonHouse",
+      "code": "06",
+      "name": "주택 이외의 거처",
+      "series": [
+        {
+          "year": "2015",
+          "houseCnt": 1478
+        },
+        {
+          "year": "2016",
+          "houseCnt": 1442
+        },
+        {
+          "year": "2017",
+          "houseCnt": 1484
+        },
+        {
+          "year": "2018",
+          "houseCnt": 1460
+        },
+        {
+          "year": "2019",
+          "houseCnt": 1472
+        },
+        {
+          "year": "2020",
+          "houseCnt": 1540
+        },
+        {
+          "year": "2021",
+          "houseCnt": 1951
+        },
+        {
+          "year": "2022",
+          "houseCnt": 2632
+        },
+        {
+          "year": "2023",
+          "houseCnt": 2850
+        },
+        {
+          "year": "2024",
+          "houseCnt": 3262
+        }
+      ]
     }
   ],
   "houseSummary": [
