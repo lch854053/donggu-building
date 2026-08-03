@@ -4049,6 +4049,30 @@ function stLineChart(series, tall=false){
   return `<svg class="st-line" viewBox="0 0 ${W} ${H}" role="img"><polyline points="${line}"/>${dots}</svg>`;
 }
 
+function stMultiLineChart(seriesByType){
+  const valid = seriesByType.filter(type => Array.isArray(type.series) && type.series.length >= 2);
+  if(!valid.length) return "";
+  const W=640, H=180, PL=30, PR=12, PT=12, PB=24;
+  const n = Math.max(...valid.map(type => type.series.length));
+  const vals = valid.flatMap(type => type.series.map(row => row.donggu)).filter(v => Number.isFinite(v));
+  if(vals.length < 2) return "";
+  const max = Math.max(...vals, 1);
+  const x = i => PL + i*(W-PL-PR)/(n-1);
+  const y = v => PT + (1-v/max)*(H-PT-PB);
+  const lines = valid.map((type, typeIndex) => {
+    const points = type.series.map((row, i) => [x(i), y(row.donggu)]);
+    const line = points.map(point => point.map(value => value.toFixed(1)).join(",")).join(" ");
+    const dots = points.map(([cx, cy]) => `<circle class="st-multi-dot st-multi-dot-${typeIndex}" cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="2.8"/>`).join("");
+    return `<polyline class="st-multi-line st-multi-line-${typeIndex}" points="${line}"/>${dots}`;
+  }).join("");
+  const years = valid[0].series.map((row, i) => `<text class="st-multi-year" x="${x(i).toFixed(1)}" y="${H-4}">${esc(String(row.year).slice(2))}</text>`).join("");
+  const legend = valid.map((type, typeIndex) => {
+    const last = type.series[type.series.length - 1];
+    return `<span><i class="st-multi-swatch st-multi-swatch-${typeIndex}"></i>${esc(type.name || "기타")} <b>${stFmt(last.donggu)}호</b></span>`;
+  }).join("");
+  return `<div class="st-multi-chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="주택 유형별 연도별 추이">${lines}${years}</svg><div class="st-multi-legend">${legend}</div></div>`;
+}
+
 function renderStats(d, sgis){
   let html = `<div class="d-panel-hint" style="margin-bottom:10px">출처 : ${esc(d.source||"")}</div>`;
   html += `<div class="st-grid">`;
@@ -4091,7 +4115,7 @@ function renderSgisStats(d){
   const summary = Array.isArray(d.houseSummary) ? d.houseSummary : [];
   const typeSeries = Array.isArray(d.houseTypeSeries) ? d.houseTypeSeries : [];
   const visibleSummary = summary.filter(row => Number(row.count) > 0 || Number(row.ratio) > 0);
-  const visibleTypeSeries = typeSeries.map(type => ({
+  const visibleTypeSeries = typeSeries.filter(type => ["detached", "apart", "rowMulti"].includes(type.id)).map(type => ({
     ...type,
     series: (Array.isArray(type.series) ? type.series : [])
       .map(row => ({ year:String(row.year), donggu:Number(row.houseCnt) }))
@@ -4125,17 +4149,11 @@ function renderSgisStats(d){
     const years = visibleTypeSeries.flatMap(type => type.series.map(row => Number(row.year))).filter(Number.isFinite);
     const firstYear = years.length ? Math.min(...years) : "";
     const lastYear = years.length ? Math.max(...years) : "";
-    html += `<div class="st-card st-card-wide">
+    html += `<div class="st-card">
       <div class="st-name">주택 유형별 시계열</div>
       <div class="st-sec">주택 유형별 주택수 (동구, ${esc(String(firstYear))}~${esc(String(lastYear))})</div>
-      <div class="st-type-series-grid">${visibleTypeSeries.map(type => {
-        const last = type.series[type.series.length - 1];
-        return `<div class="st-type-series-card">
-          <div class="st-type-series-head"><span>${esc(type.name || "기타")}</span><b>${fmt(last.donggu)}<small>호</small></b></div>
-          ${stLineChart(type.series)}
-        </div>`;
-      }).join("")}</div>
-      <div class="st-note">SGIS 인구주택총조사 주택유형 코드 기준 · 주택 이외의 거처 포함</div>
+      ${stMultiLineChart(visibleTypeSeries)}
+      <div class="st-note">SGIS 인구주택총조사 주택유형 코드 기준 · 연립주택과 다세대주택 합산</div>
     </div>`;
   }
   return html + `</div>`;

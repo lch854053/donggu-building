@@ -40,7 +40,7 @@ jobs:
             echo "::error::stats_donggu.json이 비어 있거나 파싱 실패 ($ind_count). 커밋 중단."
             exit 1
           fi
-           sgis_valid=$(node -e "try{const d=require('./sgis_stats_donggu.json');const types=Array.isArray(d.houseTypeSeries)&&d.houseTypeSeries.length===6&&d.houseTypeSeries.every(t=>Array.isArray(t.series)&&t.series.length===10&&t.series.every(r=>Number.isFinite(r.houseCnt)));console.log(Array.isArray(d.houseSeries)&&d.houseSeries.length>0&&Array.isArray(d.houseSummary)&&d.houseSummary.length>0&&d.summaryYear&&types?1:0)}catch{console.log(0)}")
+           sgis_valid=$(node -e "try{const d=require('./sgis_stats_donggu.json');const codes=JSON.stringify(d.houseTypeSeries?.map(t=>t.codes?.join(',')));const types=codes===JSON.stringify(['01','02','03,04'])&&d.houseTypeSeries.every(t=>Array.isArray(t.series)&&t.series.length===10&&t.series.every(r=>Number.isFinite(r.houseCnt)));console.log(Array.isArray(d.houseSeries)&&d.houseSeries.length>0&&Array.isArray(d.houseSummary)&&d.houseSummary.length>0&&d.summaryYear&&types?1:0)}catch{console.log(0)}")
            echo "sgis_stats_donggu.json 검증: $sgis_valid"
            if [ "$sgis_valid" -ne 1 ] 2>/dev/null; then
              echo "::error::sgis_stats_donggu.json이 비어 있거나 주택 유형 시계열 형식 오류. 커밋 중단."

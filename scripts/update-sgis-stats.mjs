@@ -16,12 +16,9 @@ const SGIS_ADM_CD = "24010"; // 광주광역시 동구
 const SGIS_HOUSE_YEARS = Array.from({ length: 10 }, (_, i) => 2015 + i);
 const SGIS_SUMMARY_YEAR = String(SGIS_HOUSE_YEARS.at(-1));
 const SGIS_HOUSE_TYPES = [
-  { id: "detached", code: "01", name: "단독주택" },
-  { id: "apart", code: "02", name: "아파트" },
-  { id: "row", code: "03", name: "연립주택" },
-  { id: "multi", code: "04", name: "다세대주택" },
-  { id: "nonResidential", code: "05", name: "비거주용 건물 내 주택" },
-  { id: "nonHouse", code: "06", name: "주택 이외의 거처" },
+  { id: "detached", codes: ["01"], name: "단독주택" },
+  { id: "apart", codes: ["02"], name: "아파트" },
+  { id: "rowMulti", codes: ["03", "04"], name: "연립·다세대" },
 ];
 const FETCH_TIMEOUT_MS = 20000;
 
@@ -94,7 +91,14 @@ async function main() {
   const houseSeries = await fetchHouseSeries(accessToken);
   const houseTypeSeries = [];
   for (const type of SGIS_HOUSE_TYPES) {
-    const series = await fetchHouseSeries(accessToken, { house_type: type.code });
+    const typeSeries = [];
+    for (const code of type.codes) {
+      typeSeries.push(await fetchHouseSeries(accessToken, { house_type: code }));
+    }
+    const series = SGIS_HOUSE_YEARS.map((year, i) => ({
+      year: String(year),
+      houseCnt: typeSeries.reduce((sum, rows) => sum + rows[i].houseCnt, 0),
+    }));
     houseTypeSeries.push({ ...type, series });
   }
 

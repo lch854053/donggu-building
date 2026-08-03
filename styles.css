@@ -507,7 +507,6 @@
   /* ===== 통계 탭 ===== */
   .st-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
   .st-card{border:1px solid var(--line);border-radius:10px;background:var(--card);padding:14px 16px}
-  .st-card-wide{grid-column:1/-1}
   .st-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:4px}
   .st-name{font-size:13px;font-weight:700;color:var(--ink)}
   .st-latest{text-align:right;flex:none}
@@ -541,8 +540,20 @@
   .st-type-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px}
   .st-type-head b{font-family:var(--mono);font-size:11px;color:var(--accent)}
   .st-type-row small{display:block;margin-top:2px;text-align:right;font-family:var(--mono);font-size:10px;color:var(--mute)}
-  .st-type-series-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px 18px}
-  .st-type-series-card{min-width:0;border-top:1px solid var(--line);padding-top:8px}
-  .st-type-series-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:12px;font-weight:700;color:var(--ink)}
-  .st-type-series-head b{font-family:var(--mono);font-size:14px;color:var(--accent)}
-  .st-type-series-head small{font-family:inherit;font-size:10px;font-weight:400;color:var(--ink-soft);margin-left:2px}
+  .st-multi-chart{min-width:0}
+  .st-multi-chart svg{width:100%;height:auto;display:block;overflow:visible}
+  .st-multi-line{fill:none;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+  .st-multi-line-0{stroke:#2f86bf}
+  .st-multi-line-1{stroke:#c45b3c}
+  .st-multi-line-2{stroke:#7b61a8}
+  .st-multi-dot-0{fill:#2f86bf}
+  .st-multi-dot-1{fill:#c45b3c}
+  .st-multi-dot-2{fill:#7b61a8}
+  .st-multi-year{font-family:var(--mono);font-size:9px;fill:var(--mute);text-anchor:middle}
+  .st-multi-legend{display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:2px;font-size:11px;color:var(--ink-soft)}
+  .st-multi-legend span{display:inline-flex;align-items:center;gap:4px}
+  .st-multi-legend b{font-family:var(--mono);font-weight:500;color:var(--ink)}
+  .st-multi-swatch{width:8px;height:8px;border-radius:50%;display:inline-block}
+  .st-multi-swatch-0{background:#2f86bf}
+  .st-multi-swatch-1{background:#c45b3c}
+  .st-multi-swatch-2{background:#7b61a8}

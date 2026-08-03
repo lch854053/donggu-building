@@ -50,7 +50,9 @@
   "houseTypeSeries": [
     {
       "id": "detached",
-      "code": "01",
+      "codes": [
+        "01"
+      ],
       "name": "단독주택",
       "series": [
         {
@@ -97,7 +99,9 @@
     },
     {
       "id": "apart",
-      "code": "02",
+      "codes": [
+        "02"
+      ],
       "name": "아파트",
       "series": [
         {
@@ -143,190 +147,52 @@
       ]
     },
     {
-      "id": "row",
-      "code": "03",
-      "name": "연립주택",
+      "id": "rowMulti",
+      "codes": [
+        "03",
+        "04"
+      ],
+      "name": "연립·다세대",
       "series": [
         {
           "year": "2015",
-          "houseCnt": 842
+          "houseCnt": 2869
         },
         {
           "year": "2016",
-          "houseCnt": 874
+          "houseCnt": 2815
         },
         {
           "year": "2017",
-          "houseCnt": 846
+          "houseCnt": 2601
         },
         {
           "year": "2018",
-          "houseCnt": 815
+          "houseCnt": 2465
         },
         {
           "year": "2019",
-          "houseCnt": 817
+          "houseCnt": 2397
         },
         {
           "year": "2020",
-          "houseCnt": 819
+          "houseCnt": 2375
         },
         {
           "year": "2021",
-          "houseCnt": 862
+          "houseCnt": 2544
         },
         {
           "year": "2022",
-          "houseCnt": 866
+          "houseCnt": 2558
         },
         {
           "year": "2023",
-          "houseCnt": 896
+          "houseCnt": 2590
         },
         {
           "year": "2024",
-          "houseCnt": 922
-        }
-      ]
-    },
-    {
-      "id": "multi",
-      "code": "04",
-      "name": "다세대주택",
-      "series": [
-        {
-          "year": "2015",
-          "houseCnt": 2027
-        },
-        {
-          "year": "2016",
-          "houseCnt": 1941
-        },
-        {
-          "year": "2017",
-          "houseCnt": 1755
-        },
-        {
-          "year": "2018",
-          "houseCnt": 1650
-        },
-        {
-          "year": "2019",
-          "houseCnt": 1580
-        },
-        {
-          "year": "2020",
-          "houseCnt": 1556
-        },
-        {
-          "year": "2021",
-          "houseCnt": 1682
-        },
-        {
-          "year": "2022",
-          "houseCnt": 1692
-        },
-        {
-          "year": "2023",
-          "houseCnt": 1694
-        },
-        {
-          "year": "2024",
-          "houseCnt": 1690
-        }
-      ]
-    },
-    {
-      "id": "nonResidential",
-      "code": "05",
-      "name": "비거주용 건물 내 주택",
-      "series": [
-        {
-          "year": "2015",
-          "houseCnt": 873
-        },
-        {
-          "year": "2016",
-          "houseCnt": 825
-        },
-        {
-          "year": "2017",
-          "houseCnt": 879
-        },
-        {
-          "year": "2018",
-          "houseCnt": 814
-        },
-        {
-          "year": "2019",
-          "houseCnt": 784
-        },
-        {
-          "year": "2020",
-          "houseCnt": 747
-        },
-        {
-          "year": "2021",
-          "houseCnt": 736
-        },
-        {
-          "year": "2022",
-          "houseCnt": 722
-        },
-        {
-          "year": "2023",
-          "houseCnt": 710
-        },
-        {
-          "year": "2024",
-          "houseCnt": 692
-        }
-      ]
-    },
-    {
-      "id": "nonHouse",
-      "code": "06",
-      "name": "주택 이외의 거처",
-      "series": [
-        {
-          "year": "2015",
-          "houseCnt": 1478
-        },
-        {
-          "year": "2016",
-          "houseCnt": 1442
-        },
-        {
-          "year": "2017",
-          "houseCnt": 1484
-        },
-        {
-          "year": "2018",
-          "houseCnt": 1460
-        },
-        {
-          "year": "2019",
-          "houseCnt": 1472
-        },
-        {
-          "year": "2020",
-          "houseCnt": 1540
-        },
-        {
-          "year": "2021",
-          "houseCnt": 1951
-        },
-        {
-          "year": "2022",
-          "houseCnt": 2632
-        },
-        {
-          "year": "2023",
-          "houseCnt": 2850
-        },
-        {
-          "year": "2024",
-          "houseCnt": 3262
+          "houseCnt": 2612
         }
       ]
     }
