@@ -39,4 +39,12 @@ test("통계 탭은 REB 정적 데이터와 시장동향 렌더러를 연결한�
   assert.match(html, /아파트 매매가격/);
   assert.match(html, /viewBox="0 0 320 126"/);
   assert.doesNotMatch(html, /토지/);
+  const statsRenderer = normalizedPage.slice(
+    normalizedPage.indexOf("function renderStats"),
+    normalizedPage.indexOf("\nfunction renderSgisStats")
+  );
+  assert.ok(
+    statsRenderer.indexOf("renderSgisStats(sgis)") < statsRenderer.indexOf("renderRebStats(reb)"),
+    "SGIS 통계가 REB 시장동향보다 먼저 렌더링되어야 한다"
+  );
 });
