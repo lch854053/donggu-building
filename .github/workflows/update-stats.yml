@@ -30,6 +30,11 @@ jobs:
           SGIS_CONSUMER_KEY: ${{ secrets.SGIS_CONSUMER_KEY }}
           SGIS_CONSUMER_SECRET: ${{ secrets.SGIS_CONSUMER_SECRET }}
 
+      - name: Update REB real-estate market stats data
+        run: npm run update-reb-stats
+        env:
+          REB_API_KEY: ${{ secrets.REB_API_KEY }}
+
       - name: Validate generated JSON (prevent empty/regressed data)
         run: |
           set -e
@@ -40,10 +45,16 @@ jobs:
             echo "::error::stats_donggu.json이 비어 있거나 파싱 실패 ($ind_count). 커밋 중단."
             exit 1
           fi
-           sgis_valid=$(node -e "try{const d=require('./sgis_stats_donggu.json');console.log(Array.isArray(d.houseSeries)&&d.houseSeries.length>0&&Array.isArray(d.houseSummary)&&d.houseSummary.length>0&&d.summaryYear?1:0)}catch{console.log(0)}")
-           echo "sgis_stats_donggu.json 검증: $sgis_valid"
-           if [ "$sgis_valid" -ne 1 ] 2>/dev/null; then
-             echo "::error::sgis_stats_donggu.json이 비어 있거나 형식 오류. 커밋 중단."
+          sgis_valid=$(node -e "try{const d=require('./sgis_stats_donggu.json');console.log(Array.isArray(d.houseSeries)&&d.houseSeries.length>0&&Array.isArray(d.houseSummary)&&d.houseSummary.length>0&&d.summaryYear?1:0)}catch{console.log(0)}")
+          echo "sgis_stats_donggu.json 검증: $sgis_valid"
+          if [ "$sgis_valid" -ne 1 ] 2>/dev/null; then
+            echo "::error::sgis_stats_donggu.json이 비어 있거나 형식 오류. 커밋 중단."
+            exit 1
+          fi
+          reb_valid=$(node -e "try{const d=require('./reb_stats_donggu.json');console.log(Array.isArray(d.indicators)&&d.indicators.length>0&&d.indicators.every(x=>Array.isArray(x.series)&&x.series.length>0)&&!d.indicators.some(x=>x.statblId==='A_2024_00532'||x.statblId==='A_2024_00901'||x.statblId==='A_2024_00902')?1:0)}catch{console.log(0)}")
+          echo "reb_stats_donggu.json 검증: $reb_valid"
+          if [ "$reb_valid" -ne 1 ] 2>/dev/null; then
+            echo "::error::reb_stats_donggu.json이 비어 있거나 토지 통계가 포함되어 있습니다. 커밋 중단."
             exit 1
           fi
 
@@ -52,7 +63,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           if [ -n "$(git status --porcelain)" ]; then
-            git add stats_donggu.json sgis_stats_donggu.json
+            git add stats_donggu.json sgis_stats_donggu.json reb_stats_donggu.json
             git commit -m "chore: monthly donggu stats update"
             git push
           else

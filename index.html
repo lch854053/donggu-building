@@ -12,7 +12,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.fullscreen/2.4.0/Control.FullScreen.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.fullscreen/2.4.0/Control.FullScreen.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<link rel="stylesheet" href="styles.css?v=6">
+<link rel="stylesheet" href="styles.css?v=7">
 </head>
 <body>
 <div class="wrap">
@@ -3986,21 +3986,24 @@ function exportVacantExcel(){
 
 
 /* ============================================================
-   통계 탭 (KOSIS e-지방지표 + SGIS 인구주택총조사, 월 1회 CI 갱신)
+   통계 탭 (KOSIS e-지방지표 + SGIS 인구주택총조사 + REB 시장동향, 월 1회 CI 갱신)
    - 실시간 API 호출 없음. 수집 스크립트가 만든 정적 JSON만 읽는다.
    - KOSIS: 지표별 최신값·연도별 추이·광주/전국 비교
    - SGIS: 인구주택총조사 주택 유형별 시계열·거처 유형 구성
+   - REB: 동구 주택 가격지수·가격·전세가율·거래량
    ============================================================ */
 let ST_DATA = null;   // stats_donggu.json 캐시
 let ST_SGIS = null;   // sgis_stats_donggu.json 캐시
+let ST_REB = null;    // reb_stats_donggu.json 캐시
 
 async function initStatsTab(){
   if(ST_DATA) return;
   const body = document.getElementById("stBody");
   try{
-    const [r, sr] = await Promise.all([
+    const [r, sr, rr] = await Promise.all([
       fetch("/stats_donggu.json"),
       fetch("/sgis_stats_donggu.json").catch(() => null),
+      fetch("/reb_stats_donggu.json").catch(() => null),
     ]);
     if(!r.ok) throw new Error(`HTTP ${r.status}`);
     ST_DATA = await r.json();
@@ -4011,12 +4014,18 @@ async function initStatsTab(){
         if(Array.isArray(sgis?.houseSummary)) ST_SGIS = sgis;
       }catch(e){ console.warn("[initStatsTab] SGIS 데이터 파싱 실패", e); }
     }
+    if(rr?.ok){
+      try{
+        const reb = await rr.json();
+        if(Array.isArray(reb?.indicators)) ST_REB = reb;
+      }catch(e){ console.warn("[initStatsTab] REB 데이터 파싱 실패", e); }
+    }
   }catch(e){
     console.error("[initStatsTab]", e);
     body.innerHTML = `<div class="d-empty">통계 데이터를 불러오지 못했습니다</div>`;
     return;
   }
-  body.innerHTML = renderStats(ST_DATA, ST_SGIS);
+  body.innerHTML = renderStats(ST_DATA, ST_SGIS, ST_REB);
 }
 
 // 지표값 포맷: 정수는 천단위, 소수는 최대 2자리
@@ -4049,7 +4058,96 @@ function stLineChart(series, tall=false){
   return `<svg class="st-line" viewBox="0 0 ${W} ${H}" role="img"><polyline points="${line}"/>${dots}</svg>`;
 }
 
-function renderStats(d, sgis){
+function rebFmt(v, unit){
+  if(v === null || v === undefined) return "-";
+  return `${stFmt(Number(v))}${unit || ""}`;
+}
+
+function rebShortLabel(row){
+  const period = String(row.period || "");
+  if(period.length === 6 && String(row.label || "").includes("분기")){
+    return `${period.slice(2,4)} Q${Number(period.slice(4))}`;
+  }
+  if(period.length === 6) return `${period.slice(2,4)}.${period.slice(4)}`;
+  return String(row.label || period);
+}
+
+// REB 월별 자료는 최근 36개월만 그려 월별 라벨·수치가 겹치지 않게 한다.
+function rebLineChart(indicators, maxPoints=36){
+  const W=320, H=126, PL=8, PR=8, PT=10, PB=20;
+  const rows = indicators.map(ind => ({
+    ...ind,
+    series: Array.isArray(ind.series) ? ind.series.slice(-maxPoints) : [],
+  })).filter(ind => ind.series.length >= 2);
+  if(!rows.length) return "";
+
+  const periods = [...new Set(rows.flatMap(ind => ind.series.map(row => row.period)))].sort().slice(-maxPoints);
+  const values = rows.flatMap(ind => periods.map(period => ind.series.find(row => row.period === period)?.value).filter(value => value != null));
+  if(values.length < 2) return "";
+  const min = Math.min(...values), max = Math.max(...values), span = (max-min) || 1;
+  const x = i => PL + i*(W-PL-PR)/(Math.max(1, periods.length-1));
+  const y = value => PT + (1-(value-min)/span)*(H-PT-PB);
+  const colors = ["#1976a8", "#c17817", "#5c7f42", "#8b5e83"];
+  const lines = rows.map((ind, rowIndex) => {
+    const points = periods.map((period, i) => {
+      const value = ind.series.find(row => row.period === period)?.value;
+      return value == null ? null : [x(i), y(value)];
+    }).filter(Boolean);
+    if(points.length < 2) return "";
+    const pointText = points.map(point => point.map(coord => coord.toFixed(1)).join(",")).join(" ");
+    return `<polyline class="reb-path" stroke="${colors[rowIndex % colors.length]}" points="${pointText}"/>`;
+  }).join("");
+  const labelStep = Math.max(1, Math.ceil((periods.length-1)/5));
+  const labels = periods.map((period, i) => {
+    if(i !== periods.length-1 && i % labelStep !== 0) return "";
+    const row = rows[0].series.find(item => item.period === period) || { period };
+    return `<text class="rpy" x="${x(i).toFixed(1)}" y="${H-3}">${esc(rebShortLabel(row))}</text>`;
+  }).join("");
+  return `<svg class="reb-line" viewBox="0 0 ${W} ${H}" role="img" aria-label="최근 시계열 추이">${lines}${labels}</svg>`;
+}
+
+function renderRebCard(title, indicators, maxPoints=36){
+  const usable = indicators.filter(ind => Array.isArray(ind?.series) && ind.series.length);
+  if(!usable.length) return "";
+  const latestPeriod = usable.map(ind => ind.series.at(-1)?.period || "").sort().at(-1);
+  const latestLabel = usable.find(ind => ind.series.at(-1)?.period === latestPeriod)?.series.at(-1)?.label || "";
+  const legends = usable.map((ind, i) => {
+    const last = ind.series.at(-1);
+    return `<div class="reb-legend-row"><i class="reb-dot c${i % 4}"></i><span>${esc(ind.name)}</span><b>${rebFmt(last?.value, ind.unit)}</b></div>`;
+  }).join("");
+  return `<div class="st-card reb-card">
+    <div class="st-head"><div class="st-name">${esc(title)}</div><em class="reb-period">${esc(latestLabel)}</em></div>
+    ${rebLineChart(usable, maxPoints)}
+    <div class="reb-legend">${legends}</div>
+  </div>`;
+}
+
+function renderRebStats(d){
+  if(!d || !Array.isArray(d.indicators)) return "";
+  const byId = new Map(d.indicators.map(ind => [ind.id, ind]));
+  const groups = [
+    ["주택종합 가격지수", ["housing_sale_index", "housing_jeonse_index", "housing_rent_index"], 36],
+    ["아파트 가격지수", ["apt_sale_index", "apt_jeonse_index", "apt_rent_index"], 36],
+    ["아파트 매매가격", ["apt_avg_sale_price", "apt_median_sale_price"], 36],
+    ["아파트 전세가격", ["apt_avg_jeonse_price", "apt_median_jeonse_price"], 36],
+    ["아파트 월세가격", ["apt_avg_rent_price", "apt_median_rent_price"], 36],
+    ["아파트 전세가율", ["apt_jeonse_ratio"], 36],
+    ["거래량", ["housing_transactions", "apt_transactions", "building_transactions"], 36],
+    ["아파트 매매가격지수 장기 추이", ["apt_sale_index_quarterly"], 36],
+  ];
+  const fetched = d.generatedAt ? String(d.generatedAt).slice(0,10) : "";
+  let html = `<div class="st-source-head">
+    <div class="st-source-title">부동산 시장동향 <span>REB Open API</span></div>
+    <div class="st-source-note">${esc(d.classPath || "광주>동구")}${fetched ? ` · ${esc(fetched)} 수집` : ""}</div>
+  </div><div class="st-grid reb-grid">`;
+  for(const [title, ids, maxPoints] of groups){
+    html += renderRebCard(title, ids.map(id => byId.get(id)).filter(Boolean), maxPoints);
+  }
+  html += `</div><div class="st-note reb-note">${esc(d.note || "한국부동산원 제공 자료")}</div>`;
+  return html;
+}
+
+function renderStats(d, sgis, reb){
   let html = `<div class="d-panel-hint" style="margin-bottom:10px">출처 : ${esc(d.source||"")}</div>`;
   html += `<div class="st-grid">`;
   for(const ind of d.indicators){
@@ -4082,6 +4180,7 @@ function renderStats(d, sgis){
     </div>`;
   }
   html += `</div>`;
+  html += renderRebStats(reb);
   html += renderSgisStats(sgis);
   return html;
 }

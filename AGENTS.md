@@ -40,6 +40,7 @@ npm run update-odcloud   # 오픈데이터 동구 아파트 (월 1회)
 npm run update-vacant    # 동구 빈집 현황 + 폴리곤 (월 1회)
 npm run update-stats     # KOSIS e-지방지표 동구 통계 (월 1회)
 npm run update-sgis-stats # SGIS 인구주택총조사 주택·거처 통계 (월 1회)
+npm run update-reb-stats  # 한국부동산원 동구 주택시장 통계 (월 1회)
 npm run collect-apt-geo  # VWorld 연속지적도에서 아파트 폴리곤
 npm run update-officetel # 건축인허가 기반 오피스텔 자동 발견
 ```
@@ -55,7 +56,7 @@ npm run update-officetel # 건축인허가 기반 오피스텔 자동 발견
 - `.github/workflows/update-kapt.yml`: 매주 일요일 — K-APT + 폴리곤 + 오피스텔
 - `.github/workflows/update-odcloud.yml`: 매월 1일 — 오픈데이터 아파트 + 폴리곤
 - `.github/workflows/update-vacant.yml`: 매월 1일 — 빈집 데이터 + stale 이슈 생성
-- `.github/workflows/update-stats.yml`: 매월 1일 — KOSIS + SGIS 동구 통계 (`KOSIS_API_KEY`, `SGIS_CONSUMER_KEY`, `SGIS_CONSUMER_SECRET` 시크릿 필요)
+- `.github/workflows/update-stats.yml`: 매월 1일 — KOSIS + SGIS + REB 동구 통계 (`KOSIS_API_KEY`, `SGIS_CONSUMER_KEY`, `SGIS_CONSUMER_SECRET`, `REB_API_KEY` 시크릿 필요)
 
 ## 아키텍처
 
@@ -70,6 +71,7 @@ npm run update-officetel # 건축인허가 기반 오피스텔 자동 발견
 - `*.json` 루트 파일: 정적 데이터 저장소 (K-APT, 빈집, 폴리곤, 행정동 매핑 등)
 - `stats_donggu.json`: KOSIS e-지방지표 정적 통계
 - `sgis_stats_donggu.json`: SGIS 인구주택총조사 주택·거처 정적 통계
+- `reb_stats_donggu.json`: 한국부동산원 동구 주택 가격·거래 정적 통계 (토지 통계 제외)
 
 ## 핵심 데이터/코드 규칙
 

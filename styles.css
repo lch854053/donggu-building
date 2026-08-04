@@ -540,3 +540,17 @@
   .st-type-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px}
   .st-type-head b{font-family:var(--mono);font-size:11px;color:var(--accent)}
   .st-type-row small{display:block;margin-top:2px;text-align:right;font-family:var(--mono);font-size:10px;color:var(--mute)}
+  .reb-grid{margin-top:0}
+  .reb-card{min-width:0}
+  .reb-period{font-style:normal;font-family:var(--mono);font-size:10px;color:var(--mute);white-space:nowrap}
+  .reb-line{width:100%;height:auto;display:block;overflow:visible;margin-top:8px}
+  .reb-line .reb-path{fill:none;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+  .reb-line text.rpy{font-family:var(--mono);font-size:8px;fill:var(--mute);text-anchor:middle}
+  .reb-legend{display:flex;flex-direction:column;gap:4px;margin-top:5px}
+  .reb-legend-row{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ink-soft)}
+  .reb-legend-row b{margin-left:auto;font-family:var(--mono);font-size:11px;font-weight:500;color:var(--ink)}
+  .reb-dot{width:7px;height:7px;border-radius:50%;flex:none;background:#1976a8}
+  .reb-dot.c1{background:#c17817}
+  .reb-dot.c2{background:#5c7f42}
+  .reb-dot.c3{background:#8b5e83}
+  .reb-note{margin-top:8px}

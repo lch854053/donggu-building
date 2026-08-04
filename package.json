@@ -10,6 +10,7 @@
     "update-vacant": "node scripts/update-vacant.mjs",
     "update-stats": "node scripts/update-stats.mjs",
     "update-sgis-stats": "node scripts/update-sgis-stats.mjs",
+    "update-reb-stats": "node scripts/update-reb-stats.mjs",
     "collect-apt-geo": "node scripts/collect-apt-geo.mjs",
     "update-officetel": "node scripts/update-officetel.mjs"
   },

@@ -39,6 +39,18 @@ cp .env.example .env
 
 실행: `SGIS_CONSUMER_KEY=... SGIS_CONSUMER_SECRET=... npm run update-sgis-stats`
 
+### 한국부동산원(R-ONE) 부동산 시장동향
+
+통계 탭은 한국부동산원 Open API에서 광주 동구의 주택·아파트 가격지수, 평균·중위가격, 전세가율, 주택·아파트·건축물 거래량을 수집해 `reb_stats_donggu.json`으로 저장합니다. 토지 거래량과 토지가격지수는 포함하지 않습니다.
+
+| 변수 | 설명 | 필수 |
+|---|---|---|
+| `REB_API_KEY` | 한국부동산원 R-ONE Open API 인증키 | update-reb-stats 실행 시 ✅ |
+
+실행: `REB_API_KEY=... npm run update-reb-stats`
+
+인증키는 브라우저에 노출하지 않으며, GitHub Actions에서는 `REB_API_KEY` Secret으로만 사용합니다. REB 월별 자료는 최신 공개 시점까지의 잠정값일 수 있습니다.
+
 ## 카카오 로컬 키워드 검색 API
 
 K-apt(공동주택관리정보시스템)의 단지명이 `'서석동 445-12 업무시설'`처럼 **행정동·지번·용도** 형태로 내려올 때, 4단계 폴백으로 실제 단지/건물명을 보정합니다.
