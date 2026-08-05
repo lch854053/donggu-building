@@ -132,33 +132,21 @@ function squareGeometryFromTarea(lon, lat, tarea) {
   return { type: "Polygon", coordinates: [ring] };
 }
 
-// 빈집 1건 → 폴리곤. geocoder(지번→도로명 폴백) 우선, 실패/거대폴리곤 시 원본 좌표 폴백.
-// 모든 시도가 거대 폴리곤이면 건물 면적 기반 정사각형으로 최후 폴백 (VWorld 데이터 한계 대응).
+// 빈집 1건 → 폴리곤. 주소 geocoder 좌표만 사용한다.
+// odcloud 원본 좌표는 실제 필지와 수백 m 차이 나는 사례가 있어 지도 위치 폴백으로 쓸 수 없다.
+// geocoder 좌표의 필지가 너무 크면 건물 면적 기반 정사각형으로 대체한다.
 async function parcelForVacant(o) {
-  let lastCoord = null;  // 가장 신뢰할 수 있는 좌표 (정사각형 폴백용)
-  // 1순위: geocoder(지번 → 도로명 폴백) → 정확 좌표 → POINT 조회
-  if (o.jibun || o.doro) {
-    const pt = await geocodeJibun(o.jibun, o.doro);
-    if (pt) {
-      lastCoord = pt;
-      const g = await parcelGeometryByCoord(pt.x, pt.y);
-      if (g && g.geometry) {
-        if (polygonMaxDimM(g.geometry) <= POLYGON_MAX_DIM_LIMIT) { g._viaGeo = true; return g; }
-        // 거대 폴리곤이면 폐기 후 2순위로
-      }
-    }
+  if (!o.jibun && !o.doro) return null;
+  const pt = await geocodeJibun(o.jibun, o.doro);
+  if (!pt) return null;
+
+  const g = await parcelGeometryByCoord(pt.x, pt.y);
+  if (g && g.geometry && polygonMaxDimM(g.geometry) <= POLYGON_MAX_DIM_LIMIT) {
+    g._viaGeo = true;
+    return g;
   }
-  // 2순위: 원본 EPSG:5181 좌표 → WGS84 변환 → POINT 조회 (거대 폴리곤이면 3순위로)
-  const rx = Number(o.x) || 0, ry = Number(o.y) || 0;
-  if (rx && ry) {
-    const { lon, lat } = toWGS84(rx, ry);
-    if (!lastCoord) lastCoord = { x: lon, y: lat };
-    const g = await parcelGeometryByCoord(lon, lat);
-    if (g && g.geometry && polygonMaxDimM(g.geometry) <= POLYGON_MAX_DIM_LIMIT) return g;
-  }
-  // 3순위: 좌표는 있으나 VWorld 지적도가 거대 폴리곤만 주는 경우 → 건물 면적 기반 정사각형
-  if (lastCoord && o.tarea) {
-    return { pnu: "", geometry: squareGeometryFromTarea(lastCoord.x, lastCoord.y, o.tarea), _viaSquare: true };
+  if (o.tarea) {
+    return { pnu: "", geometry: squareGeometryFromTarea(pt.x, pt.y, o.tarea), _viaSquare: true };
   }
   return null;
 }
@@ -571,17 +559,15 @@ async function main() {
 
   // ───────────────────────────────────────────────
   // 지도 탭용: 빈집 폴리곤 사전 수집 → vacant_geo.json
-  // 빈집 원본 좌표(EPSG:5181)는 건물이 아닌 거대 집합 필지의 대표점인 경우가 많아
-  // 좌표 기반 POINT 조회만으로는 엉뚱한 큰 폴리곤이 잡힘.
-  // 따라서 지번주소(jibun)를 VWorld geocoder로 정확 좌표로 변환 후 POINT 조회(1순위)하고,
-  // 실패 시 원본 EPSG:5181 좌표 → WGS84 폴백(2순위).
+  // 빈집 원본 좌표(EPSG:5181)는 실제 필지와 수백 m 차이 나는 사례가 있으므로 사용하지 않는다.
+  // 지번주소(jibun)를 VWorld geocoder로 정확 좌표로 변환한 뒤 POINT 조회한다.
   // ───────────────────────────────────────────────
   if (VWORLD_KEY) {
     console.log("\n지도 탭용 빈집 폴리곤 수집 중...");
     const geoInput = out
       .map((o, i) => ({ i, o }))
-      .filter(it => it.o.jibun || (Number(it.o.x) && Number(it.o.y)));
-    console.log(`  폴리곤 수집 대상: ${geoInput.length}건 (지번/좌표 보유)`);
+      .filter(it => it.o.jibun || it.o.doro);
+    console.log(`  폴리곤 수집 대상: ${geoInput.length}건 (주소 보유)`);
     const geoResults = await runPool(geoInput, async (it) => {
       const g = await parcelForVacant(it.o);
       if (it.i % 100 === 0) console.log(`  [폴리곤] ${it.i + 1}/${out.length}`);
@@ -589,7 +575,7 @@ async function main() {
     }, GEO_CONCURRENCY);
 
     const geoOut = [];
-    let geoOk = 0, byGeo = 0, byCoord = 0, bySquare = 0;
+    let geoOk = 0, byGeo = 0, bySquare = 0;
     for (let k = 0; k < geoInput.length; k++) {
       const it = geoInput[k];
       const o = it.o;
@@ -597,8 +583,7 @@ async function main() {
       if (g && g.geometry) {
         geoOk++;
         if (g._viaSquare) bySquare++;
-        else if (o.jibun && g._viaGeo) byGeo++;
-        else byCoord++;
+        else if (g._viaGeo) byGeo++;
         geoOut.push({
           pnu: g.pnu,
           dong: o.dong, hdong: o.hdong, kind: o.kind,
@@ -609,8 +594,20 @@ async function main() {
       }
     }
     const geoPath = join(ROOT, "vacant_geo.json");
+    console.log(`  빈집 폴리곤 수집: ${geoOk}건 / ${out.length}건 (geocoder ${byGeo} / 면적정사각형 ${bySquare})`);
+
+    // VWorld 인증/한도/장애로 실제 필지 조회가 대량 실패하면 빈 결과나 대체 도형으로
+    // 정상 데이터를 덮어쓰는 회귀를 막는다.
+    let previousPnuCount = 0;
+    try {
+      const previous = JSON.parse(await readFile(geoPath, "utf8"));
+      if (Array.isArray(previous)) previousPnuCount = previous.filter(item => item?.pnu).length;
+    } catch { /* 기존 파일 없음/파싱 실패 */ }
+    if (byGeo === 0 || (previousPnuCount > 0 && byGeo < previousPnuCount * 0.5)) {
+      throw new Error(`[가드] VWorld 실제 필지 수집 급감: ${byGeo}건 (기존 ${previousPnuCount}건). vacant_geo.json을 덮어쓰지 않음.`);
+    }
+
     await writeFile(geoPath, JSON.stringify(geoOut, null, " ") + "\n", "utf8");
-    console.log(`  빈집 폴리곤 수집: ${geoOk}건 / ${out.length}건 (geocoder ${byGeo} / 좌표폴백 ${byCoord} / 면적정사각형 ${bySquare})`);
     console.log(`  저장 경로: ${geoPath}`);
   } else {
     console.log("\nVWORLD_KEY 없음 — 빈집 폴리곤 수집 생략");

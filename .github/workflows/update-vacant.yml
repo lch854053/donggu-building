@@ -45,12 +45,17 @@ jobs:
       - name: Validate generated JSON (prevent empty/regressed data)
         run: |
           set -e
-          # vacant_geo.json이 빈 배열이거나 파싱 불가면 커밋하지 않는다
-          # (apt_geo.json 회귀 0add14c와 동일한 패턴 방지).
+          # 빈 배열뿐 아니라 VWorld 전체 실패로 PNU 없는 대체 도형만 생성된 경우도 차단한다.
           vacant_count=$(node -e "try{const d=require('./vacant_geo.json');console.log(Array.isArray(d)?d.length:-1)}catch{console.log(-1)}")
+          pnu_count=$(node -e "try{const d=require('./vacant_geo.json');console.log(Array.isArray(d)?d.filter(x=>x.pnu).length:-1)}catch{console.log(-1)}")
           echo "vacant_geo.json 레코드 수: $vacant_count"
+          echo "vacant_geo.json PNU 보유 수: $pnu_count"
           if [ "$vacant_count" -le 0 ] 2>/dev/null; then
             echo "::error::vacant_geo.json이 비어 있거나 파싱 실패 ($vacant_count). 커밋 중단."
+            exit 1
+          fi
+          if [ $((pnu_count * 2)) -lt "$vacant_count" ] 2>/dev/null; then
+            echo "::error::VWorld 실제 필지 비율이 50% 미만 ($pnu_count/$vacant_count). 커밋 중단."
             exit 1
           fi
 
