@@ -335,6 +335,13 @@ function matchesYearFilter(useAprDay, yearMin, yearMax, yearActive, includeUnkno
   return !yearActive || (year >= yearMin && year <= yearMax);
 }
 
+// 숫자 조건 필터의 미확인 처리. 0㎡·음수·비수치 값은 공공데이터의 누락값으로 본다.
+function matchesAreaFilter(area, areaMin, areaMax, areaActive, includeUnknown){
+  const value = Number(area);
+  if(area == null || area === "" || !Number.isFinite(value) || value <= 0) return includeUnknown;
+  return !areaActive || (value >= areaMin && value <= areaMax);
+}
+
 // 표시용 날짜 포맷 ("20150911"→2015.09.11, "201509"→2015.09, "2015"→2015)
 function fmtUseApr(s){
   const d = String(s||"").replace(/\D/g,"");

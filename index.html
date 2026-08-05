@@ -252,6 +252,7 @@
           <div class="field">
             <label class="lbl-row"><span>연면적(㎡)</span><span class="readout" id="h-ro-area">전체</span></label>
             <div class="dual" id="h-dual-area" data-min="0" data-max="100000" data-step="500" data-unit="㎡" data-group="1"></div>
+            <label class="chk-row"><input type="checkbox" id="h-areaunknown" checked><span>연면적 미확인 포함</span></label>
           </div>
           <div class="field">
             <label class="lbl-row"><span>사용승인 연도</span><span class="readout" id="h-ro-year">전체</span></label>
@@ -2580,7 +2581,8 @@ function fillMissingFromBuilding(row, titles){
     const pk = titles.reduce((s,t)=> s + totalParking(t), 0);
     if(pk > 0) out.parking = pk;
   }
-  if(out.tarea == null){
+  const currentArea = Number(out.tarea);
+  if(out.tarea == null || !Number.isFinite(currentArea) || currentArea <= 0){
     const area = titles.reduce((s,t)=> s + (Number(t.totArea)||0), 0);
     if(area > 0) out.tarea = area;
   }
@@ -2606,6 +2608,8 @@ async function runHousingSearch(){
     const [areaMin, areaMaxRaw] = H_DUAL.area.values();
     const hhldMax = H_DUAL.hhld.atCap() ? Infinity : hhldMaxRaw;
     const areaMax = H_DUAL.area.atCap() ? Infinity : areaMaxRaw;
+    const areaActive = !H_DUAL.area.isFull();
+    const incAreaUnknown = document.getElementById("h-areaunknown").checked;
     const [yearMin, yearMaxRaw] = H_DUAL.year.values();
     const yearMax = H_DUAL.year.atCap() ? Infinity : yearMaxRaw;
     const yearActive = !H_DUAL.year.isFull();
@@ -2705,7 +2709,7 @@ async function runHousingSearch(){
 
       if(selKind.length && !selKind.includes(row.kind)){ f_kind++; continue; }
       if(row.hhld < hhldMin || row.hhld > hhldMax){ f_hhld++; continue; }
-      if(row.tarea != null && (row.tarea < areaMin || row.tarea > areaMax)){ f_area++; continue; }
+      if(!matchesAreaFilter(row.tarea, areaMin, areaMax, areaActive, true)){ f_area++; continue; }
       // 미확인 날짜는 표제부 보강 후 최종 판정한다. 여기서 제외하면
       // 실제 승인일을 확인할 기회를 잃고, 그대로 표시하면 범위 밖 건물이 섞인다.
       if(!matchesYearFilter(row.useAprDay, yearMin, yearMax, yearActive, true)){ f_year++; continue; }
@@ -2759,7 +2763,7 @@ async function runHousingSearch(){
       if(hhld < hhldMin || hhld > hhldMax) continue;
       const areaRaw = t.silHoHhldArea;
       const area = areaRaw != null ? Number(areaRaw) : null;
-      if(area != null && (area < areaMin || area > areaMax)) continue;
+      // area는 세대별 면적이다. 화면의 연면적 조건은 표제부 보강 후 tarea로 판정한다.
       const useAprDay = String(t.useAprDay || "");
       // getApHsTpInfo는 useAprDay가 비어 있는 경우가 많으므로 일단 보류하고,
       // 표제부 보강 뒤 matchesYearFilter로 최종 판정한다.
@@ -2800,14 +2804,16 @@ async function runHousingSearch(){
         }
         // 조회 실패는 데이터 불확실 → 일단 유지, 대장 없음 확인 시만 제외
         if(!ok) return m;
-        // 표제부가 없어도 사용승인 연도 미확인을 선택했으면 원본 공동주택
-        // 항목을 유지한다. 이후 최종 연도 필터가 체크 상태를 적용한다.
-        if(extractYear(m.useAprDay) === null && incUnknown) return m;
+        // 표제부가 없어도 선택된 미확인 조건이 있으면 원본 공동주택 항목을
+        // 유지한다. 이후 최종 필터가 각 체크 상태를 적용한다.
+        const areaMissing = m.tarea == null || !Number.isFinite(Number(m.tarea)) || Number(m.tarea) <= 0;
+        if((extractYear(m.useAprDay) === null && incUnknown) || (areaMissing && incAreaUnknown)) return m;
         return { ...m, _exclude: true };
       }, 5, ()=>{ hProgress.done++; updateHProgress(); });
       // 복제본으로 matched 내용 교체 (원본 객체 직접 수정 회피)
       matched.length = 0;
       matched.push(...filled.filter(m => !m._exclude
+        && matchesAreaFilter(m.tarea, areaMin, areaMax, areaActive, incAreaUnknown)
         && matchesYearFilter(m.useAprDay, yearMin, yearMax, yearActive, incUnknown)));
     }
 
@@ -2887,7 +2893,7 @@ async function runHousingSearch(){
       };
       if(selKind.length && !selKind.includes(row.kind)) continue;
       if(row.hhld < hhldMin || row.hhld > hhldMax) continue;
-      if(row.tarea != null && (row.tarea < areaMin || row.tarea > areaMax)) continue;
+      if(!matchesAreaFilter(row.tarea, areaMin, areaMax, areaActive, incAreaUnknown)) continue;
       if(!matchesYearFilter(row.useAprDay, yearMin, yearMax, yearActive, incUnknown)) continue;
       matched.push(row);
       existingPnus.add(e.pnu);
@@ -2921,6 +2927,7 @@ async function runHousingSearch(){
       };
       if(selKind.length && !selKind.includes(row.kind)) continue;
       if(row.hhld < hhldMin || row.hhld > hhldMax) continue;
+      if(!matchesAreaFilter(row.tarea, areaMin, areaMax, areaActive, incAreaUnknown)) continue;
       if(!matchesYearFilter(row.useAprDay, yearMin, yearMax, yearActive, incUnknown)) continue;
       matched.push(row);
       existingPnus.add(e.pnu);
@@ -3248,6 +3255,7 @@ function exportHousingExcel(){
 
 function clearHousing(){
   if(H_FILTERS_READY){ H_MS.kind.reset(); H_DUAL.hhld.reset(); H_DUAL.area.reset(); H_DUAL.year.reset(); }
+  const au = document.getElementById("h-areaunknown"); if(au) au.checked = true;
   const cu = document.getElementById("h-yearunknown"); if(cu) cu.checked = true;
   document.getElementById("hResultArea").style.display="none";
   document.getElementById("hStats").style.display="none";

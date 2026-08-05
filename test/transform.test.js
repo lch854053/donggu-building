@@ -346,6 +346,14 @@ test("matchesYearFilter: 보강 후 승인연도와 미확인을 구분", () => 
   assert.equal(f.matchesYearFilter("-", 2023, Infinity, true, false), false);
 });
 
+test("matchesAreaFilter: 보강 후 연면적과 미확인을 구분", () => {
+  assert.equal(f.matchesAreaFilter(654.5976, 77000, 100000, true, true), false);
+  assert.equal(f.matchesAreaFilter(80000, 77000, 100000, true, true), true);
+  assert.equal(f.matchesAreaFilter(null, 77000, 100000, true, true), true);
+  assert.equal(f.matchesAreaFilter(null, 77000, 100000, true, false), false);
+  assert.equal(f.matchesAreaFilter(0, 0, 100000, false, false), false);
+});
+
 test("dongMatch: 숫자 동 표기차 흡수", () => {
   assert.equal(f.dongMatch("108동", "108"), true);
   assert.equal(f.dongMatch("제108동", "108"), true);

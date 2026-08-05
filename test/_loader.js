@@ -27,7 +27,7 @@ export function loadTransform() {
       cleanForSearch, stripParens, totalParking, mergeBuilding,
       archRowToBuilding, pickArchMain,
       shtRowToBuilding, pickShtTitle,
-      toPNU, hdongOf, fmt, esc, extractYear, matchesYearFilter, fmtUseApr, norm,
+      toPNU, hdongOf, fmt, esc, extractYear, matchesYearFilter, matchesAreaFilter, fmtUseApr, norm,
       matchCat, leadNum, dongMatch, dedupeBy, bldLabel, gbLabel,
       roadMatches, geomAreaM2, geomContainsPoint,
       stripJibunLandSuffix, shortAddr, formatJibun, pickMainTitle,
