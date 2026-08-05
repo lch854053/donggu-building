@@ -2606,7 +2606,8 @@ async function runHousingSearch(){
     const [areaMin, areaMaxRaw] = H_DUAL.area.values();
     const hhldMax = H_DUAL.hhld.atCap() ? Infinity : hhldMaxRaw;
     const areaMax = H_DUAL.area.atCap() ? Infinity : areaMaxRaw;
-    const [yearMin, yearMax] = H_DUAL.year.values();
+    const [yearMin, yearMaxRaw] = H_DUAL.year.values();
+    const yearMax = H_DUAL.year.atCap() ? Infinity : yearMaxRaw;
     const yearActive = !H_DUAL.year.isFull();
     const incUnknown = document.getElementById("h-yearunknown").checked;
 
@@ -2705,9 +2706,9 @@ async function runHousingSearch(){
       if(selKind.length && !selKind.includes(row.kind)){ f_kind++; continue; }
       if(row.hhld < hhldMin || row.hhld > hhldMax){ f_hhld++; continue; }
       if(row.tarea != null && (row.tarea < areaMin || row.tarea > areaMax)){ f_area++; continue; }
-      const yr = extractYear(row.useAprDay);
-      if(yr===null){ if(!incUnknown){ f_year++; continue; } }
-      else if(yearActive && (yr < yearMin || yr > yearMax)){ f_year++; continue; }
+      // 미확인 날짜는 표제부 보강 후 최종 판정한다. 여기서 제외하면
+      // 실제 승인일을 확인할 기회를 잃고, 그대로 표시하면 범위 밖 건물이 섞인다.
+      if(!matchesYearFilter(row.useAprDay, yearMin, yearMax, yearActive, true)){ f_year++; continue; }
       matched.push(row);
     }
 
@@ -2760,9 +2761,9 @@ async function runHousingSearch(){
       const area = areaRaw != null ? Number(areaRaw) : null;
       if(area != null && (area < areaMin || area > areaMax)) continue;
       const useAprDay = String(t.useAprDay || "");
-      const yr = extractYear(useAprDay);
-      if(yr===null){ if(!incUnknown) continue; }
-      else if(yearActive && (yr < yearMin || yr > yearMax)) continue;
+      // getApHsTpInfo는 useAprDay가 비어 있는 경우가 많으므로 일단 보류하고,
+      // 표제부 보강 뒤 matchesYearFilter로 최종 판정한다.
+      if(!matchesYearFilter(useAprDay, yearMin, yearMax, yearActive, true)) continue;
       matched.push({
         source: "건축인허가",
         pnu,
@@ -2799,11 +2800,15 @@ async function runHousingSearch(){
         }
         // 조회 실패는 데이터 불확실 → 일단 유지, 대장 없음 확인 시만 제외
         if(!ok) return m;
+        // 표제부가 없어도 사용승인 연도 미확인을 선택했으면 원본 공동주택
+        // 항목을 유지한다. 이후 최종 연도 필터가 체크 상태를 적용한다.
+        if(extractYear(m.useAprDay) === null && incUnknown) return m;
         return { ...m, _exclude: true };
       }, 5, ()=>{ hProgress.done++; updateHProgress(); });
       // 복제본으로 matched 내용 교체 (원본 객체 직접 수정 회피)
       matched.length = 0;
-      matched.push(...filled.filter(m => !m._exclude));
+      matched.push(...filled.filter(m => !m._exclude
+        && matchesYearFilter(m.useAprDay, yearMin, yearMax, yearActive, incUnknown)));
     }
 
     // ── 건축물대장에서 건물명을 찾지 못한 bad name 단지에 대해
@@ -2883,9 +2888,7 @@ async function runHousingSearch(){
       if(selKind.length && !selKind.includes(row.kind)) continue;
       if(row.hhld < hhldMin || row.hhld > hhldMax) continue;
       if(row.tarea != null && (row.tarea < areaMin || row.tarea > areaMax)) continue;
-      const yr = extractYear(row.useAprDay);
-      if(yr === null){ if(!incUnknown) continue; }
-      else if(yearActive && (yr < yearMin || yr > yearMax)) continue;
+      if(!matchesYearFilter(row.useAprDay, yearMin, yearMax, yearActive, incUnknown)) continue;
       matched.push(row);
       existingPnus.add(e.pnu);
     }
@@ -2918,9 +2921,7 @@ async function runHousingSearch(){
       };
       if(selKind.length && !selKind.includes(row.kind)) continue;
       if(row.hhld < hhldMin || row.hhld > hhldMax) continue;
-      const yr = extractYear(row.useAprDay);
-      if(yr === null){ if(!incUnknown) continue; }
-      else if(yearActive && (yr < yearMin || yr > yearMax)) continue;
+      if(!matchesYearFilter(row.useAprDay, yearMin, yearMax, yearActive, incUnknown)) continue;
       matched.push(row);
       existingPnus.add(e.pnu);
     }

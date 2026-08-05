@@ -327,6 +327,14 @@ function extractYear(useAprDay){
   return null;
 }
 
+// 사용승인 연도 필터. 날짜가 아직 보강되지 않은 항목은 호출자가
+// 실제 날짜를 확인한 뒤 다시 판정할 수 있도록 미확인으로 처리한다.
+function matchesYearFilter(useAprDay, yearMin, yearMax, yearActive, includeUnknown){
+  const year = extractYear(useAprDay);
+  if(year === null) return includeUnknown;
+  return !yearActive || (year >= yearMin && year <= yearMax);
+}
+
 // 표시용 날짜 포맷 ("20150911"→2015.09.11, "201509"→2015.09, "2015"→2015)
 function fmtUseApr(s){
   const d = String(s||"").replace(/\D/g,"");

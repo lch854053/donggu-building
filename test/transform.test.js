@@ -338,6 +338,14 @@ test("extractYear: 날짜에서 연도 추출", () => {
   assert.equal(f.extractYear(""), null);
 });
 
+test("matchesYearFilter: 보강 후 승인연도와 미확인을 구분", () => {
+  assert.equal(f.matchesYearFilter("20140821", 2023, Infinity, true, true), false);
+  assert.equal(f.matchesYearFilter("20200803", 2023, Infinity, true, true), false);
+  assert.equal(f.matchesYearFilter("202605", 2023, Infinity, true, true), true);
+  assert.equal(f.matchesYearFilter("-", 2023, Infinity, true, true), true);
+  assert.equal(f.matchesYearFilter("-", 2023, Infinity, true, false), false);
+});
+
 test("dongMatch: 숫자 동 표기차 흡수", () => {
   assert.equal(f.dongMatch("108동", "108"), true);
   assert.equal(f.dongMatch("제108동", "108"), true);
