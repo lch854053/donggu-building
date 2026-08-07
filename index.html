@@ -1223,23 +1223,27 @@ function initFilters(){
 
 // 행정동 매핑 1회 로드 + 드롭다운 구성
 async function loadHaengjeong(){
-  if(HJ) return;
   initFilters();   // 용도/구조/슬라이더 1회 구성
   const sel = document.getElementById("c-hdong");
-  try{
-    const r = await fetch("/haengjeong.json");
-    HJ = await r.json();
-    // jibun2hdong 역매핑: 행정동 → [지번키] (단건 대상), 행정동 → 지번수 (동단위 비용 추정)
-    HDONG2JIBUN = {}; BJD_PARCELS = {};
-    for(const [k, hd] of Object.entries(HJ.jibun2hdong || {})){
-      if(!HDONG2JIBUN[hd]) HDONG2JIBUN[hd] = [];
-      HDONG2JIBUN[hd].push(k);
-      const bjd = k.slice(0,5);
-      BJD_PARCELS[bjd] = (BJD_PARCELS[bjd] || 0) + 1;
+  if(!HJ){
+    try{
+      const r = await fetch("/haengjeong.json");
+      HJ = await r.json();
+    }catch(e){
+      sel.innerHTML = '<option value="">매핑 로드 실패</option>';
+      const mSel = document.getElementById("m-hdong");
+      if(mSel) mSel.innerHTML = '<option value="">매핑 로드 실패</option>';
+      return;
     }
-  }catch(e){
-    sel.innerHTML = '<option value="">매핑 로드 실패</option>';
-    return;
+  }
+  // 지도 탭이 HJ만 먼저 캐시할 수 있으므로, 파생 인덱스와 두 셀렉트를 항상 구성한다.
+  // jibun2hdong 역매핑: 행정동 → [지번키] (단건 대상), 행정동 → 지번수 (동단위 비용 추정)
+  HDONG2JIBUN = {}; BJD_PARCELS = {};
+  for(const [k, hd] of Object.entries(HJ.jibun2hdong || {})){
+    if(!HDONG2JIBUN[hd]) HDONG2JIBUN[hd] = [];
+    HDONG2JIBUN[hd].push(k);
+    const bjd = k.slice(0,5);
+    BJD_PARCELS[bjd] = (BJD_PARCELS[bjd] || 0) + 1;
   }
   // 전체 행정동코드 집합
   const set = new Set();
@@ -1249,9 +1253,12 @@ async function loadHaengjeong(){
   const names = Object.keys(HJ.hdong2bjd).sort((a,b)=>a.localeCompare(b,"ko"));
   const opts = '<option value="__ALL__">전체 (동구 전역)</option>'
     + names.map(n=>`<option value="${n}">${n}</option>`).join("");
-  sel.innerHTML = opts;
   const mSel = document.getElementById("m-hdong");
-  if(mSel) mSel.innerHTML = opts;
+  const fillIfEmpty = target => {
+    if(target && target.options.length <= 1 && target.options[0]?.value !== "__ALL__") target.innerHTML = opts;
+  };
+  fillIfEmpty(sel);
+  fillIfEmpty(mSel);
 }
 
 // 동 단위 페이지 조회 (프록시)
