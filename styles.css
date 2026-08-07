@@ -407,6 +407,7 @@
   .ms-section .field{margin-bottom:0}
   .ms-section .field label{font-size:12px;font-weight:600;color:var(--ink-soft);margin-bottom:4px;display:block}
   .ms-section select{width:100%;font-size:13px;padding:7px 8px;border:1px solid var(--line-2);border-radius:6px;background:#fff}
+  .map-data-date{font-family:var(--mono);font-size:10px;color:var(--mute);padding:0 2px 2px}
 
   /* 사이드 패널 버튼 영역 */
   .map-side .controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap}

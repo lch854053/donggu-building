@@ -518,6 +518,7 @@
             <div class="ms" id="map-ms-hkind"></div>
           </div>
         </div>
+        <div class="map-data-date" id="mapVacantDate" style="display:none"></div>
         <div class="ms-section" id="map-cond-cond" style="display:none">
           <div class="field">
             <label>용도 <span class="sel-hint">(미선택 = 전체)</span></label>
@@ -4258,6 +4259,7 @@ const COND_PNU_CACHE = new Map();  // 조건검색: pnu → geometry (뷰포트 
 const COND_CHUNK = 50;             // 조건검색 폴리곤 일괄조회 단위
 const COND_MAX_VIEWPORT = 500;     // 뷰포트 내 폴리곤 일괄표시 상한 (초과 시 상한만 먼저 표시 + 줌인 안내)
 let M_BJD_BOUNDS = null;           // bjd_bounds.json: 법정동코드(5) → { name, b:[minX,minY,maxX,maxY] }
+let M_VACANT_BASE_DATE = "";       // vacantlist_donggu.json의 빈집 API 기준일
 
 // 조건검색 결과에서 제외할 PNU 블랙리스트.
 // VWorld 연속지적도 원본 폴리곤이 지적(토지) 형태상 특이하게 보이는 필지를 결과 목록·폴리곤 모두에서 숨김.
@@ -4362,6 +4364,18 @@ async function loadMapStaticData(){
       if(r.ok) M_BJD_BOUNDS = await r.json();
     }catch(e){ console.error("[loadMapStaticData bjd_bounds]", e); }
   }
+  if(!M_VACANT_BASE_DATE){
+    try{
+      const r = await fetch("/vacantlist_donggu.json");
+      if(r.ok){
+        const rows = await r.json();
+        const dated = Array.isArray(rows) ? rows.find(d => d?.baseDate) : null;
+        M_VACANT_BASE_DATE = String(dated?.baseDate || "").trim();
+      }
+    }catch(e){ console.error("[loadMapStaticData vacant date]", e); }
+  }
+  const dateEl = document.getElementById("mapVacantDate");
+  if(dateEl) dateEl.textContent = M_VACANT_BASE_DATE ? `조회 기준일: ${M_VACANT_BASE_DATE}` : "";
 }
 
 // 사이드 패널 다중선택 필터 구성
@@ -4384,6 +4398,8 @@ function syncMapCondSections(){
   document.getElementById("map-cond-vacant").style.display = sources.includes("vacant") ? "" : "none";
   document.getElementById("map-cond-apt").style.display    = sources.includes("apt")    ? "" : "none";
   document.getElementById("map-cond-cond").style.display   = sources.includes("cond")   ? "" : "none";
+  const dateEl = document.getElementById("mapVacantDate");
+  if(dateEl) dateEl.style.display = sources.includes("vacant") && M_VACANT_BASE_DATE ? "" : "none";
 }
 function mapSelectedSources(){
   return [...document.querySelectorAll('#mapSourceGrid input:checked')].map(c => c.value);
