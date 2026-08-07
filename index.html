@@ -4501,8 +4501,9 @@ async function runMapSearch(){
     if(sources.includes("apt"))    filterAptForMap(isAll ? null : hdong);
     if(sources.includes("cond")){
       await runCondForMap(isAll ? null : hdong);
+      if(!isAll) fitMapToBjdList(HJ?.hdong2bjd?.[hdong] || []);
     }
-    renderAllMapLayers();
+    await renderAllMapLayers();
     renderMapResults();
     renderMapLegend();
     fitMapToResults();
@@ -4706,6 +4707,21 @@ function bjdIntersectingBounds(leafletBounds){
   return result;
 }
 
+// 행정동 선택 변경 시 이전 조회 화면이 다른 법정동에 남아 있어도
+// 새 결과의 법정동 범위를 먼저 화면에 맞춘다.
+function fitMapToBjdList(bjdList){
+  if(!M_MAP || !M_BJD_BOUNDS || !bjdList?.length) return;
+  let bounds = null;
+  for(const bjd of bjdList){
+    const b = M_BJD_BOUNDS[bjd]?.b;
+    if(!b || b.length < 4) continue;
+    const next = L.latLngBounds([b[1], b[0]], [b[3], b[2]]);
+    if(bounds) bounds.extend(next); else bounds = next;
+  }
+  if(!bounds?.isValid()) return;
+  try{ M_MAP.fitBounds(bounds, { padding:[30,30], maxZoom:17 }); }catch(e){}
+}
+
 // GeoJSON geometry가 Leaflet bounds와 교차하는지 (대략)
 function geoIntersectsBounds(geom, bounds){
   try{
@@ -4733,7 +4749,7 @@ function redrawCondLayer(){
 }
 
 // ── 레이어 렌더 (전체) ──
-function renderAllMapLayers(){
+async function renderAllMapLayers(){
   // 빈집
   M_LAYER.vacant.clearLayers();
   for(const d of M_RESULTS.vacant){
@@ -4749,7 +4765,7 @@ function renderAllMapLayers(){
   // 조건검색은 redrawCondViewport 에서 처리(뷰포트 기반)
   M_LAYER.cond.clearLayers();
   if(mapSelectedSources().includes("cond") && M_RESULTS.cond.length){
-    refreshCondViewport();
+    await refreshCondViewport();
   }
 }
 
