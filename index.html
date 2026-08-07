@@ -4566,6 +4566,17 @@ async function runCondForMap(hdong){
 
   const selPurps = M_MS.purps ? M_MS.purps.selected() : [];
   const selStrct = M_MS.strct ? M_MS.strct.selected() : [];
+  // 법정동이 여러 행정동에 걸치면 법정동 단위 조회만으로는 다른 동이 섞인다.
+  // 번지 매핑을 우선하고, 매핑이 없는 경우에는 단일 행정동에만 속한 법정동만 폴백한다.
+  const uniqueBjdHdong = new Map();
+  if(hdong){
+    for(const [name, bjds] of Object.entries(HJ.hdong2bjd || {})){
+      for(const bjd of bjds){
+        if(uniqueBjdHdong.has(bjd)) uniqueBjdHdong.set(bjd, "");
+        else uniqueBjdHdong.set(bjd, name);
+      }
+    }
+  }
 
   // 동 단위로 표제부 페이지 조회(runPool 재사용) → 용도/구조 필터 → pnu 수집
   const MAX_PAGES = 100;   // ~100건/페이지 → 동당 최대 1만건 (산수동 5697건 커버)
@@ -4599,6 +4610,14 @@ async function runCondForMap(hdong){
   // pickMainTitle(주건축물 > 용도 있는 행)로 대표 행을 선택한다.
   const groups = new Map();
   for(const t of all){
+    if(hdong){
+      const bjd = String(t.bjdongCd || "").padStart(5, "0");
+      const bun = String(t.bun || "").padStart(4, "0");
+      const ji  = String(t.ji || "").padStart(4, "0");
+      const key = bjd + bun + ji;
+      const bHdong = (HJ.jibun2hdong || {})[key] || uniqueBjdHdong.get(bjd) || "";
+      if(bHdong !== hdong) continue;
+    }
     if(!matchCat(t.mainPurpsCdNm, selPurps, PURPS_OPTS)) continue;
     if(!matchCat(t.strctCdNm, selStrct, STRCT_OPTS)) continue;
     const bun = String(t.bun || "").padStart(4,"0");
