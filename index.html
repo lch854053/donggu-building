@@ -1133,6 +1133,7 @@ let HDONG2JIBUN = null;   // 행정동 → [지번키] 역매핑 (jibun2hdong �
 let BJD_PARCELS = null;   // 행정동코드 → 매핑된 지번 수 (동단위 비용 추정용)
 let ALL_BJD = [];         // 동구 전체 행정동코드(전체 검색용)
 let CRESULTS = [];        // 조건검색 결과 (표시용 building 객체 배열)
+const BUILDING_PAGE_CACHE = new Map(); // 성공한 동·페이지 원본 응답 캐시(조건 변경 시 재사용)
 
 /* ---- 용도/구조 분류 (흔한 것 노출 + 기타) ---- */
 const PURPS_OPTS = ["단독주택","공동주택","제1종근린생활시설","제2종근린생활시설","판매시설","업무시설","교육연구시설","의료시설","숙박시설","문화및집회시설","노유자시설","종교시설","창고시설","자동차관련시설"];
@@ -1263,11 +1264,31 @@ async function loadHaengjeong(){
 
 // 동 단위 페이지 조회 (프록시)
 async function fetchDongPage(bjd, pageNo){
-  const { ok, data } = await api("building", {
-    sigunguCd:SIGUNGU, bjdongCd:bjd, numOfRows:"1000", pageNo:String(pageNo)
-  });
-  if(!ok) return {titles:[], totalCount:0};
-  return {titles:Array.isArray(data.titles)?data.titles:[], totalCount:Number(data.totalCount||0)};
+  const key = `${SIGUNGU}:${bjd}:${pageNo}`;
+  const cached = BUILDING_PAGE_CACHE.get(key);
+  if(cached) return cached;
+
+  // 조건이 바뀌어도 같은 동·페이지 원본은 다시 API를 호출할 필요가 없다.
+  // 단, 실패 응답은 캐시하지 않아 다음 조회에서 재시도한다.
+  const pending = (async()=>{
+    const { ok, status, data, error } = await api("building", {
+      sigunguCd:SIGUNGU, bjdongCd:bjd, numOfRows:"1000", pageNo:String(pageNo)
+    });
+    if(!ok){
+      return {
+        titles:[], totalCount:0,
+        error: status ? `서버 오류 ${status}` : (error || "건축물 API 조회 실패")
+      };
+    }
+    return {
+      titles:Array.isArray(data?.titles)?data.titles:[],
+      totalCount:Number(data?.totalCount||0)
+    };
+  })();
+  BUILDING_PAGE_CACHE.set(key, pending);
+  const result = await pending;
+  if(result.error) BUILDING_PAGE_CACHE.delete(key);
+  return result;
 }
 
 // 번지 단건 조회 (프록시) — 한 필지의 표제부만
@@ -4277,6 +4298,7 @@ let M_RESULTS = { vacant: [], apt: [], cond: [] };  // 필터 적용 후 결과(
 let M_MS = {};               // 다중선택 컴포넌트
 let M_INITIALIZED = false;
 let M_INIT_PROMISE = null;   // 지도 초기화 중복 실행 방지 + 조회 대기용
+let M_COND_SEARCH_ID = 0;    // 중복 조회 시 오래된 응답의 결과 덮어쓰기 방지
 let M_MOVE_TIMER = null;
 const COND_PNU_CACHE = new Map();  // 조건검색: pnu → geometry (뷰포트 갱신 캐시)
 const COND_CHUNK = 50;             // 조건검색 폴리곤 일괄조회 단위
@@ -4589,13 +4611,17 @@ function filterAptForMap(hdong){
 
 // ── 건축물 조건검색 (live API) → 결과 건물의 parcel key 수집 ──
 async function runCondForMap(hdong){
+  const searchId = ++M_COND_SEARCH_ID;
   document.getElementById("mapHint").textContent = "건축물 조건검색 중…";
   COND_PNU_CACHE.clear();
   M_LAYER.cond.clearLayers();
 
   if(!HJ) await loadHaengjeong();
   const bjdList = hdong ? (HJ.hdong2bjd[hdong] || []) : ALL_BJD;
-  if(!bjdList.length){ M_RESULTS.cond = []; return; }
+  if(!bjdList.length){
+    if(searchId === M_COND_SEARCH_ID) M_RESULTS.cond = [];
+    return;
+  }
 
   const selPurps = M_MS.purps ? M_MS.purps.selected() : [];
   const selStrct = M_MS.strct ? M_MS.strct.selected() : [];
@@ -4615,12 +4641,14 @@ async function runCondForMap(hdong){
   const MAX_PAGES = 100;   // ~100건/페이지 → 동당 최대 1만건 (산수동 5697건 커버)
   // 1페이지로 totalCount 파악
   const p1 = await runPool(bjdList, async (bjd)=>{
-    const { titles, totalCount } = await fetchDongPage(bjd, 1);
-    return { bjd, titles, totalCount };
+    const { titles, totalCount, error } = await fetchDongPage(bjd, 1);
+    return { bjd, titles, totalCount, error };
   }, 5);
   const more = [];
   const all = [];
+  let failedPages = 0;
   for(const r of p1){
+    if(r?.error || !Array.isArray(r?.titles)){ failedPages++; continue; }
     all.push(...r.titles);
     const pageSize = Math.max(r.titles.length, 1);
     if(r.totalCount > pageSize){
@@ -4631,10 +4659,13 @@ async function runCondForMap(hdong){
   // 잔여 페이지 병렬 조회
   if(more.length){
     const got = await runPool(more, async (t)=>{
-      const { titles } = await fetchDongPage(t.bjd, t.pg);
-      return titles;
+      const { titles, totalCount, error } = await fetchDongPage(t.bjd, t.pg);
+      return { titles, totalCount, error };
     }, 5);
-    for(const ts of got) if(Array.isArray(ts)) all.push(...ts);
+    for(const r of got){
+      if(r?.error || !Array.isArray(r?.titles)){ failedPages++; continue; }
+      all.push(...r.titles);
+    }
   }
 
   // 필터 + pnu 수집 (중복 pnu 제거)
@@ -4661,6 +4692,7 @@ async function runCondForMap(hdong){
     const arr = groups.get(pnu);
     if(arr) arr.push(t); else groups.set(pnu, [t]);
   }
+  if(searchId !== M_COND_SEARCH_ID) return;
   M_RESULTS.cond = [...groups.entries()].map(([pnu, arr]) => {
     const t = pickMainTitle(arr) || {};
     return {
@@ -4676,7 +4708,8 @@ async function runCondForMap(hdong){
     platPlc: t.newPlatPlc || t.platPlc || "",
     };
   });
-  document.getElementById("mapHint").textContent = `건축물 조건검색: ${M_RESULTS.cond.length}건`;
+  const failedHint = failedPages ? ` · API ${failedPages}페이지 조회 실패` : "";
+  document.getElementById("mapHint").textContent = `건축물 조건검색: ${M_RESULTS.cond.length}건${failedHint}`;
 }
 
 
