@@ -2186,23 +2186,38 @@ function initHousingFilters(){
   H_FILTERS_READY = true;
 }
 
-// 행정동 매핑 1회 로드 + 드롭다운 구성 (조건검색 loadHaengjeong 과 동일 구조)
-async function loadHousing(){
-  initHousingFilters();
+function fillHousingHdong(){
   const sel = document.getElementById("h-hdong");
-  if(HJ_H){ return; }
-  try{
-    const r = await fetch("/haengjeong.json");
-    HJ_H = await r.json();
-  }catch(e){
-    sel.innerHTML = '<option value="">매핑 로드 실패</option>';
-    return;
-  }
-  const set = new Set();
-  Object.values(HJ_H.hdong2bjd).forEach(arr => arr.forEach(c => set.add(c)));
+  if(!sel || !HJ_H?.hdong2bjd) return;
+  // 이미 구성된 선택값은 유지하고, 초기 안내 옵션일 때만 다시 채운다.
+  if(sel.options.length > 1 || sel.options[0]?.value === "__ALL__") return;
   const names = Object.keys(HJ_H.hdong2bjd).sort((a,b)=>a.localeCompare(b,"ko"));
   sel.innerHTML = '<option value="__ALL__">전체 (동구 전역)</option>'
     + names.map(n=>`<option value="${n}">${n}</option>`).join("");
+}
+
+// 행정동 매핑 1회 로드 + 드롭다운 구성 (조건검색 loadHaengjeong 과 동일 구조)
+async function loadHousing(){
+  initHousingFilters();
+  if(HJ_H){
+    fillHousingHdong();
+    return;
+  }
+  try{
+    // 다른 탭에서 이미 읽은 매핑을 재사용해 탭 전환 중 중복 로딩을 피한다.
+    if(HJ){
+      HJ_H = HJ;
+    }else{
+      const r = await fetch("/haengjeong.json");
+      if(!r.ok) throw new Error(`HTTP ${r.status}`);
+      HJ_H = await r.json();
+    }
+  }catch(e){
+    const sel = document.getElementById("h-hdong");
+    if(sel) sel.innerHTML = '<option value="">매핑 로드 실패</option>';
+    return;
+  }
+  fillHousingHdong();
 }
 
 // 동구 전체 단지 목록 — getTotalAptList3 는 44초(전국 22페이지 순회)라
@@ -3380,7 +3395,7 @@ function mUpdate(done,total){
 
 function initDemolFilters(){
   if(M_FILTERS_READY) return;
-  M_GB = buildMultiselect("mms-gb", M_GB_OPTS);
+  M_GB = buildMultiselect("mms-gb", M_GB_OPTS, false);
   M_DUAL_year = buildDual("mdual-year","mro-year");
   // 행정동 드롭다운은 loadHaengjeong 완료 후 채워짐. 폼 컨트롤 재사용용 초기화 진입점.
   M_FILTERS_READY = true;
@@ -4261,6 +4276,7 @@ let M_DATA = {               // 소스별 정적 데이터 캐시
 let M_RESULTS = { vacant: [], apt: [], cond: [] };  // 필터 적용 후 결과(원본 객체 배열)
 let M_MS = {};               // 다중선택 컴포넌트
 let M_INITIALIZED = false;
+let M_INIT_PROMISE = null;   // 지도 초기화 중복 실행 방지 + 조회 대기용
 let M_MOVE_TIMER = null;
 const COND_PNU_CACHE = new Map();  // 조건검색: pnu → geometry (뷰포트 갱신 캐시)
 const COND_CHUNK = 50;             // 조건검색 폴리곤 일괄조회 단위
@@ -4311,12 +4327,21 @@ async function parcelsFromPNUs(pnuArray){
 // ── 지도 초기화 (최초 1회) ──
 async function initMapTab(){
   if(!M_INITIALIZED){
-    buildMapFilters();
-    await loadMapStaticData();
-    await loadMapHaengjeong();
-    initMapLeaflet();
-    bindMapCardEsc();
-    M_INITIALIZED = true;
+    if(!M_INIT_PROMISE){
+      M_INIT_PROMISE = (async()=>{
+        // 정적 데이터가 준비된 뒤 필터를 만들면 빈집 등급 목록도 누락되지 않는다.
+        await loadMapStaticData();
+        buildMapFilters();
+        await loadMapHaengjeong();
+        initMapLeaflet();
+        bindMapCardEsc();
+        M_INITIALIZED = true;
+      })().catch(e=>{
+        M_INIT_PROMISE = null;
+        throw e;
+      });
+    }
+    await M_INIT_PROMISE;
   }
   // 소스 체크박스 상태에 따라 조건 섹션 노출
   syncMapCondSections();
@@ -4483,15 +4508,22 @@ function initMapLeaflet(){
 
 // ── 검색 실행 (사이드 패널 "조회" 버튼) ──
 async function runMapSearch(){
-  const sources = mapSelectedSources();
-  if(!sources.length){ document.getElementById("mapHint").textContent = "소스를 1개 이상 선택하세요."; return; }
-  const hdong = document.getElementById("map-hdong").value;
-  const isAll = hdong === "__ALL__";
   const runBtn = document.getElementById("mapRunBtn");
   runBtn.disabled = true;
-  document.getElementById("mapHint").textContent = "";
+  document.getElementById("mapHint").textContent = "지도 초기화 중…";
 
   try{
+    // 탭 전환 직후 조회해도 레이어·행정동·정적 데이터가 준비된 뒤 검색한다.
+    await initMapTab();
+    const sources = mapSelectedSources();
+    if(!sources.length){
+      document.getElementById("mapHint").textContent = "소스를 1개 이상 선택하세요.";
+      return;
+    }
+    const hdong = document.getElementById("map-hdong").value;
+    const isAll = hdong === "__ALL__";
+    document.getElementById("mapHint").textContent = "";
+
     // 선택 해제된 소스의 이전 결과를 초기화 (체크해제해도 잔류하지 않도록)
     if(!sources.includes("vacant")) M_RESULTS.vacant = [];
     if(!sources.includes("apt"))    M_RESULTS.apt = [];
