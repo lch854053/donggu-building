@@ -4612,7 +4612,10 @@ function filterAptForMap(hdong){
 // ── 건축물 조건검색 (live API) → 결과 건물의 parcel key 수집 ──
 async function runCondForMap(hdong){
   const searchId = ++M_COND_SEARCH_ID;
+  clearTimeout(M_MOVE_TIMER);
+  M_MOVE_TIMER = null;
   document.getElementById("mapHint").textContent = "건축물 조건검색 중…";
+  showMapLoading(false); // 이전 조회의 지연된 뷰포트 로딩 상태 초기화
   COND_PNU_CACHE.clear();
   M_LAYER.cond.clearLayers();
 
@@ -4715,7 +4718,7 @@ async function runCondForMap(hdong){
 
 
 // ── 뷰포트 내 조건검색 폴리곤 갱신 ──
-async function refreshCondViewport(){
+async function refreshCondViewport(searchId = M_COND_SEARCH_ID){
   if(!M_MAP) return;
   const bounds = M_MAP.getBounds();
   // 미수집 PNU는 좌표가 없어 뷰포트 판별이 불가. 법정동 경계(M_BJD_BOUNDS)로 뷰포트와
@@ -4740,6 +4743,7 @@ async function refreshCondViewport(){
     need = need.slice(0, COND_MAX_VIEWPORT);
   }
   if(need.length === 0){
+    if(searchId !== M_COND_SEARCH_ID) return;
     document.getElementById("mapHint").textContent = overflow
       ? `표시할 건물이 너무 많습니다. 지도를 확대(줄인)하세요.`
       : "";
@@ -4748,6 +4752,7 @@ async function refreshCondViewport(){
   }
   showMapLoading(true);
   const feats = await parcelsFromPNUs(need);
+  if(searchId !== M_COND_SEARCH_ID) return;
   for(const f of feats){
     if(f.properties?.pnu) COND_PNU_CACHE.set(f.properties.pnu, f.geometry);
   }
