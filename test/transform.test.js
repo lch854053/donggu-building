@@ -41,6 +41,14 @@ test("jusoToBldCandidates: 동구 외(admCd 기준)는 빈 배열", () => {
   assert.deepEqual(f.jusoToBldCandidates(j), []);
 });
 
+test("jusoToBldCandidates: 현행 동구 코드(12210)도 후보로 허용", () => {
+  // 도로명주소 API가 2026년부터 반환하는 전남광주통합특별시 코드.
+  const j = { admCd: "1221011800", mtYn: "0", lnbrMnnm: 100, lnbrSlno: 0 };
+  assert.deepEqual(f.jusoToBldCandidates(j), [
+    { sigunguCd: "12210", bjdongCd: "11800", platGbCd: "0", bun: "0100", ji: "0000" },
+  ]);
+});
+
 test("jusoToBldCandidates: bdMgtSn 없으면 candB(lnbr)만", () => {
   const j = { admCd: "2911010900", mtYn: "0", lnbrMnnm: 100, lnbrSlno: 5 };
   const out = f.jusoToBldCandidates(j);

@@ -1,4 +1,4 @@
-// /api/hspms?op=getHpDongOulnInfo&sigunguCd=29110&bjdongCd=10100&platGbCd=0&bun=0123&ji=0004
+// /api/hspms?op=getHpDongOulnInfo&sigunguCd=12210&bjdongCd=10100&platGbCd=0&bun=0123&ji=0004
 // 국토교통부 건축HUB 주택인허가정보(HsPmsHubService) 프록시
 // 단지 단위 인허가 상세(동별개요의 bldNm 으로 공동주택명 보정, 부대복리시설·주차장 등)
 // 응답: { items:[...], totalCount } / 오류 시 { items:[], error }
@@ -6,6 +6,7 @@
 import { guard, fetchWithTimeout, setSecurity } from "./_lib/proxy.js";
 import { unwrapGov } from "./_lib/govapi.js";
 import { resolveDataKey } from "./_lib/datakey.js";
+import { normalizeDongguHubSigungu } from "./_lib/donggu.js";
 
 const BASE = "https://apis.data.go.kr/1613000/HsPmsHubService";
 const FETCH_TIMEOUT_MS = 8000;
@@ -30,7 +31,7 @@ export default async function handler(req, res) {
   if (!ALLOWED_OPS.has(op))
     return res.status(400).json({ items: [], error: "허용되지 않은 op" });
 
-  const sigunguCd = one(req.query.sigunguCd).trim();
+  const sigunguCd = normalizeDongguHubSigungu(one(req.query.sigunguCd).trim());
   const bjdongCd  = one(req.query.bjdongCd).trim();
   const platGbCd  = one(req.query.platGbCd).trim();
   const bunRaw    = one(req.query.bun).trim();

@@ -1,5 +1,5 @@
-// /api/building?sigunguCd=29110&bjdongCd=10100&platGbCd=0&bun=0123&ji=0004   (단건: 번지 지정)
-// /api/building?sigunguCd=29110&bjdongCd=10100&numOfRows=1000&pageNo=1       (동단위: 번지 생략)
+// /api/building?sigunguCd=12210&bjdongCd=10100&platGbCd=0&bun=0123&ji=0004   (단건: 번지 지정)
+// /api/building?sigunguCd=12210&bjdongCd=10100&numOfRows=1000&pageNo=1       (동단위: 번지 생략)
 // 국토교통부 건축HUB 표제부(getBrTitleInfo) 등 프록시.
 // op가 getSr* 이면 폐쇄말소대장(ShtRgstHubService)로 엔드포인트를 자동 전환한다.
 //   - 필드 구조가 getBr* 과 동일해 응답은 그대로 cardHTML·mergeBuilding 파이프라인에 넘긴다.
@@ -12,6 +12,7 @@
 import { guard, fetchWithTimeout, setSecurity } from "./_lib/proxy.js";
 import { unwrapGov } from "./_lib/govapi.js";
 import { resolveDataKey } from "./_lib/datakey.js";
+import { normalizeDongguHubSigungu } from "./_lib/donggu.js";
 
 const HUB        = "https://apis.data.go.kr/1613000/BldRgstHubService";
 const HUB_CLOSED = "https://apis.data.go.kr/1613000/ShtRgstHubService";
@@ -119,7 +120,7 @@ export default async function handler(req, res) {
   // 점검기관 조회는 시도 단위라 필지 검증 전에 분기
   if (op === "getInspectionAgency") return handleAgency(req, res);
 
-  const sigunguCd = one(req.query.sigunguCd).trim();
+  const sigunguCd = normalizeDongguHubSigungu(one(req.query.sigunguCd).trim());
   const bjdongCd  = one(req.query.bjdongCd).trim();
   const platGbCd  = one(req.query.platGbCd).trim();
   const bunRaw    = one(req.query.bun).trim();

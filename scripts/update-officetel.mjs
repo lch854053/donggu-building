@@ -31,6 +31,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { unwrapGov } from "../api/_lib/govapi.js";
+import { DONGGU_HUB_SIGUNGU, DONGGU_LEGACY_SIGUNGU } from "../api/_lib/donggu.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
@@ -40,7 +41,8 @@ const ORIGIN = process.env.ALLOWED_ORIGIN || BASE_URL;
 const DIRECT_SERVICE_KEY = process.env.ARCH_SERVICE_KEY || process.env.BLD_SERVICE_KEY;
 const ARCH_BASE = "https://apis.data.go.kr/1613000/ArchPmsHubService";
 const BLD_BASE  = "https://apis.data.go.kr/1613000/BldRgstHubService";
-const SIGUNGU = "29110";   // 광주 동구
+const SIGUNGU_HUB = DONGGU_HUB_SIGUNGU;
+const SIGUNGU_PNU = DONGGU_LEGACY_SIGUNGU;
 
 const extraPath = join(ROOT, "aptlist_extra_donggu.json");
 const hjPath    = join(ROOT, "haengjeong.json");
@@ -91,7 +93,7 @@ async function callProxy(endpoint, op, params) {
 
 // 기본개요(법정동 단위 전수). 직접/프록시 분기
 async function fetchBasisDong(bjd, pageNo) {
-  const params = { sigunguCd: SIGUNGU, bjdongCd: bjd, numOfRows: String(PAGE_SIZE), pageNo: String(pageNo) };
+  const params = { sigunguCd: SIGUNGU_HUB, bjdongCd: bjd, numOfRows: String(PAGE_SIZE), pageNo: String(pageNo) };
   if (DIRECT_SERVICE_KEY) return callGovDirect(ARCH_BASE, "getApBasisOulnInfo", params);
   return callProxy("archpms", "getApBasisOulnInfo", params);
 }
@@ -152,7 +154,7 @@ function pnuOf(r) {
   const bun = String(r.bun || "").padStart(4, "0");
   const ji  = String(r.ji  || "").padStart(4, "0");
   const pnuPlatGb = String(r.platGbCd || "0") === "1" ? "2" : "1";   // 산이면 2, 그 외(대지/블록) 1
-  return `${SIGUNGU}${r.bjdongCd}${pnuPlatGb}${bun}${ji}`;
+  return `${SIGUNGU_PNU}${r.bjdongCd}${pnuPlatGb}${bun}${ji}`;
 }
 
 // 괄호 제거 + 닫는 괄호 잔여 정리 (예: "수기동 16-3 업무시설)" → "수기동 16-3 업무시설")
@@ -309,7 +311,7 @@ async function main() {
     const bun = String(r.bun || "").padStart(4, "0");
     const ji  = String(r.ji  || "").padStart(4, "0");
     try {
-      const { items } = await fetchFlr(SIGUNGU, r.bjdongCd, String(r.platGbCd || "0"), bun, ji);
+      const { items } = await fetchFlr(SIGUNGU_HUB, r.bjdongCd, String(r.platGbCd || "0"), bun, ji);
       return { basis: r, flrItems: items, ratio: officetelRatio(items) };
     } catch (e) {
       return { basis: r, flrItems: [], ratio: 0, error: e.message };
@@ -344,7 +346,7 @@ async function main() {
     const bun = String(basis.bun || "").padStart(4, "0");
     const ji  = String(basis.ji  || "").padStart(4, "0");
     try {
-      const { items } = await fetchTitle(SIGUNGU, basis.bjdongCd, String(basis.platGbCd || "0"), bun, ji);
+      const { items } = await fetchTitle(SIGUNGU_HUB, basis.bjdongCd, String(basis.platGbCd || "0"), bun, ji);
       return buildEntry(basis, items);
     } catch (e) {
       return buildEntry(basis, []);   // 표제부 실패 시 기본개요만으로 생성

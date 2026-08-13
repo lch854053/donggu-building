@@ -12,6 +12,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
+import { DONGGU_HUB_SIGUNGU, DONGGU_LEGACY_SIGUNGU } from "../api/_lib/donggu.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
@@ -23,7 +24,7 @@ const DOMAIN = "https://donggu-building.vercel.app";
 const CONCURRENCY = 6;
 const pnuRe = /^\d{19}$/;
 // VWorld 연속지적도는 신규 시군구코드(12210)만 인식. 구 코드(29110) 정규화.
-const pnuForVWorld = (pnu) => pnu.startsWith("29110") ? "12210" + pnu.slice(5) : pnu;
+const pnuForVWorld = (pnu) => pnu.startsWith(DONGGU_LEGACY_SIGUNGU) ? DONGGU_HUB_SIGUNGU + pnu.slice(5) : pnu;
 
 // PNU별 수동 geometry 오버라이드 — 폴리곤 미반영/부정확 단지 중 위치/모양/표시주소를
 // 수동 보정한 경우. VWorld가 제공하는 좌표가 실제 대지와 어긋날 때 여기서 보정하면
@@ -73,7 +74,8 @@ const POINT_OVERRIDES = {
 const BLD_KIND_KEYWORDS = ["연립", "다세대", "오피스텔", "도시형"];
 const BLD_SERVICE_KEY = process.env.BLD_SERVICE_KEY;
 const BLD_HUB = "https://apis.data.go.kr/1613000/BldRgstHubService";
-const SIGUNGU = "29110";
+const SIGUNGU_HUB = DONGGU_HUB_SIGUNGU;
+const SIGUNGU_PNU = DONGGU_LEGACY_SIGUNGU;
 const ALL_BJD = ["10100","10200","10300","10400","10500","10600","10700","10800","10900","11000","11100","11200","11300","11400","11500","11600","11700","11800","11900","12000","12100","12200","12300","12400","12500","12600","12700","12800","12900","13000","13100","13200","13300","13400"];
 
 // 한국부동산원 공동주택 단지 식별정보(getAptInfo) — K-apt·odcloud에 미등록인 구형
@@ -266,7 +268,7 @@ async function fetchBldTitlePage(bjd, pageNo) {
   if (!BLD_SERVICE_KEY) return { titles: [], totalCount: 0 };
   const qs = new URLSearchParams({
     serviceKey: BLD_SERVICE_KEY,
-    sigunguCd: SIGUNGU, bjdongCd: bjd,
+    sigunguCd: SIGUNGU_HUB, bjdongCd: bjd,
     numOfRows: "1000", pageNo: String(pageNo), _type: "json",
   });
   const url = `${BLD_HUB}/getBrTitleInfo?${qs}`;
@@ -337,7 +339,7 @@ async function collectLowriseFromBuilding() {
     if (!bun || !ji) continue;
     // 건축물대장 platGbCd(0=대지)와 VWorld 연속지적도 platGb 자리는 매핑이 다름.
     // VWorld는 동구 전 필지가 platGb=1(블록)로 등록되어 있어 강제 1로 정규화.
-    const pnu = `${SIGUNGU}${t.bjdongCd || ""}1${bun}${ji}`;
+    const pnu = `${SIGUNGU_PNU}${t.bjdongCd || ""}1${bun}${ji}`;
     if (!pnuRe.test(pnu)) continue;
     if (!parcels.has(pnu)) parcels.set(pnu, { titles: [], kind });
     parcels.get(pnu).titles.push(t);
@@ -355,7 +357,7 @@ async function collectLowriseFromBuilding() {
       if (d && (!useAprDay || d < useAprDay)) useAprDay = d;
     }
     out.push({
-      pnu, bjdCode: `${SIGUNGU}${titles[0].bjdongCd || ""}`,
+      pnu, bjdCode: `${SIGUNGU_PNU}${titles[0].bjdongCd || ""}`,
       dong: "", kind,
       hhld: hhld || null, useAprDay,
       bldNm, mainPurps: titles[0].etcPurps || "",
@@ -411,7 +413,7 @@ async function collectAptFromGetAptInfo() {
     })
     .map(d => ({
       pnu: String(d.PNU).trim(),
-      bjdCode: `${SIGUNGU}${String(d.PNU).slice(5, 10)}`,
+      bjdCode: `${SIGUNGU_PNU}${String(d.PNU).slice(5, 10)}`,
       dong: "",
       kind: gbCdToKind(String(d.COMPLEX_GB_CD || "").trim()),
       complexNm: String(d.COMPLEX_NM1 || d.COMPLEX_NM2 || d.COMPLEX_NM3 || "").trim(),

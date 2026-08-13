@@ -7,7 +7,7 @@ function jusoToBldCandidates(j){
   const out = [];
   const seen = new Set();
   const push = (p) => {
-    if(p.sigunguCd !== "29110") return;          // 동구만
+    if(p.sigunguCd !== "29110" && p.sigunguCd !== "12210") return; // 동구 구·현행 코드
     const k = `${p.bjdongCd}-${p.bun}-${p.ji}-${p.platGbCd}`;
     if(seen.has(k)) return;                       // 중복 제거
     seen.add(k);

@@ -1,4 +1,4 @@
-// /api/archpms?op=getApBasisOulnInfo&sigunguCd=29110&bjdongCd=10100&platGbCd=0&bun=0123&ji=0004
+// /api/archpms?op=getApBasisOulnInfo&sigunguCd=12210&bjdongCd=10100&platGbCd=0&bun=0123&ji=0004
 // 국토교통부 건축HUB 건축인허가정보(ArchPmsHubService) 프록시
 // 이력 탭: 기본개요(getApBasisOulnInfo) → 건축허가일·착공일·사용승인일 등 인허가 생애주기
 // 응답: { items:[...], totalCount } / 오류 시 { items:[], error }
@@ -7,6 +7,7 @@ import { guard, fetchWithTimeout, setSecurity } from "./_lib/proxy.js";
 import { unwrapGov } from "./_lib/govapi.js";
 import { fetchOdcloudBasisOulnSafe } from "./_lib/archpms-odcloud.js";
 import { resolveDataKey } from "./_lib/datakey.js";
+import { normalizeDongguHubSigungu } from "./_lib/donggu.js";
 
 const BASE = "https://apis.data.go.kr/1613000/ArchPmsHubService";
 const FETCH_TIMEOUT_MS = 8000;
@@ -24,7 +25,7 @@ export default async function handler(req, res) {
   if (!ALLOWED_OPS.has(op))
     return res.status(400).json({ items: [], error: "허용되지 않은 op" });
 
-  const sigunguCd = one(req.query.sigunguCd).trim();
+  const sigunguCd = normalizeDongguHubSigungu(one(req.query.sigunguCd).trim());
   const bjdongCd  = one(req.query.bjdongCd).trim();
   const platGbCd  = one(req.query.platGbCd).trim();
   const bunRaw    = one(req.query.bun).trim();
