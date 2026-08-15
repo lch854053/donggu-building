@@ -57,49 +57,44 @@ async function runPool(items, fn, concurrency) {
   return results;
 }
 
-export default async function handler(req, res) {
-  if (!guard(req, res)) return;
+function parcelProperties(pnu, properties = {}) {
+  return {
+    pnu,
+    sigunguCd: pnu.substring(0, 5),
+    bjdongCd:  pnu.substring(5, 10),
+    platGbCd:  pnu.substring(10, 11) === "2" ? "1" : "0",
+    bun:       pnu.substring(11, 15),
+    ji:        pnu.substring(15, 19),
+    addr:      properties.addr || "",
+    jibun:     properties.jibun || "",
+  };
+}
 
-  const x    = (req.query.x    || "").toString().trim();
-  const y    = (req.query.y    || "").toString().trim();
-  const pnu  = (req.query.pnu  || "").toString().trim();
-  const pnus = (req.query.pnus || "").toString().trim();
+async function handleBatch(pnus, res) {
+  const list = pnus.split(",").map(s => s.trim()).filter(Boolean).filter(v => pnuRe.test(v));
+  if (!list.length) return res.status(400).json({ error: "유효한 PNU 없음" });
+  if (list.length > MAX_BATCH) return res.status(400).json({ error: `최대 ${MAX_BATCH}개까지 조회 가능` });
 
-  // 복수 PNU 일괄조회 모드 ─ GeoJSON FeatureCollection 으로 병합 반환
-  if (pnus) {
-    const list = pnus.split(",").map(s => s.trim()).filter(Boolean).filter(v => pnuRe.test(v));
-    if (!list.length) return res.status(400).json({ error: "유효한 PNU 없음" });
-    if (list.length > MAX_BATCH) return res.status(400).json({ error: `최대 ${MAX_BATCH}개까지 조회 가능` });
+  const key = requireEnv(res, "VWORLD_KEY");
+  if (!key) return;
 
-    const key = requireEnv(res, "VWORLD_KEY");
-    if (!key) return;
-
-    const raw = await runPool(list, p => fetchOne(p, key), BATCH_CONCURRENCY);
-    const features = [];
-    for (let idx = 0; idx < list.length; idx++) {
-      const got = raw[idx];
-      if (!got || !got.geometry) continue;
-      const p = got.properties || {};
-      features.push({
-        type: "Feature",
-        properties: {
-          pnu: list[idx],
-          sigunguCd: list[idx].substring(0, 5),
-          bjdongCd:  list[idx].substring(5, 10),
-          platGbCd:  list[idx].substring(10, 11) === "2" ? "1" : "0",
-          bun:       list[idx].substring(11, 15),
-          ji:        list[idx].substring(15, 19),
-          addr:  p.addr  || "",
-          jibun: p.jibun || "",
-        },
-        geometry: got.geometry,
-      });
-    }
-    setSecurity(res);
-    res.setHeader("Cache-Control", "s-maxage=86400, stale-while-revalidate=3600");
-    return res.status(200).json({ found: features.length > 0, features });
+  const raw = await runPool(list, p => fetchOne(p, key), BATCH_CONCURRENCY);
+  const features = [];
+  for (let idx = 0; idx < list.length; idx++) {
+    const got = raw[idx];
+    if (!got || !got.geometry) continue;
+    features.push({
+      type: "Feature",
+      properties: parcelProperties(list[idx], got.properties),
+      geometry: got.geometry,
+    });
   }
+  setSecurity(res);
+  res.setHeader("Cache-Control", "s-maxage=86400, stale-while-revalidate=3600");
+  return res.status(200).json({ found: features.length > 0, features });
+}
 
+async function handleSingle({ x, y, pnu }, res) {
   // 단일 조회: pnu 우선, 없으면 좌표(POINT)
   let filter;
   if (pnu) {
@@ -144,17 +139,22 @@ export default async function handler(req, res) {
     res.setHeader("Cache-Control", "s-maxage=86400, stale-while-revalidate=3600");
     return res.status(200).json({
       found: true,
-      pnu: got,
-      sigunguCd: got.substring(0, 5),
-      bjdongCd:  got.substring(5, 10),
-      platGbCd:  got.substring(10, 11) === "2" ? "1" : "0",  // 2=산
-      bun:       got.substring(11, 15),
-      ji:        got.substring(15, 19),
-      addr:  p.addr  || "",
-      jibun: p.jibun || "",
+      ...parcelProperties(got, p),
       geometry: features[0].geometry || null,
     });
   } catch (e) {
     return failJson(res, e, "vworld-parcel");
   }
+}
+
+export default async function handler(req, res) {
+  if (!guard(req, res)) return;
+
+  const x    = (req.query.x    || "").toString().trim();
+  const y    = (req.query.y    || "").toString().trim();
+  const pnu  = (req.query.pnu  || "").toString().trim();
+  const pnus = (req.query.pnus || "").toString().trim();
+
+  if (pnus) return handleBatch(pnus, res);
+  return handleSingle({ x, y, pnu }, res);
 }

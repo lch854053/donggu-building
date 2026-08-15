@@ -18,6 +18,15 @@ const one = (v) => (Array.isArray(v) ? v[0] : v) ?? "";
 
 const ALLOWED_OPS = new Set(["getApBasisOulnInfo", "getApTmpBldInfo", "getApHdcrMgmRgstInfo", "getApDemolExtngMgmRgstInfo", "getApHsTpInfo"]);
 
+async function respondWithOdcloudFallback(res, params) {
+  const odcloud = await fetchOdcloudBasisOulnSafe(params);
+  if (!odcloud.items.length) return false;
+  setSecurity(res);
+  res.setHeader("Cache-Control", "s-maxage=3600, stale-while-revalidate");
+  res.status(200).json({ items: odcloud.items, totalCount: odcloud.totalCount });
+  return true;
+}
+
 export default async function handler(req, res) {
   if (!guard(req, res)) return;
 
@@ -51,6 +60,9 @@ export default async function handler(req, res) {
     q.bun = bunRaw.padStart(4, "0");
     q.ji  = jiRaw ? jiRaw.padStart(4, "0") : "0000";
   }
+  const fallbackParams = op === "getApBasisOulnInfo" && q.bun && q.ji
+    ? { sigunguCd, bjdongCd, platGbCd, bun: q.bun, ji: q.ji }
+    : null;
 
   // serviceKey 는 '디코딩 키'를 환경변수에 넣고 여기서 1회만 인코딩
   const url = `${BASE}/${op}?serviceKey=${encodeURIComponent(serviceKey)}&${new URLSearchParams(q)}`;
@@ -61,16 +73,8 @@ export default async function handler(req, res) {
     const { items, totalCount } = unwrapGov(text, op);
 
     // getApBasisOulnInfo: 국토교통부 결과가 비면 odcloud 폴백 시도
-    const hasBunJi = !!q.bun && !!q.ji;
-    if (op === "getApBasisOulnInfo" && !items.length && hasBunJi) {
-      const odcloud = await fetchOdcloudBasisOulnSafe({
-        sigunguCd, bjdongCd, platGbCd, bun: q.bun, ji: q.ji
-      });
-      if (odcloud.items.length) {
-        setSecurity(res);
-        res.setHeader("Cache-Control", "s-maxage=3600, stale-while-revalidate");
-        return res.status(200).json({ items: odcloud.items, totalCount: odcloud.totalCount });
-      }
+    if (!items.length && fallbackParams && await respondWithOdcloudFallback(res, fallbackParams)) {
+      return;
     }
 
     setSecurity(res);
@@ -78,17 +82,9 @@ export default async function handler(req, res) {
     return res.status(200).json({ items, totalCount });
   } catch (e) {
     // getApBasisOulnInfo: 국토교통부 API 실패 시 odcloud 폴백 시도
-    const hasBunJi = !!q.bun && !!q.ji;
-    if (op === "getApBasisOulnInfo" && hasBunJi) {
+    if (fallbackParams) {
       try {
-        const odcloud = await fetchOdcloudBasisOulnSafe({
-          sigunguCd, bjdongCd, platGbCd, bun: q.bun, ji: q.ji
-        });
-        if (odcloud.items.length) {
-          setSecurity(res);
-          res.setHeader("Cache-Control", "s-maxage=3600, stale-while-revalidate");
-          return res.status(200).json({ items: odcloud.items, totalCount: odcloud.totalCount });
-        }
+        if (await respondWithOdcloudFallback(res, fallbackParams)) return;
       } catch (odcloudErr) {
         const masked = String(odcloudErr?.message || odcloudErr).replace(/serviceKey=[^&\s]+/gi, "serviceKey=***");
         console.error("[archpms-odcloud]", masked);

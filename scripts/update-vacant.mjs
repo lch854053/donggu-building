@@ -404,37 +404,7 @@ async function checkExcelStale() {
 // ───────────────────────────────────────────────
 // main
 // ───────────────────────────────────────────────
-async function main() {
-  if (!ODCLOUD_SERVICE_KEY) {
-    console.error("ODCLOUD_SERVICE_KEY 환경변수가 설정되지 않았습니다.");
-    process.exit(1);
-  }
-  if (!KAKAO_REST_API_KEY) {
-    console.error("KAKAO_REST_API_KEY 환경변수가 설정되지 않았습니다.");
-    process.exit(1);
-  }
-  if (!JUSO_CONFM_KEY) {
-    console.error("JUSO_CONFM_KEY 환경변수가 설정되지 않았습니다.");
-    process.exit(1);
-  }
-
-  console.log("odcloud 빈집 데이터 수집 중...");
-  const rows = await fetchAllVacant();
-  console.log(`odcloud 총 ${rows.length}건`);
-
-  console.log("엑셀 보강 데이터 로드 중...");
-  const excelRows = readExcelSupplement();
-  console.log(`엑셀 보강 row 수: ${excelRows.length}건`);
-  const excelMap = buildExcelMap(excelRows);
-  console.log(`엑셀 고유 매칭 키 수: ${excelMap.size}건`);
-
-  await checkExcelStale();
-
-  const manualMap = await loadManualOverrides();
-  if (manualMap.size) {
-    console.log(`수동 보정 파일: ${manualMap.size}건 로드`);
-  }
-
+async function resolveVacantAddresses(rows, excelMap) {
   console.log("1차: 엑셀 보강 매칭 중...");
   const stage1 = rows.map((row, i) => {
     const matched = matchFromExcel(row, excelMap);
@@ -447,9 +417,8 @@ async function main() {
 
   let stage1Ok = 0;
   let stage1NeedsFallback = 0;
-  for (let i = 0; i < rows.length; i++) {
-    const hdong = stage1[i].hdong;
-    if (hdong && DONGGU_HDONGS.has(hdong)) stage1Ok++;
+  for (const result of stage1) {
+    if (result.hdong && DONGGU_HDONGS.has(result.hdong)) stage1Ok++;
     else stage1NeedsFallback++;
   }
   console.log(`  1차 결과: 성공 ${stage1Ok}건 / 2차 대상 ${stage1NeedsFallback}건`);
@@ -489,7 +458,7 @@ async function main() {
   console.log(`  2차 결과: 성공 ${stage2Ok}건 / 3차 대상 ${stage2NeedsFallback}건`);
 
   console.log("3차: 행안부 + 카카오 행정동 매핑 중...");
-  const stage3 = await runPool(rows, async (row, i) => {
+  const resolved = await runPool(rows, async (row, i) => {
     const hdong2 = stage2[i].hdong;
     if (hdong2 && DONGGU_HDONGS.has(hdong2)) return stage2[i];
 
@@ -507,6 +476,10 @@ async function main() {
     }
   }, CONCURRENCY);
 
+  return { resolved, stage1Ok, stage2Ok };
+}
+
+function buildVacantOutput(rows, resolved, manualMap) {
   let mapped = 0;
   let finalFail = 0;
   const out = rows.map((row, i) => {
@@ -515,7 +488,7 @@ async function main() {
     const rawX = Number(row["위도"] || 0);
     const rawY = Number(row["경도"] || 0);
 
-    let { hdong, jibun, doro } = stage3[i];
+    let { hdong, jibun, doro } = resolved[i];
     if (hdong && !DONGGU_HDONGS.has(hdong)) hdong = "";
 
     const manual = manualMap.get(`${rawX},${rawY}`);
@@ -539,6 +512,96 @@ async function main() {
       doro,
     };
   });
+  return { out, mapped, finalFail };
+}
+
+async function collectVacantGeometry(out) {
+  if (!VWORLD_KEY) {
+    console.log("\nVWORLD_KEY 없음 — 빈집 폴리곤 수집 생략");
+    return;
+  }
+
+  console.log("\n지도 탭용 빈집 폴리곤 수집 중...");
+  const geoInput = out
+    .map((o, i) => ({ i, o }))
+    .filter(it => it.o.jibun || it.o.doro);
+  console.log(`  폴리곤 수집 대상: ${geoInput.length}건 (주소 보유)`);
+  const geoResults = await runPool(geoInput, async (it) => {
+    const g = await parcelForVacant(it.o);
+    if (it.i % 100 === 0) console.log(`  [폴리곤] ${it.i + 1}/${out.length}`);
+    return g;
+  }, GEO_CONCURRENCY);
+
+  const geoOut = [];
+  let geoOk = 0, byGeo = 0, bySquare = 0;
+  for (let k = 0; k < geoInput.length; k++) {
+    const it = geoInput[k];
+    const o = it.o;
+    const g = geoResults[k];
+    if (g && g.geometry) {
+      geoOk++;
+      if (g._viaSquare) bySquare++;
+      else if (g._viaGeo) byGeo++;
+      geoOut.push({
+        pnu: g.pnu,
+        dong: o.dong, hdong: o.hdong, kind: o.kind,
+        year: o.year, struct: o.struct, tarea: o.tarea,
+        grade: o.grade, jibun: o.jibun, doro: o.doro,
+        geometry: g.geometry,
+      });
+    }
+  }
+  const geoPath = join(ROOT, "vacant_geo.json");
+  console.log(`  빈집 폴리곤 수집: ${geoOk}건 / ${out.length}건 (geocoder ${byGeo} / 면적정사각형 ${bySquare})`);
+
+  // VWorld 인증/한도/장애로 실제 필지 조회가 대량 실패하면 빈 결과나 대체 도형으로
+  // 정상 데이터를 덮어쓰는 회귀를 막는다.
+  let previousPnuCount = 0;
+  try {
+    const previous = JSON.parse(await readFile(geoPath, "utf8"));
+    if (Array.isArray(previous)) previousPnuCount = previous.filter(item => item?.pnu).length;
+  } catch { /* 기존 파일 없음/파싱 실패 */ }
+  if (byGeo === 0 || (previousPnuCount > 0 && byGeo < previousPnuCount * 0.5)) {
+    throw new Error(`[가드] VWorld 실제 필지 수집 급감: ${byGeo}건 (기존 ${previousPnuCount}건). vacant_geo.json을 덮어쓰지 않음.`);
+  }
+
+  await writeFile(geoPath, JSON.stringify(geoOut, null, " ") + "\n", "utf8");
+  console.log(`  저장 경로: ${geoPath}`);
+}
+
+async function main() {
+  if (!ODCLOUD_SERVICE_KEY) {
+    console.error("ODCLOUD_SERVICE_KEY 환경변수가 설정되지 않았습니다.");
+    process.exit(1);
+  }
+  if (!KAKAO_REST_API_KEY) {
+    console.error("KAKAO_REST_API_KEY 환경변수가 설정되지 않았습니다.");
+    process.exit(1);
+  }
+  if (!JUSO_CONFM_KEY) {
+    console.error("JUSO_CONFM_KEY 환경변수가 설정되지 않았습니다.");
+    process.exit(1);
+  }
+
+  console.log("odcloud 빈집 데이터 수집 중...");
+  const rows = await fetchAllVacant();
+  console.log(`odcloud 총 ${rows.length}건`);
+
+  console.log("엑셀 보강 데이터 로드 중...");
+  const excelRows = readExcelSupplement();
+  console.log(`엑셀 보강 row 수: ${excelRows.length}건`);
+  const excelMap = buildExcelMap(excelRows);
+  console.log(`엑셀 고유 매칭 키 수: ${excelMap.size}건`);
+
+  await checkExcelStale();
+
+  const manualMap = await loadManualOverrides();
+  if (manualMap.size) {
+    console.log(`수동 보정 파일: ${manualMap.size}건 로드`);
+  }
+
+  const { resolved, stage1Ok, stage2Ok } = await resolveVacantAddresses(rows, excelMap);
+  const { out, mapped, finalFail } = buildVacantOutput(rows, resolved, manualMap);
 
   const outputPath = join(ROOT, "vacantlist_donggu.json");
   await writeFile(outputPath, JSON.stringify(out, null, " ") + "\n", "utf8");
@@ -557,61 +620,7 @@ async function main() {
   console.log(`  지번 주소 확보: ${withJibun}건 / 도로명 주소 확보: ${withDoro}건`);
   console.log(`저장 경로: ${outputPath}`);
 
-  // ───────────────────────────────────────────────
-  // 지도 탭용: 빈집 폴리곤 사전 수집 → vacant_geo.json
-  // 빈집 원본 좌표(EPSG:5181)는 실제 필지와 수백 m 차이 나는 사례가 있으므로 사용하지 않는다.
-  // 지번주소(jibun)를 VWorld geocoder로 정확 좌표로 변환한 뒤 POINT 조회한다.
-  // ───────────────────────────────────────────────
-  if (VWORLD_KEY) {
-    console.log("\n지도 탭용 빈집 폴리곤 수집 중...");
-    const geoInput = out
-      .map((o, i) => ({ i, o }))
-      .filter(it => it.o.jibun || it.o.doro);
-    console.log(`  폴리곤 수집 대상: ${geoInput.length}건 (주소 보유)`);
-    const geoResults = await runPool(geoInput, async (it) => {
-      const g = await parcelForVacant(it.o);
-      if (it.i % 100 === 0) console.log(`  [폴리곤] ${it.i + 1}/${out.length}`);
-      return g;
-    }, GEO_CONCURRENCY);
-
-    const geoOut = [];
-    let geoOk = 0, byGeo = 0, bySquare = 0;
-    for (let k = 0; k < geoInput.length; k++) {
-      const it = geoInput[k];
-      const o = it.o;
-      const g = geoResults[k];
-      if (g && g.geometry) {
-        geoOk++;
-        if (g._viaSquare) bySquare++;
-        else if (g._viaGeo) byGeo++;
-        geoOut.push({
-          pnu: g.pnu,
-          dong: o.dong, hdong: o.hdong, kind: o.kind,
-          year: o.year, struct: o.struct, tarea: o.tarea,
-          grade: o.grade, jibun: o.jibun, doro: o.doro,
-          geometry: g.geometry,
-        });
-      }
-    }
-    const geoPath = join(ROOT, "vacant_geo.json");
-    console.log(`  빈집 폴리곤 수집: ${geoOk}건 / ${out.length}건 (geocoder ${byGeo} / 면적정사각형 ${bySquare})`);
-
-    // VWorld 인증/한도/장애로 실제 필지 조회가 대량 실패하면 빈 결과나 대체 도형으로
-    // 정상 데이터를 덮어쓰는 회귀를 막는다.
-    let previousPnuCount = 0;
-    try {
-      const previous = JSON.parse(await readFile(geoPath, "utf8"));
-      if (Array.isArray(previous)) previousPnuCount = previous.filter(item => item?.pnu).length;
-    } catch { /* 기존 파일 없음/파싱 실패 */ }
-    if (byGeo === 0 || (previousPnuCount > 0 && byGeo < previousPnuCount * 0.5)) {
-      throw new Error(`[가드] VWorld 실제 필지 수집 급감: ${byGeo}건 (기존 ${previousPnuCount}건). vacant_geo.json을 덮어쓰지 않음.`);
-    }
-
-    await writeFile(geoPath, JSON.stringify(geoOut, null, " ") + "\n", "utf8");
-    console.log(`  저장 경로: ${geoPath}`);
-  } else {
-    console.log("\nVWORLD_KEY 없음 — 빈집 폴리곤 수집 생략");
-  }
+  await collectVacantGeometry(out);
 }
 
 main().catch(e => {

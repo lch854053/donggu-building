@@ -427,19 +427,7 @@ async function collectAptFromGetAptInfo() {
   return out;
 }
 
-async function main() {
-  if (!VWORLD_KEY) {
-    console.error("VWORLD_KEY 환경변수가 설정되지 않았습니다.");
-    process.exit(1);
-  }
-
-  console.log("공동주택 단지 목록 로드 중...");
-  const kapt = await loadJson("aptlist_donggu.json");
-  const odcloud = await loadJson("aptlist_odcloud_donggu.json");
-  const extra = await loadJson("aptlist_extra_donggu.json");
-  console.log(`  K-apt: ${kapt.length} / odcloud: ${odcloud.length} / extra: ${extra.length}`);
-
-  // 단위 단지 객체 통합 — PNU가 키. 동일 PNU면 풍부한 정보 우선(K-apt > extra > odcloud).
+function mergeComplexSources({ kapt, extra, odcloud, aptid, lowrise }) {
   const byPnu = new Map();
   for (const r of kapt) {
     const pnu = String(r.pnu || "").trim();
@@ -450,11 +438,9 @@ async function main() {
       bjdCode: r.bjdCode || "", dong: r.as3 || "",
       kind: normalizeKind(r.bass?.codeAptNm, ""),
       kaptCode: r.kaptCode || "",
-      // 실제 총 세대수는 hoCnt이며, kaptdaCnt는 hoCnt가 비어 있는 구형 레코드의 폴백이다.
       hhld: Number(r.bass?.hoCnt || 0) || Number(r.bass?.kaptdaCnt || 0) || null,
       useAprDay: r.bass?.kaptUsedate || "",
       strct: r.dtl?.struMain || r.bass?.codeStruNm || "",
-      // K-apt 상세는 런타임에 lazy 로드되므로 여기선 최소값만. 상세카드에서 fetch.
     });
   }
   for (const r of extra) {
@@ -482,14 +468,8 @@ async function main() {
       officeTel: r.officeTel || "",
     });
   }
-
-  // 한국부동산원 getAptInfo에서 아파트/연립/다세대 보충 + 단지명 보강.
-  // K-apt·odcloud 미등록 구형 단지(대명아파트 등) 누락 보충과, 건축물대장(bld)에 건물명이
-  // 없어 "다세대" 등으로 빠진 단지명(고려원룸 등)을 getAptInfo 이름으로 보강.
-  // 정적 3소스(bld 보충 포함)보다 먼저 주입해 getAptInfo의 단지명/메타를 우선 반영.
-  const aptid = await collectAptFromGetAptInfo();
   for (const r of aptid) {
-    if (byPnu.has(r.pnu)) continue;   // 기존 단지 우선
+    if (byPnu.has(r.pnu)) continue;
     byPnu.set(r.pnu, {
       pnu: r.pnu, source: "aptid",
       bjdCode: r.bjdCode || "", dong: "",
@@ -499,16 +479,38 @@ async function main() {
       adres: r.adres || "",
     });
   }
-
-  // 건축물대장에서 연립/다세대/오피스텔 보충 수집 (K-apt·odcloud는 아파트 중심이라 누락 방지)
-  const lowrise = await collectLowriseFromBuilding();
   for (const r of lowrise) {
-    if (byPnu.has(r.pnu)) continue;   // 기존 단지 우선
+    if (byPnu.has(r.pnu)) continue;
     byPnu.set(r.pnu, {
       ...r, source: "bld",
       complexNm: r.bldNm || r.kind || "",
     });
   }
+  return byPnu;
+}
+
+async function main() {
+  if (!VWORLD_KEY) {
+    console.error("VWORLD_KEY 환경변수가 설정되지 않았습니다.");
+    process.exit(1);
+  }
+
+  console.log("공동주택 단지 목록 로드 중...");
+  const kapt = await loadJson("aptlist_donggu.json");
+  const odcloud = await loadJson("aptlist_odcloud_donggu.json");
+  const extra = await loadJson("aptlist_extra_donggu.json");
+  console.log(`  K-apt: ${kapt.length} / odcloud: ${odcloud.length} / extra: ${extra.length}`);
+
+  // 한국부동산원 getAptInfo에서 아파트/연립/다세대 보충 + 단지명 보강.
+  // K-apt·odcloud 미등록 구형 단지(대명아파트 등) 누락 보충과, 건축물대장(bld)에 건물명이
+  // 없어 "다세대" 등으로 빠진 단지명(고려원룸 등)을 getAptInfo 이름으로 보강.
+  // 정적 3소스(bld 보충 포함)보다 먼저 주입해 getAptInfo의 단지명/메타를 우선 반영.
+  const aptid = await collectAptFromGetAptInfo();
+
+  // 건축물대장에서 연립/다세대/오피스텔 보충 수집 (K-apt·odcloud는 아파트 중심이라 누락 방지)
+  const lowrise = await collectLowriseFromBuilding();
+  // PNU가 키. 동일 PNU면 K-apt > extra > odcloud > aptid > 건축물대장 순으로 유지한다.
+  const byPnu = mergeComplexSources({ kapt, extra, odcloud, aptid, lowrise });
 
   const complexes = [...byPnu.values()];
   console.log(`  고유 단지(PNU 기준): ${complexes.length}건`);
