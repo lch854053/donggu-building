@@ -1,0 +1,11 @@
+{
+    "schema_version": 2,
+    "commit": "982fc14caf7127859b999580e6e4af3166dbad96",
+    "indexed_at": "2026-08-15T07:37:17Z",
+    "project": "D-Documents-Default-Project",
+    "nodes": 16107,
+    "edges": 17262,
+    "original_size": 31260672,
+    "compressed_size": 1848252,
+    "compression_level": 3
+}
