@@ -7,7 +7,7 @@ import { guard, fetchWithTimeout, setSecurity } from "./_lib/proxy.js";
 import { unwrapGov } from "./_lib/govapi.js";
 import { fetchOdcloudBasisOulnSafe } from "./_lib/archpms-odcloud.js";
 import { resolveDataKey } from "./_lib/datakey.js";
-import { normalizeDongguHubSigungu } from "./_lib/donggu.js";
+import { normalizeDongguHubSigungu, normalizeDongguLegacySigungu } from "./_lib/donggu.js";
 
 const BASE = "https://apis.data.go.kr/1613000/ArchPmsHubService";
 const FETCH_TIMEOUT_MS = 8000;
@@ -34,7 +34,10 @@ export default async function handler(req, res) {
   if (!ALLOWED_OPS.has(op))
     return res.status(400).json({ items: [], error: "허용되지 않은 op" });
 
-  const sigunguCd = normalizeDongguHubSigungu(one(req.query.sigunguCd).trim());
+  const requestedSigunguCd = one(req.query.sigunguCd).trim();
+  const sigunguCd = op === "getApDemolExtngMgmRgstInfo"
+    ? normalizeDongguLegacySigungu(requestedSigunguCd)
+    : normalizeDongguHubSigungu(requestedSigunguCd);
   const bjdongCd  = one(req.query.bjdongCd).trim();
   const platGbCd  = one(req.query.platGbCd).trim();
   const bunRaw    = one(req.query.bun).trim();

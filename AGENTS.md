@@ -78,7 +78,7 @@ npm run update-officetel # 건축인허가 기반 오피스텔 자동 발견
 - **동구 시군구코드 이중 체계**
   - 기존 정적 PNU·로컬 데이터: `29110` (구 광주광역시 동구)
   - 건축HUB/건축인허가·VWorld 연속지적도: `12210` (전남광주통합특별시 동구)
-  - `building`·`archpms`·`hspms` 프록시는 기존 `29110` 요청을 상류 API 호출 직전에 `12210`으로 정규화한다. 정적 PNU 형식은 데이터 마이그레이션 전까지 `29110`을 유지한다.
+  - `building`·`archpms`·`hspms` 프록시는 기존 `29110` 요청을 상류 API 호출 직전에 `12210`으로 정규화한다. 단, 철거멸실관리대장(`getApDemolExtngMgmRgstInfo`)은 상류 데이터가 기존 코드로 색인되어 `29110`을 사용한다. 정적 PNU 형식은 데이터 마이그레이션 전까지 `29110`을 유지한다.
 - **PNU 조립**: `sigunguCd(5) + bjdongCd(5) + platGbCd(1→1/2) + bun(4) + ji(4)` → 19자리. `platGbCd` 산(1)은 PNU에서 2다.
 - **건축물대장 미등록 신축**: `getBrTitleInfo` 0건일 때 `getApBasisOulnInfo`로 폴백. 표제부가 없는 필드는 `-`로 표시.
 - **주차대수**: `totPkngCnt` 우선, 없으면 `indrAutoUtcnt + oudrAutoUtcnt + indrMechUtcnt + oudrMechUtcnt` 합산.

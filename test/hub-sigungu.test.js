@@ -21,7 +21,7 @@ const upstreamBody = JSON.stringify({
   },
 });
 
-test("construction HUB proxies convert legacy Dong-gu code to 12210", { concurrency: false }, async () => {
+test("construction HUB proxies use the operation-specific Dong-gu code", { concurrency: false }, async () => {
   const originalKey = process.env.BLD_SERVICE_KEY;
   const originalFetch = globalThis.fetch;
   const urls = [];
@@ -38,6 +38,7 @@ test("construction HUB proxies convert legacy Dong-gu code to 12210", { concurre
     const cases = [
       [building, common],
       [archpms, { ...common, op: "getApHsTpInfo" }],
+      [archpms, { ...common, sigunguCd: "12210", op: "getApDemolExtngMgmRgstInfo" }],
       [hspms, { ...common, op: "getHpDongOulnInfo" }],
     ];
 
@@ -52,8 +53,8 @@ test("construction HUB proxies convert legacy Dong-gu code to 12210", { concurre
     else process.env.BLD_SERVICE_KEY = originalKey;
   }
 
-  assert.equal(urls.length, 3);
-  for (const url of urls) {
-    assert.equal(new URL(url).searchParams.get("sigunguCd"), "12210");
-  }
+  assert.deepEqual(
+    urls.map((url) => new URL(url).searchParams.get("sigunguCd")),
+    ["12210", "12210", "29110", "12210"],
+  );
 });
