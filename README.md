@@ -1,204 +1,92 @@
-# 광주 동구 건축물대장 일괄조회
+# 동구 건축물대장 일괄조회
 
-광주광역시 동구 건축물대장 및 공동주택 정보를 일괄 조회하는 웹 애플리케이션입니다.
+전남광주통합특별시 동구의 건축물, 공동주택, 철거·멸실, 빈집, 주택 통계를 한곳에서 조회하는 웹 애플리케이션입니다.
 
-## 환경변수
+서비스: https://donggu-building.vercel.app
 
-`.env.example`을 복사해 `.env`를 만들고 아래 값을 채웁니다.
+## 주요 기능
 
-```bash
-cp .env.example .env
-```
-
-### 공공데이터포털(apis.data.go.kr) — 단일 키 통합
-
-검증(2026-07) 결과 하나의 일반 인증키가 여러 서비스에 공용 승인되어, 아래 5개 서비스는 **`DATA_SERVICE_KEY` 하나로 모두 동작**합니다.
-
-- 건축물대장(BldRgstHubService) · 건축인허가(ArchPmsHubService) · 주택인허가(HsPmsHubService) · 폐쇄말소대장(ShtRgstHubService) · K-APT 공동주택 기본정보(AptBasisInfoServiceV4)
-
-| 변수 | 설명 | 필수 |
-|---|---|---|
-| `DATA_SERVICE_KEY` | 공공데이터포털 통합 서비스키 (위 5개 서비스 공용) | ✅ |
-| `ODCLOUD_SERVICE_KEY` | odcloud(공동주택 단지목록 aptid · 동구 건축허가현황) — 별도 인증 체계, `DATA_SERVICE_KEY`로 동작 안 함 | ✅ |
-| `VWORLD_KEY` | V-World (필지/지도/GIS건물정보) | ✅ |
-| `KAKAO_REST_API_KEY` | 카카오 REST API 키 (공동주택명 보정용) | ✅ |
-| `JUSO_CONFM_KEY` | 행안부 도로명주소 API 키 (스크립트 PNU 보강용) | (워크플로우만) |
-
-> **레거시 호환**: 이미 서비스별 개별 키(`BLD`/`ARCH`/`HSPMS`/`SHT`/`APT_SERVICE_KEY`)를 설정해 둔 배포도 그대로 동작합니다. 각 api 핸들러는 개별 키가 있으면 우선 사용하고, 없으면 `DATA_SERVICE_KEY`로 자동 폴백합니다.
-
-서비스키는 공공데이터포털의 **디코딩된 키**를 입력해야 합니다.
-
-### SGIS(통계지리정보서비스) 인구주택총조사
-
-통계 탭은 SGIS AccessToken을 수집 스크립트에서만 발급해 `sgis_stats_donggu.json`으로 저장합니다. 서비스 ID와 보안 Key를 브라우저에 노출하지 않습니다.
-
-| 변수 | 설명 | 필수 |
-|---|---|---|
-| `SGIS_CONSUMER_KEY` | SGIS 서비스 ID | update-sgis-stats 실행 시 ✅ |
-| `SGIS_CONSUMER_SECRET` | SGIS 보안 Key | update-sgis-stats 실행 시 ✅ |
-
-실행: `SGIS_CONSUMER_KEY=... SGIS_CONSUMER_SECRET=... npm run update-sgis-stats`
-
-### 한국부동산원(R-ONE) 부동산 시장동향
-
-통계 탭은 한국부동산원 Open API에서 광주 동구의 주택·아파트 가격지수, 평균·중위가격, 전세가율, 주택·아파트·건축물 거래량을 수집해 `reb_stats_donggu.json`으로 저장합니다. 토지 거래량과 토지가격지수는 포함하지 않습니다.
-
-| 변수 | 설명 | 필수 |
-|---|---|---|
-| `REB_API_KEY` | 한국부동산원 R-ONE Open API 인증키 | update-reb-stats 실행 시 ✅ |
-
-실행: `REB_API_KEY=... npm run update-reb-stats`
-
-인증키는 브라우저에 노출하지 않으며, GitHub Actions에서는 `REB_API_KEY` Secret으로만 사용합니다. REB 월별 자료는 최신 공개 시점까지의 잠정값일 수 있습니다.
-
-## 카카오 로컬 키워드 검색 API
-
-K-apt(공동주택관리정보시스템)의 단지명이 `'서석동 445-12 업무시설'`처럼 **행정동·지번·용도** 형태로 내려올 때, 4단계 폴백으로 실제 단지/건물명을 보정합니다.
-
-1. 건축물대장 표제부(`getBrTitleInfo`) — 1차
-2. 건축인허가정보(`getApHsTpInfo`) — 2차
-3. **주택인허가정보 동별개요(`getHpDongOulnInfo`) — 3차** ⭐ 신규
-4. 카카오 로컬 키워드 검색 API — 4차 (최종 폴백)
-
-주택인허가(HsPmsHubService)의 동별개요는 단지 단위로 건물명(`bldNm`)을 일관되게 제공해, 공공데이터 기반 보정 정확도를 높입니다. 카카오(상업 상호)로 넘어가기 전 공공데이터 보정 기회를 한 번 더 확보합니다.
-
-관련 파일:
-
-- `api/hspms.js` — 주택인허가 프록시 엔드포인트 (3차 보정)
-- `api/kakao-local.js` — 카카오 프록시 엔드포인트 (4차 보정)
-- `index.html` — 공동주택 관리 탭의 보정 파이프라인
-- `transform.js` — HTML 태그 제거 유틸리티
-
-> 참고: 동일 목적으로 네이버 Local Search API도 검토했으나, 도로명/지번 주소로는 결과 항목이 반환되지 않아 카카오 API로 대체했습니다.
-
-## 공동주택 상세카드 보강
-
-공동주택 관리 탭에서 단지명을 클릭하면 펼쳐지는 상세카드는 K-apt 기본·상세정보를 우선 표시하되, **K-apt에 빈 값이 있는 필드를 주택인허가정보로 보강**합니다. 카드를 별도로 늘리지 않고 기존 카드의 같은 항목을 채웁니다.
-
-보강 소스 (HsPmsHubService):
-
-- 관리공동형별개요(`getHpMgmCoopTpOulnInfo`): 사업주체(시공사), 난방방식, 관리방식, 구조, 최고층수, 동수, 세대수, 승강기, 연면적, 복도형식, 사용연료
-- 주차장(`getHpPklotInfo`): 옥내/옥외 × 자주식/기계식 주차대수 (K-apt 주차가 비어있을 때 폴백)
-
-적용 규칙:
-
-- **K-apt 우선**: 값이 있으면 K-apt 값을 표시
-- **빈값 폴백**: K-apt가 0·빈값이면 주택인허가 값으로 채움. K-apt 상세정보(`dtl`)가 통째로 없는 관리미참여 단지도 주택인허가로 주차·구조·승강기·층수 등을 표시
-- **단지 합산**: 관리공동형별개요는 형별(평형) 단위로 내려와 단지 단위 값이 행마다 반복되므로 대표값을 사용. 세대수만 평형 분할이므로 합산. 주차장은 행 합산
-
-## K-APT 미등록 단지 추가
-
-K-APT에 등록되지 않은 오피스텔·다세대 등은 `aptlist_extra_donggu.json`에 직접 추가하면 공동주택 관리 탭에 함께 표시됩니다.
-
-`aptlist_extra_donggu.json` 예시:
-
-```json
-[
-  {
-    "pnu": "2911010400100680001",
-    "complexNm": "금남로 유탑유블레스 원시티",
-    "doroAddr": "전남광주통합특별시 동구 천변우로 361-21",
-    "adres": "전남광주통합특별시 동구 수기동 68-1",
-    "kind": "오피스텔",
-    "hhld": 480,
-    "dongCnt": 1,
-    "grndFlr": 27,
-    "ugrndFlr": 2,
-    "useAprDay": "20220614",
-    "tarea": 45603.70,
-    "parking": 494
-  }
-]
-```
-
-필수 항목: `pnu`, `complexNm`, `doroAddr`, `adres`, `kind`
-선택 항목: `hhld`, `dongCnt`, `grndFlr`, `ugrndFlr`, `useAprDay`, `tarea`, `parking`, `area`
-
-## 오피스텔 자동 발견
-
-오피스텔은 K-APT와 주택유형정보(`getApHsTpInfo`)에 등록되지 않는 경우가 많아(예: 금남로 유탑유블레스 원시티) 수동 등록에 의존했습니다. `scripts/update-officetel.mjs`는 건축인허가정보 기반으로 오피스텔을 자동 식별해 `aptlist_extra_donggu.json`을 갱신합니다.
-
-### 판별 로직 (엄격 임계값)
-
-순수 업무시설(사옥)과 오피스텔(주거용 업무시설)을 구분하기 위해 2단계 신호 조합을 사용합니다.
-
-1. **1차 후보**: 건축인허가 기본개요(`getApBasisOulnInfo`)에서 `mainPurpsCdNm="업무시설"` AND `hoCnt ≥ 50`
-2. **2차 확정**: 층별개요(`getApFlrOulnInfo`)의 오피스텔 용도코드(`mainPurpsCd="14202"`) 비중 `≥ 50%`
-3. 확정 단지는 표제부(`getBrTitleInfo`)에서 도로명주소·층수·주차대수 보강
-
-### 보존 병합
-
-수동으로 등록한 기존 항목은 PNU가 같으면 **기존 값을 우선**합니다. 스크립트는 신규 오피스텔 추가와 기존 항목의 빈 필드 채우기만 수행하므로, 직접 입력한 정확한 값이 덮어씌워지지 않습니다.
-
-### 실행
-
-```bash
-# 직접 호출 (공공데이터포털 키)
-ARCH_SERVICE_KEY=YOUR_KEY npm run update-officetel
-
-# 프록시 모드 (로컬 서버)
-BASE_URL=http://localhost:3000 npm run update-officetel
-```
-
-GitHub Actions(`update-kapt.yml`)가 매주 일요일 K-APT 갱신 후 자동 실행하며, 변경 시 `aptlist_extra_donggu.json`을 커밋합니다. 실행 로그에 각 후보의 오피스텔 비중·탈락 사유가 표시돼 오탐 여부를 검증할 수 있습니다.
-
-## 건축인허가정보 폴백 (건축물대장 미등록 신축 건물)
-
-건축물대장(`getBrTitleInfo`)은 매월 갱신되어 사용승인 직후의 신축 건물이 누락되는 경우가 있습니다. 일괄조회·단건 상세조회는 건축물대장이 0건일 때 **건축인허가정보(`getApBasisOulnInfo`)로 폴백**해 최소한의 건물 정보를 보여줍니다.
-
-폴백 순서 (일괄조회 `processOne` / 단건조회 `runDetail` 공통):
-
-1. juso 도로명주소 → 지번 → 건축물대장 표제부
-2. (0건) VWorld 좌표·PNU로 지번 재확인 → 건축물대장 표제부
-3. **(0건) 건축인허가 기본개요 → 대표 행으로 정보 표시** ⭐
-
-인허가 기준 행은 건축물대장과 동일한 지번(`sigunguCd`·`bjdongCd`·`platGbCd`·`bun`·`ji`)으로 조회하며, 대표 행은 `pickArchMain`(건물명+건축구분 있는 본건물 우선)으로 선택합니다.
-
-표시 규칙:
-
-- **상태 = 정상**, 비고 = "건축물대장 미반영 — 건축인허가정보 기준 표시" 안내
-- 도로명주소는 juso가 준 값으로 채움 (인허가에는 도로명이 없음)
-- 인허가에 없는 필드(구조·층수·동명)는 "-"로 표시되며, 단건 상세카드의 부가 탭(층별개요 등)은 "정보 없음"으로 표시됩니다
-
-> 참고: 동계로 68(계림2동행정복합센터)은 위 시군구코드 정규화로 VWorld 폴백이 실제 대장(계림동 1842)을 찾아내므로 인허가 폴백까지 가지 않습니다. 인허가 폴백은 VWorld도 찾지 못한 진짜 미등록 신축 건물에만 발동합니다.
-
-관련 파일:
-
-- `index.html` — `fetchArchBuilding` 헬퍼 + `processOne`/`runDetail`의 인허가 폴백 단계
-- `transform.js` — `archRowToBuilding`/`pickArchMain` 순수 변환 함수
-- `api/archpms.js` — 건축인허가 프록시 엔드포인트
-
-## GIS건물통합정보(WFS)
-
-건축물 상세카드(단건 상세조회)에 V-World **GIS건물통합정보 WFS**(`getBldgisSpceWFS`, typename `dt_d010`)의 속성을 보강값으로 통합합니다. 조회 시점에 대표지번 1건으로 WFS를 1회 호출해 `D_BLDGIS`에 캐싱합니다(다동 건물도 지번이 공통이라 1회로 충분).
-
-> **복수 건물 처리**: 한 필지(pnu)에 건물이 여럿일 수 있다(예: 학교 교사 본관/별관, 부속건축물). 보조 속성의 일관성을 위해 **대표 속성 1건**을 '건물명이 있는 것 → 그중 연면적 최대' 우선으로 선정한다.
-
-카드 본문에 건축물대장에 없는 값만 'GIS' 태그와 함께 추가합니다:
-
-- **건물높이**(`hg`) → 규모·용도 섹션 (대장은 층수만 있고 높이는 없음)
-- **위반건축물여부**(`violt_bild`) → 안전 섹션 (대장에 위반여부 정보 없음)
-
-표시 규칙:
-
-- **건축물대장 우선**: 메인 정보(규모·용도·면적·층수·사용승인일 등)는 카드 본문의 대장 값을 그대로 유지
-- **GIS값 보조**: 대장에 없는 높이·위반건축물여부만 'GIS' 태그로 추가 표시
-- WFS 조회 실패(0건·에러)해도 카드는 대장만으로 정상 동작(Graceful)
-
-> 건물 윤곽선(`ag_geom`) 지도 오버레이는 복수 건물 처리·정합성 등 리스크가 커 도입을 철회했다. 지도는 기존대로 VWorld 연속지적도 필지경계만 표시한다.
-
-> 참고: WFS는 `VERSION=1.1.0`·`OUTPUT=application/json`·`domain` 파라미터가 필수이며 GeoJSON FeatureCollection으로 응답합니다. 시군구코드는 구(29110)/신규(12210) 양쪽을 수용하지만 응답 pnu는 항상 12210로 정규화됩니다. 기존 `VWORLD_KEY`를 그대로 재사용합니다.
-
-관련 파일:
-
-- `api/vworld-bld.js` — GIS건물통합정보 WFS 프록시(PNU → 대표 속성 1건)
-- `index.html` — `bldgisFromPNU`/`loadBldgis` 헬퍼, `runDetail`의 prefetch, `cardHTML` 본문 통합
+- 주소 여러 건을 입력해 건축물대장을 일괄 조회하고 엑셀로 저장
+- 행정동, 용도, 구조, 층수, 연면적, 사용승인 연도로 건축물 검색
+- 건축물 단건 상세정보와 필지 지도 조회
+- K-APT 및 동구 공동주택 현황 검색
+- 철거·멸실 이력과 폐쇄말소대장 조회
+- 빈집 등급·위치 및 KOSIS·SGIS·한국부동산원 통계 제공
 
 ## 로컬 실행
 
-Vercel CLI가 설치되어 있어야 합니다.
+Node.js 20 이상과 Vercel CLI가 필요합니다.
 
 ```bash
-npm i -g vercel
+git clone https://github.com/lch854053/donggu-building.git
+cd donggu-building
+npm install
+npm install -g vercel
+cp .env.example .env
 vercel dev
 ```
+
+브라우저에서 `http://localhost:3000`을 엽니다. 공공데이터포털 서비스키는 디코딩된 값을 사용합니다.
+
+## 환경변수
+
+| 변수 | 용도 |
+|---|---|
+| `DATA_SERVICE_KEY` | 건축물대장, 건축·주택인허가, 폐쇄말소대장, K-APT |
+| `JUSO_CONFM_KEY` | 도로명주소 검색 및 PNU 보강 |
+| `VWORLD_KEY` | 지오코딩, 필지·건물 정보, 지도 |
+| `ODCLOUD_SERVICE_KEY` | 공동주택·빈집 공개데이터 |
+| `KAKAO_REST_API_KEY` | 공동주택명 및 빈집 행정동 보정 |
+| `KOSIS_API_KEY` | KOSIS 통계 갱신 |
+| `SGIS_CONSUMER_KEY`, `SGIS_CONSUMER_SECRET` | SGIS 통계 갱신 |
+| `REB_API_KEY` | 한국부동산원 통계 갱신 |
+
+기존 서비스별 키(`BLD_SERVICE_KEY`, `ARCH_SERVICE_KEY`, `HSPMS_SERVICE_KEY`, `SHT_SERVICE_KEY`, `APT_SERVICE_KEY`)도 지원합니다. 전체 목록과 예시는 `.env.example`을 참고하세요.
+
+## 구조
+
+code-review-graph 기준으로 코드는 다음 네 영역으로 분리됩니다.
+
+| 영역 | 역할 |
+|---|---|
+| `index.html`, `styles.css` | 탭 기반 정적 웹 UI |
+| `app-api.js`, `transform.js` | 브라우저 API 호출과 순수 데이터 변환 |
+| `api/*.js`, `api/_lib/*.js` | Vercel Serverless 프록시와 공통 인증·응답 처리 |
+| `scripts/*.mjs` | 외부 데이터를 수집해 루트 JSON 저장소 갱신 |
+
+조회 화면은 서버리스 API를 통해 실시간 데이터를 가져오고, 공동주택·빈집·통계·지도 데이터는 저장소의 정적 JSON을 함께 사용합니다. API 키는 브라우저에 노출하지 않습니다.
+
+## 테스트
+
+```bash
+node --test
+```
+
+`transform.js`는 브라우저 전역 함수 파일입니다. ESM으로 직접 import하지 않고 `test/_loader.js`를 통해 테스트합니다.
+
+## 데이터 갱신
+
+| 명령 | 갱신 대상 |
+|---|---|
+| `npm run update-kapt` | K-APT 단지 기본·상세정보 |
+| `npm run update-odcloud` | 동구 공동주택 공개데이터 |
+| `npm run update-vacant` | 빈집 현황과 필지 도형 |
+| `npm run update-stats` | KOSIS 주요 지표 |
+| `npm run update-sgis-stats` | SGIS 주택·거처 통계 |
+| `npm run update-reb-stats` | 한국부동산원 주택시장 통계 |
+| `npm run collect-apt-geo` | 공동주택 필지 도형 |
+| `npm run update-officetel` | 건축인허가 기반 오피스텔 목록 |
+
+수집 스크립트는 환경변수를 `process.env`에서 직접 읽습니다. 필요한 키를 명령 앞에 지정하거나, 지원되는 스크립트는 실행 중인 프록시를 `BASE_URL=http://localhost:3000`으로 지정합니다. GitHub Actions는 K-APT를 매주, 공동주택·빈집·통계를 매월 갱신합니다.
+
+## 동구 코드 규칙
+
+- 정적 PNU와 기존 데이터: `29110`
+- 건축HUB·건축인허가·VWorld: `12210`
+- 철거멸실관리대장 `getApDemolExtngMgmRgstInfo`: 상류 색인에 맞춰 `29110`
+
+프록시가 서비스별 코드 변환을 담당하므로 브라우저 코드에서 임의로 변환하지 않습니다.
+
+## 배포
+
+정적 파일과 `api/*`를 함께 Vercel에 배포합니다. 운영 환경에도 `.env.example`의 필수 키를 등록해야 합니다.
