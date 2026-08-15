@@ -33,6 +33,13 @@ test("browser API layer loads after transforms and keeps the shared request cont
   assert.deepEqual(await context.searchJuso("동구"), [{ roadAddr: "test" }]);
 });
 
+test("footer derives the update date from the deployed document metadata", () => {
+  const page = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+  assert.match(page, /id="lastUpdated"/);
+  assert.match(page, /document\.lastModified/);
+  assert.doesNotMatch(page, /마지막 업데이트\s*:\s*2026\.\s*7\.\s*11/);
+});
+
 test("archpms keeps an empty HUB response when odcloud fallback is unavailable", { concurrency: false }, async () => {
   const originalFetch = globalThis.fetch;
   const originalBldKey = process.env.BLD_SERVICE_KEY;
