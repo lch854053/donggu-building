@@ -1124,6 +1124,11 @@ async function loadHaengjeong(){
 }
 
 // 동 단위 페이지 조회 (프록시)
+// 동단위 스캔은 동시 5건을 연속으로 던져 상류(공공데이터포털)의 초당 요청 한도
+// (LIMITED_NUMBER_OF_SERVICE_REQUESTS_PER_SECOND_EXCEEDS_ERROR)·응답 지연(SERVICETIMEOUT_ERROR)에
+// 걸리기 쉽고, 그때 프록시는 502/504를 낸다. 이를 빈 결과로 삼키면 "조회 0건"이 되고
+// 성공 응답만 엣지에 캐시되므로 다시 검색할수록 건수가 채워지는 것처럼 보인다.
+// → apiRetry 로 백오프+지터 재시도하고, 그래도 실패하면 error 를 담아 호출측에 알린다.
 async function fetchDongPage(bjd, pageNo){
   const key = `${SIGUNGU}:${bjd}:${pageNo}`;
   const cached = BUILDING_PAGE_CACHE.get(key);
@@ -1132,7 +1137,7 @@ async function fetchDongPage(bjd, pageNo){
   // 조건이 바뀌어도 같은 동·페이지 원본은 다시 API를 호출할 필요가 없다.
   // 단, 실패 응답은 캐시하지 않아 다음 조회에서 재시도한다.
   const pending = (async()=>{
-    const { ok, status, data, error } = await api("building", {
+    const { ok, status, data, error } = await apiRetry("building", {
       sigunguCd:SIGUNGU, bjdongCd:bjd, numOfRows:"1000", pageNo:String(pageNo)
     });
     if(!ok){
@@ -1143,7 +1148,8 @@ async function fetchDongPage(bjd, pageNo){
     }
     return {
       titles:Array.isArray(data?.titles)?data.titles:[],
-      totalCount:Number(data?.totalCount||0)
+      totalCount:Number(data?.totalCount||0),
+      error:data?.error || null
     };
   })();
   BUILDING_PAGE_CACHE.set(key, pending);
@@ -1152,11 +1158,12 @@ async function fetchDongPage(bjd, pageNo){
   return result;
 }
 
-// 번지 단건 조회 (프록시) — 한 필지의 표제부만
+// 번지 단건 조회 (프록시) — 한 필지의 표제부만. 반환 { titles:[], error }
+// 동단위 페이지와 같은 큐에서 돌기 때문에 같은 한도·지연 오류를 맞는다 → 동일하게 재시도·전달.
 async function fetchParcel(bjd, bun, ji){
-  const { ok, data } = await api("building", { sigunguCd:SIGUNGU, bjdongCd:bjd, bun, ji });
-  if(!ok) return [];
-  return Array.isArray(data.titles) ? data.titles : [];
+  const { ok, status, data, error } = await apiRetry("building", { sigunguCd:SIGUNGU, bjdongCd:bjd, bun, ji });
+  if(!ok) return { titles:[], error: status ? `서버 오류 ${status}` : (error || "건축물 API 조회 실패") };
+  return { titles: Array.isArray(data?.titles) ? data.titles : [], error: data?.error || null };
 }
 
 async function runConditionSearch(){
@@ -1215,16 +1222,21 @@ async function runConditionSearch(){
   //    (건축HUB는 numOfRows 와 무관하게 ~100건/페이지로 응답)
   const MAX_PAGES = 100;   // 행정동당 최대 페이지 (~100건/페이지 → 최대 1만건, 산수동 5697건 커버)
   const more = [];
+  let failedPages = 0;     // 재시도까지 실패한 조회 수(결과 불완전 안내용)
   if(pageBjds.length){
     let p1done = 0; cUpdate(0, pageBjds.length);
     const page1 = await runPool(pageBjds, async (bjd)=>{
-      const {titles,totalCount} = await fetchDongPage(bjd,1);
-      return {bjd, titles, totalCount};
+      const {titles,totalCount,error} = await fetchDongPage(bjd,1);
+      return {bjd, titles, totalCount, error};
     }, 5, ()=>cUpdate(++p1done, pageBjds.length));
     page1.forEach(r=>{
+      // 실패한 동은 totalCount 도 0으로 오므로, 조용히 넘기면 그 동 전체가 결과에서 빠진다.
+      if(r?.error || !Array.isArray(r?.titles)){ failedPages++; return; }
       all.push(...r.titles);
-      const pageSize = Math.max(r.titles.length, 1);   // 실측 페이지 크기
-      if(r.totalCount > pageSize){
+      // 1페이지가 비었으면 잔여 페이지를 계산할 근거(실측 페이지 크기)가 없다.
+      // pageSize=1 로 떨어져 동당 MAX_PAGES 만큼 헛요청이 나가면 초당 한도를 다시 친다.
+      const pageSize = r.titles.length;                // 실측 페이지 크기
+      if(pageSize && r.totalCount > pageSize){
         const pages = Math.min(Math.ceil(r.totalCount / pageSize), MAX_PAGES);
         for(let pg=2; pg<=pages; pg++) more.push({type:"page", bjd:r.bjd, pg});
       }
@@ -1236,10 +1248,13 @@ async function runConditionSearch(){
   if(tasks.length){
     let tdone = 0; cUpdate(0, tasks.length);
     const got = await runPool(tasks, async (t)=>{
-      if(t.type==="page"){ const {titles} = await fetchDongPage(t.bjd, t.pg); return titles; }
+      if(t.type==="page"){ const {titles, error} = await fetchDongPage(t.bjd, t.pg); return {titles, error}; }
       return await fetchParcel(t.bjd, t.bun, t.ji);
     }, 5, ()=>cUpdate(++tdone, tasks.length));
-    got.forEach(ts=> all.push(...ts));
+    got.forEach(r=>{
+      if(r?.error || !Array.isArray(r?.titles)){ failedPages++; return; }
+      all.push(...r.titles);
+    });
   }
 
   // 4) 행정동 필터 + 조건 필터
@@ -1272,8 +1287,15 @@ async function runConditionSearch(){
   CRESULTS = matched;
   setTimeout(()=>{
     document.getElementById("cProgWrap").classList.remove("on");
-    document.getElementById("cHint").textContent = "";
+    // 재시도까지 실패한 조회가 있으면 결과가 불완전하다는 사실을 반드시 알린다.
+    // (조용히 0건으로 보이던 기존 동작이 "여러 번 눌러야 나온다"의 원인이었다)
+    document.getElementById("cHint").textContent = failedPages
+      ? `일부 조회 실패(${failedPages}건) · 결과가 불완전할 수 있습니다. 잠시 후 다시 검색해 주세요.`
+      : "";
     cRunBtn.disabled = false;
+    if(failedPages && !all.length){
+      alert("공공데이터포털 응답 지연으로 건축물대장을 불러오지 못했습니다.\n잠시 후 다시 검색해 주세요.");
+    }
     renderConditionResults(scanned, isAll?"전체":hdong);
   }, 300);
 }
@@ -4531,8 +4553,10 @@ async function runCondForMap(hdong){
   for(const r of p1){
     if(r?.error || !Array.isArray(r?.titles)){ failedPages++; continue; }
     all.push(...r.titles);
-    const pageSize = Math.max(r.titles.length, 1);
-    if(r.totalCount > pageSize){
+    // 1페이지가 비면 실측 페이지 크기가 없다. pageSize=1 로 떨어져 동당 MAX_PAGES 만큼
+    // 헛요청이 나가면 상류 초당 요청 한도를 다시 쳐서 남은 조회까지 실패한다.
+    const pageSize = r.titles.length;
+    if(pageSize && r.totalCount > pageSize){
       const pages = Math.min(Math.ceil(r.totalCount / pageSize), MAX_PAGES);
       for(let pg = 2; pg <= pages; pg++) more.push({ bjd: r.bjd, pg });
     }
