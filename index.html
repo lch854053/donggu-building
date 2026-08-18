@@ -3190,15 +3190,17 @@ let M_GB = null;            // 구분 다중선택 컴포넌트
 let M_DUAL_year = null;     // 연도 듀얼 슬라이더
 const M_GB_OPTS = ["철거","부분철거","멸실"];
 
-// 철거대장 동단위 1페이지 조회 (번지 생략). 반환 { items:[], totalCount }
+// 철거대장 동단위 1페이지 조회 (번지 생략). 반환 { items:[], totalCount, error }
+// 상류 지연·트래픽한도로 프록시가 502/504 를 내면 apiRetry 가 백오프 재시도하고,
+// 그래도 실패하면 error 를 담아 돌려준다(호출측에서 실패 동 수를 집계·안내).
 async function fetchDemolDong(bjd, pageNo){
-  const { ok, data } = await api("archpms", {
+  const { ok, status, data, error } = await apiRetry("archpms", {
     op:"getApDemolExtngMgmRgstInfo",
     sigunguCd:SIGUNGU, bjdongCd:bjd,
     platGbCd:"0", numOfRows:"1000", pageNo:String(pageNo)
   });
-  if(!ok) return { items:[], totalCount:0 };
-  return { items:Array.isArray(data.items)?data.items:[], totalCount:Number(data.totalCount||0) };
+  if(!ok) return { items:[], totalCount:0, error: status ? `서버 오류 ${status}` : (error || "철거대장 조회 실패") };
+  return { items:Array.isArray(data.items)?data.items:[], totalCount:Number(data.totalCount||0), error:data.error || null };
 }
 
 // 철거·멸실 원본 → 표시용 행 정규화 (실제 응답 필드 기준)
@@ -3311,16 +3313,21 @@ async function runDemolSearch(){
   const MAX_PAGES = 100;   // ~100건/페이지 → 동당 최대 1만건 (산수동 5697건 커버)
   const all = [];
   let p1done = 0; mUpdate(0, bjdList.length);
+  let failedPages = 0;
   const page1 = await runPool(bjdList, async (bjd)=>{
-    const {items, totalCount} = await fetchDemolDong(bjd,1);
-    return {bjd, items, totalCount};
+    const {items, totalCount, error} = await fetchDemolDong(bjd,1);
+    return {bjd, items, totalCount, error};
   }, 5, ()=>mUpdate(++p1done, bjdList.length));
 
   const more = [];
   page1.forEach(r=>{
+    // 실패한 동은 totalCount 도 0으로 오므로, 조용히 넘기면 그 동 전체가 결과에서 빠진다.
+    if(r?.error || !Array.isArray(r?.items)){ failedPages++; return; }
     all.push(...r.items.map(it=>mergeDemol(it, r.bjd)));
-    const pageSize = Math.max(r.items.length, 1);
-    if(r.totalCount > pageSize){
+    // 1페이지가 비었으면 잔여 페이지를 계산할 근거(실측 페이지 크기)가 없다.
+    // pageSize=1 로 떨어져 동당 MAX_PAGES 만큼 헛요청이 나가는 것을 막는다.
+    const pageSize = r.items.length;
+    if(pageSize && r.totalCount > pageSize){
       const pages = Math.min(Math.ceil(r.totalCount/pageSize), MAX_PAGES);
       for(let pg=2; pg<=pages; pg++) more.push({bjd:r.bjd, pg});
     }
@@ -3328,10 +3335,13 @@ async function runDemolSearch(){
   if(more.length){
     let tdone = 0; mUpdate(0, more.length);
     const got = await runPool(more, async (t)=>{
-      const {items} = await fetchDemolDong(t.bjd, t.pg);
-      return items.map(it=>mergeDemol(it, t.bjd));
+      const {items, error} = await fetchDemolDong(t.bjd, t.pg);
+      return { error, rows: items.map(it=>mergeDemol(it, t.bjd)) };
     }, 5, ()=>mUpdate(++tdone, more.length));
-    got.forEach(arr=>all.push(...arr));
+    got.forEach(r=>{
+      if(r?.error || !Array.isArray(r?.rows)){ failedPages++; return; }
+      all.push(...r.rows);
+    });
   }
 
   // 필터: 행정동(단건선택 시) + 구분 + 연도
@@ -3366,8 +3376,15 @@ async function runDemolSearch(){
 
   setTimeout(()=>{
     document.getElementById("mProgWrap").classList.remove("on");
-    document.getElementById("mHint").textContent = "";
     mRunBtn.disabled = false;
+    // 재시도까지 실패한 조회가 있으면 결과가 불완전하다는 사실을 반드시 알린다.
+    // (조용히 0건으로 보이던 기존 동작이 "여러 번 눌러야 나온다"의 원인이었다)
+    document.getElementById("mHint").textContent = failedPages
+      ? `일부 조회 실패(${failedPages}건) · 결과가 불완전할 수 있습니다. 잠시 후 다시 검색해 주세요.`
+      : "";
+    if(failedPages && !all.length){
+      alert("공공데이터포털 응답 지연으로 철거멸실대장을 불러오지 못했습니다.\n잠시 후 다시 검색해 주세요.");
+    }
     renderDemolResults(scanned, isAll?"전체":hdong);
   }, 300);
 }

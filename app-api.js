@@ -16,6 +16,26 @@ async function api(path, params){
   }
 }
 
+// 재시도 대상: 네트워크 끊김(0) + 상류 지연/한도초과로 프록시가 내는 5xx·429.
+// 400/403 처럼 같은 요청을 다시 보내도 결과가 같은 응답은 재시도하지 않는다.
+const RETRYABLE_STATUS = new Set([0, 408, 425, 429, 500, 502, 503, 504]);
+const apiSleep = (ms)=> new Promise(r=>setTimeout(r, ms));
+
+// 동단위 스캔처럼 한 번에 수십 건을 던지는 경로용 래퍼.
+// 공공데이터포털이 느려지면 프록시가 8초 타임아웃으로 504를 내는데, 이를 그대로
+// 빈 결과로 삼으면 "조회 0건"으로 보인다. 지수 백오프 + 지터로 일시 오류만 되돌린다.
+async function apiRetry(path, params, { retries = 3, baseDelay = 400 } = {}){
+  let last = { ok:false, status:0, data:null };
+  for(let attempt = 0; attempt <= retries; attempt++){
+    last = await api(path, params);
+    if(last.ok || !RETRYABLE_STATUS.has(last.status)) return last;
+    if(attempt === retries) break;
+    // 지터가 없으면 동시 5건이 같은 시점에 재시도해 한도를 다시 친다
+    await apiSleep(baseDelay * 2 ** attempt + Math.random() * baseDelay);
+  }
+  return last;
+}
+
 async function searchJuso(keyword){
   const { ok, data } = await api("juso", { keyword });
   if(!ok) return [];
