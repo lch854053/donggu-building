@@ -573,7 +573,7 @@
           <h2>동구 건물 형태</h2>
           <p>도로와 지명을 걷어내고 건물의 배치와 도시 조직만 표현합니다.</p>
           <div class="fg-key"><span></span><b>건물 footprint</b></div>
-          <button class="ghost fg-save" id="fgSaveBtn" onclick="saveFigureGroundJpg()">JPG 저장</button>
+          <button class="ghost fg-save" id="fgSaveBtn" onclick="saveFigureGroundPng()">투명 PNG 저장</button>
           <div class="fg-source">VWorld GIS건물통합정보</div>
         </aside>
         <div class="fg-stage">
@@ -5171,9 +5171,9 @@ function setFigureGroundStatus(text, persistent){
   }
 }
 
-async function saveFigureGroundJpg(){
+async function saveFigureGroundPng(){
   const button = document.getElementById("fgSaveBtn");
-  const originalText = button?.textContent || "JPG 저장";
+  const originalText = button?.textContent || "투명 PNG 저장";
   if(button){ button.disabled = true; button.textContent = "저장 중…"; }
   try{
     if(!FG_MAP || !FG_MANIFEST) await initFigureGroundMap();
@@ -5194,15 +5194,11 @@ async function saveFigureGroundJpg(){
     output.height = size;
     const ctx = output.getContext("2d");
 
-    // JPEG는 투명도를 지원하지 않으므로 화면과 같은 회백색 바탕에 원형 지도를 합성한다.
-    ctx.fillStyle = "#e9e7e1";
-    ctx.fillRect(0, 0, size, size);
+    // 출력 캔버스는 비워 두고 건물 레이어만 원형으로 잘라 배경 전체를 투명하게 유지한다.
     ctx.save();
     ctx.beginPath();
     ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
     ctx.clip();
-    ctx.fillStyle = "#f3f1eb";
-    ctx.fillRect(0, 0, size, size);
     for(const source of mapCanvases){
       const rect = source.getBoundingClientRect();
       if(!rect.width || !rect.height) continue;
@@ -5216,27 +5212,21 @@ async function saveFigureGroundJpg(){
       );
     }
     ctx.restore();
-    ctx.globalAlpha = 1;
-    ctx.strokeStyle = "rgba(53,56,58,.10)";
-    ctx.lineWidth = Math.max(1, ratio);
-    ctx.beginPath();
-    ctx.arc(size / 2, size / 2, size / 2 - ctx.lineWidth / 2, 0, Math.PI * 2);
-    ctx.stroke();
 
-    const blob = await new Promise(resolve => output.toBlob(resolve, "image/jpeg", 0.95));
-    if(!blob) throw new Error("JPG 파일을 만들지 못했습니다.");
+    const blob = await new Promise(resolve => output.toBlob(resolve, "image/png"));
+    if(!blob) throw new Error("PNG 파일을 만들지 못했습니다.");
     const now = new Date();
     const pad = value => String(value).padStart(2, "0");
     const stamp = `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}`;
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `donggu-figure-ground-${stamp}.jpg`;
+    link.download = `donggu-figure-ground-${stamp}.png`;
     link.click();
     setTimeout(()=>URL.revokeObjectURL(url), 1000);
   }catch(error){
     console.error("[figure-ground export]", error);
-    setFigureGroundStatus(error.message || "JPG 저장에 실패했습니다.", true);
+    setFigureGroundStatus(error.message || "PNG 저장에 실패했습니다.", true);
   }finally{
     if(button){ button.disabled = false; button.textContent = originalText; }
   }
