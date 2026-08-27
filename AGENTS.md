@@ -42,6 +42,7 @@ npm run update-stats     # KOSIS e-지방지표 동구 통계 (월 1회)
 npm run update-sgis-stats # SGIS 인구주택총조사 주택·거처 통계 (월 1회)
 npm run update-reb-stats  # 한국부동산원 동구 주택시장 통계 (월 1회)
 npm run collect-apt-geo  # VWorld 연속지적도에서 아파트 폴리곤
+npm run collect-footprints # VWorld GIS건물통합정보 Figure-Ground 격자 데이터
 npm run update-officetel # 건축인허가 기반 오피스텔 자동 발견
 ```
 
@@ -57,6 +58,7 @@ npm run update-officetel # 건축인허가 기반 오피스텔 자동 발견
 - `.github/workflows/update-odcloud.yml`: 매월 1일 — 오픈데이터 아파트 + 폴리곤
 - `.github/workflows/update-vacant.yml`: 매월 1일 — 빈집 데이터 + stale 이슈 생성
 - `.github/workflows/update-stats.yml`: 매월 1일 — KOSIS + SGIS + REB 동구 통계 (`KOSIS_API_KEY`, `SGIS_CONSUMER_KEY`, `SGIS_CONSUMER_SECRET`, `REB_API_KEY` 시크릿 필요)
+- `.github/workflows/update-footprints.yml`: 수동 실행 — 동구 건물 footprint 수집·분할 (`VWORLD_KEY`, PNU 폴백 시 `BLD_SERVICE_KEY` 필요)
 
 ## 아키텍처
 

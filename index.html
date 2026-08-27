@@ -12,7 +12,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.fullscreen/2.4.0/Control.FullScreen.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.fullscreen/2.4.0/Control.FullScreen.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<link rel="stylesheet" href="styles.css?v=7">
+<link rel="stylesheet" href="styles.css?v=8">
 </head>
 <body>
 <div class="wrap">
@@ -486,6 +486,11 @@
 
   <!-- ===== TAB 7: 지도 ===== -->
   <div id="tab-map" style="display:none">
+    <div class="b-subtabs map-subtabs">
+      <button class="b-subtab active" data-map-sub="general" onclick="switchMapSubtab('general')">일반지도</button>
+      <button class="b-subtab" data-map-sub="figure" onclick="switchMapSubtab('figure')">테마지도 조회</button>
+    </div>
+    <div id="map-sub-general" class="map-subpanel">
     <div class="map-layout">
       <!-- 사이드 패널: 소스 선택 + 조건 필터 + 결과목록 -->
       <aside class="map-side" id="mapSide">
@@ -559,6 +564,31 @@
         <div class="map-card" id="mapCard" style="display:none"></div>
       </div>
     </div>
+    </div><!-- /map-sub-general -->
+
+    <div id="map-sub-figure" class="map-subpanel" style="display:none">
+      <div class="fg-layout">
+        <aside class="fg-side">
+          <div class="fg-kicker">FIGURE / GROUND</div>
+          <h2>동구 건물 형태</h2>
+          <p>도로와 지명을 걷어내고 건물의 배치와 도시 조직만 표현합니다.</p>
+          <div class="fg-key"><span></span><b>건물 footprint</b></div>
+          <dl class="fg-meta">
+            <div><dt>전체 건물</dt><dd id="fgTotal">-</dd></div>
+            <div><dt>화면 표시</dt><dd id="fgVisible">-</dd></div>
+            <div><dt>데이터 기준</dt><dd id="fgDate">-</dd></div>
+          </dl>
+          <button class="ghost fg-reset" onclick="resetFigureGroundView()">동구 중심으로</button>
+          <div class="fg-source">VWorld GIS건물통합정보</div>
+        </aside>
+        <div class="fg-stage">
+          <div class="fg-disc">
+            <div id="figureGroundMap" class="fg-map"></div>
+            <div id="fgStatus" class="fg-status">데이터 준비 중…</div>
+          </div>
+        </div>
+      </div>
+    </div><!-- /map-sub-figure -->
   </div><!-- /tab-map -->
 
   <div class="footnote">
@@ -2042,7 +2072,7 @@ function switchTab(which){
   if(which==="housing") loadHousing();
   if(which==="vacant") initVacantTab();
   if(which==="stats") initStatsTab();
-  if(which==="map") initMapTab();
+  if(which==="map") switchMapSubtab(MAP_SUBTAB);
 }
 
 function switchBuildingSubtab(key){
@@ -5026,6 +5056,138 @@ function clearMapSelection(){
   document.getElementById("mapResultsWrap").style.display = "none";
   document.getElementById("mapHint").textContent = "";
   closeMapCard();
+}
+
+/* ============================================================
+   Figure-Ground 테마지도
+   ============================================================ */
+let MAP_SUBTAB = "general";
+let FG_MAP = null;
+let FG_MANIFEST = null;
+let FG_RENDERER = null;
+let FG_MOVE_TIMER = null;
+let FG_LOAD_ID = 0;
+const FG_CELL_DATA = new Map();
+const FG_CELL_LAYERS = new Map();
+
+function switchMapSubtab(which){
+  if(!["general","figure"].includes(which)) which = "general";
+  MAP_SUBTAB = which;
+  document.querySelectorAll("[data-map-sub]").forEach(button => {
+    button.classList.toggle("active", button.dataset.mapSub === which);
+  });
+  document.getElementById("map-sub-general").style.display = which === "general" ? "" : "none";
+  document.getElementById("map-sub-figure").style.display = which === "figure" ? "" : "none";
+  if(which === "general") initMapTab();
+  else initFigureGroundMap();
+}
+
+async function initFigureGroundMap(){
+  if(!FG_MAP){
+    FG_RENDERER = L.canvas({ padding:0.35 });
+    FG_MAP = L.map("figureGroundMap", {
+      renderer:FG_RENDERER,
+      preferCanvas:true,
+      zoomControl:true,
+      attributionControl:false,
+      maxBounds:MAP_BOUNDS,
+      maxBoundsViscosity:0.9,
+      minZoom:13,
+      maxZoom:19,
+    }).setView(MAP_CENTER, MAP_DEFAULT_ZOOM);
+    FG_MAP.on("moveend", ()=>{
+      clearTimeout(FG_MOVE_TIMER);
+      FG_MOVE_TIMER = setTimeout(loadFigureGroundViewport, 180);
+    });
+  }
+  setTimeout(()=>FG_MAP.invalidateSize(), 60);
+  if(FG_MANIFEST){ await loadFigureGroundViewport(); return; }
+  setFigureGroundStatus("건물 데이터를 불러오는 중…", true);
+  try{
+    const response = await fetch("/data/figure-ground/manifest.json");
+    if(!response.ok) throw new Error("건물 데이터가 아직 생성되지 않았습니다.");
+    const manifest = await response.json();
+    if(!manifest?.cells?.length) throw new Error("건물 데이터가 비어 있습니다.");
+    FG_MANIFEST = manifest;
+    document.getElementById("fgTotal").textContent = Number(manifest.featureCount || 0).toLocaleString("ko-KR") + "동";
+    const generated = new Date(manifest.generatedAt);
+    document.getElementById("fgDate").textContent = Number.isNaN(generated.getTime())
+      ? "-" : generated.toLocaleDateString("ko-KR");
+    await loadFigureGroundViewport();
+  }catch(error){
+    setFigureGroundStatus(error.message || "건물 데이터를 불러오지 못했습니다.", true);
+  }
+}
+
+function fgBoundsIntersect(a, b){
+  return a[0] <= b[2] && a[2] >= b[0] && a[1] <= b[3] && a[3] >= b[1];
+}
+
+async function loadFigureGroundViewport(){
+  if(!FG_MAP || !FG_MANIFEST) return;
+  const loadId = ++FG_LOAD_ID;
+  const bounds = FG_MAP.getBounds();
+  const padding = Number(FG_MANIFEST.cellSize || 0.01) * 1.05;
+  const viewport = [
+    bounds.getWest() - padding, bounds.getSouth() - padding,
+    bounds.getEast() + padding, bounds.getNorth() + padding,
+  ];
+  const needed = FG_MANIFEST.cells.filter(cell => fgBoundsIntersect(cell.bounds, viewport));
+  const neededIds = new Set(needed.map(cell => cell.id));
+  for(const [id, layer] of FG_CELL_LAYERS){
+    if(!neededIds.has(id)){
+      FG_MAP.removeLayer(layer);
+      FG_CELL_LAYERS.delete(id);
+    }
+  }
+
+  const pending = needed.filter(cell => !FG_CELL_LAYERS.has(cell.id));
+  if(pending.length) setFigureGroundStatus(`${pending.length}개 영역 불러오는 중…`, true);
+  let next = 0;
+  async function worker(){
+    while(next < pending.length){
+      const cell = pending[next++];
+      try{
+        let collection = FG_CELL_DATA.get(cell.id);
+        if(!collection){
+          const response = await fetch(`/data/figure-ground/${cell.file}`);
+          if(!response.ok) throw new Error(`영역 ${cell.id} 응답 오류`);
+          collection = await response.json();
+          FG_CELL_DATA.set(cell.id, collection);
+        }
+        if(loadId !== FG_LOAD_ID || !neededIds.has(cell.id)) continue;
+        const layer = L.geoJSON(collection, {
+          renderer:FG_RENDERER,
+          style:{ color:"#35383a", weight:0, fillColor:"#35383a", fillOpacity:0.96, interactive:false },
+        }).addTo(FG_MAP);
+        FG_CELL_LAYERS.set(cell.id, layer);
+      }catch(error){ console.error("[figure-ground]", error); }
+    }
+  }
+  await Promise.all(Array.from({ length:Math.min(4, pending.length) }, worker));
+  if(loadId !== FG_LOAD_ID) return;
+  const visible = [...FG_CELL_LAYERS.keys()].reduce((sum, id) => {
+    const cell = FG_MANIFEST.cells.find(item => item.id === id);
+    return sum + Number(cell?.count || 0);
+  }, 0);
+  document.getElementById("fgVisible").textContent = visible.toLocaleString("ko-KR") + "동";
+  setFigureGroundStatus(`${visible.toLocaleString("ko-KR")}개 건물 표시`, false);
+}
+
+function setFigureGroundStatus(text, persistent){
+  const status = document.getElementById("fgStatus");
+  if(!status) return;
+  status.textContent = text;
+  status.classList.toggle("show", Boolean(persistent));
+  if(!persistent){
+    status.classList.add("show");
+    setTimeout(()=>status.classList.remove("show"), 1400);
+  }
+}
+
+function resetFigureGroundView(){
+  if(!FG_MAP) return;
+  FG_MAP.setView(MAP_CENTER, MAP_DEFAULT_ZOOM);
 }
 
 // 날짜 포맷 헬퍼 (YYYYMMDD → YYYY.MM.DD)

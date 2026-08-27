@@ -12,6 +12,7 @@
 - K-APT 및 동구 공동주택 현황 검색
 - 철거·멸실 이력과 폐쇄말소대장 조회
 - 빈집 등급·위치 및 KOSIS·SGIS·한국부동산원 통계 제공
+- VWorld 건물 footprint 기반 Figure-Ground 테마지도 제공
 
 ## 로컬 실행
 
@@ -75,6 +76,8 @@ node --test
 | `npm run update-sgis-stats` | SGIS 주택·거처 통계 |
 | `npm run update-reb-stats` | 한국부동산원 주택시장 통계 |
 | `npm run collect-apt-geo` | 공동주택 필지 도형 |
+| `npm run probe-footprints` | VWorld 건물 BBOX 조회 지원 여부 확인 |
+| `npm run collect-footprints` | Figure-Ground 건물 도형 수집·격자 분할 |
 | `npm run update-officetel` | 건축인허가 기반 오피스텔 목록 |
 
 수집 스크립트는 환경변수를 `process.env`에서 직접 읽습니다. 필요한 키를 명령 앞에 지정하거나, 지원되는 스크립트는 실행 중인 프록시를 `BASE_URL=http://localhost:3000`으로 지정합니다. GitHub Actions는 K-APT를 매주, 공동주택·빈집·통계를 매월 갱신합니다.

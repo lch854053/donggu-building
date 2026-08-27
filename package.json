@@ -12,6 +12,8 @@
     "update-sgis-stats": "node scripts/update-sgis-stats.mjs",
     "update-reb-stats": "node scripts/update-reb-stats.mjs",
     "collect-apt-geo": "node scripts/collect-apt-geo.mjs",
+    "probe-footprints": "node scripts/collect-building-footprints.mjs --probe",
+    "collect-footprints": "node scripts/collect-building-footprints.mjs",
     "update-officetel": "node scripts/update-officetel.mjs"
   },
   "engines": {
