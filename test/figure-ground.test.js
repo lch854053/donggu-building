@@ -85,4 +85,10 @@ test("map page exposes a lazy-loaded Figure-Ground subtab", () => {
   assert.match(page, /figure-ground\/manifest\.json/);
   assert.match(page, /L\.canvas\(/);
   assert.match(page, /loadFigureGroundViewport/);
+  assert.match(page, /saveFigureGroundJpg/);
+  assert.match(page, /toBlob\(resolve, "image\/jpeg"/);
+  assert.doesNotMatch(page, />전체 건물</);
+  assert.doesNotMatch(page, />화면 표시</);
+  assert.doesNotMatch(page, />데이터 기준</);
+  assert.doesNotMatch(page, />동구 중심으로</);
 });

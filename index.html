@@ -573,12 +573,7 @@
           <h2>동구 건물 형태</h2>
           <p>도로와 지명을 걷어내고 건물의 배치와 도시 조직만 표현합니다.</p>
           <div class="fg-key"><span></span><b>건물 footprint</b></div>
-          <dl class="fg-meta">
-            <div><dt>전체 건물</dt><dd id="fgTotal">-</dd></div>
-            <div><dt>화면 표시</dt><dd id="fgVisible">-</dd></div>
-            <div><dt>데이터 기준</dt><dd id="fgDate">-</dd></div>
-          </dl>
-          <button class="ghost fg-reset" onclick="resetFigureGroundView()">동구 중심으로</button>
+          <button class="ghost fg-save" id="fgSaveBtn" onclick="saveFigureGroundJpg()">JPG 저장</button>
           <div class="fg-source">VWorld GIS건물통합정보</div>
         </aside>
         <div class="fg-stage">
@@ -5109,10 +5104,6 @@ async function initFigureGroundMap(){
     const manifest = await response.json();
     if(!manifest?.cells?.length) throw new Error("건물 데이터가 비어 있습니다.");
     FG_MANIFEST = manifest;
-    document.getElementById("fgTotal").textContent = Number(manifest.featureCount || 0).toLocaleString("ko-KR") + "동";
-    const generated = new Date(manifest.generatedAt);
-    document.getElementById("fgDate").textContent = Number.isNaN(generated.getTime())
-      ? "-" : generated.toLocaleDateString("ko-KR");
     await loadFigureGroundViewport();
   }catch(error){
     setFigureGroundStatus(error.message || "건물 데이터를 불러오지 못했습니다.", true);
@@ -5166,12 +5157,7 @@ async function loadFigureGroundViewport(){
   }
   await Promise.all(Array.from({ length:Math.min(4, pending.length) }, worker));
   if(loadId !== FG_LOAD_ID) return;
-  const visible = [...FG_CELL_LAYERS.keys()].reduce((sum, id) => {
-    const cell = FG_MANIFEST.cells.find(item => item.id === id);
-    return sum + Number(cell?.count || 0);
-  }, 0);
-  document.getElementById("fgVisible").textContent = visible.toLocaleString("ko-KR") + "동";
-  setFigureGroundStatus(`${visible.toLocaleString("ko-KR")}개 건물 표시`, false);
+  setFigureGroundStatus("지도 준비 완료", false);
 }
 
 function setFigureGroundStatus(text, persistent){
@@ -5185,9 +5171,75 @@ function setFigureGroundStatus(text, persistent){
   }
 }
 
-function resetFigureGroundView(){
-  if(!FG_MAP) return;
-  FG_MAP.setView(MAP_CENTER, MAP_DEFAULT_ZOOM);
+async function saveFigureGroundJpg(){
+  const button = document.getElementById("fgSaveBtn");
+  const originalText = button?.textContent || "JPG 저장";
+  if(button){ button.disabled = true; button.textContent = "저장 중…"; }
+  try{
+    if(!FG_MAP || !FG_MANIFEST) await initFigureGroundMap();
+    if(!FG_MAP || !FG_MANIFEST) throw new Error("저장할 지도 데이터가 없습니다.");
+    await loadFigureGroundViewport();
+    await new Promise(resolve => requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+
+    const disc = document.querySelector(".fg-disc");
+    const mapEl = document.getElementById("figureGroundMap");
+    const mapCanvases = [...mapEl.querySelectorAll("canvas")];
+    if(!disc || !mapCanvases.length) throw new Error("지도 화면을 캡처할 수 없습니다.");
+    const discRect = disc.getBoundingClientRect();
+    const ratio = Math.min(window.devicePixelRatio || 1, 2);
+    const size = Math.max(1, Math.round(discRect.width * ratio));
+    const scale = size / discRect.width;
+    const output = document.createElement("canvas");
+    output.width = size;
+    output.height = size;
+    const ctx = output.getContext("2d");
+
+    // JPEG는 투명도를 지원하지 않으므로 화면과 같은 회백색 바탕에 원형 지도를 합성한다.
+    ctx.fillStyle = "#e9e7e1";
+    ctx.fillRect(0, 0, size, size);
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
+    ctx.clip();
+    ctx.fillStyle = "#f3f1eb";
+    ctx.fillRect(0, 0, size, size);
+    for(const source of mapCanvases){
+      const rect = source.getBoundingClientRect();
+      if(!rect.width || !rect.height) continue;
+      ctx.globalAlpha = Number.parseFloat(getComputedStyle(source).opacity) || 1;
+      ctx.drawImage(
+        source,
+        (rect.left - discRect.left) * scale,
+        (rect.top - discRect.top) * scale,
+        rect.width * scale,
+        rect.height * scale,
+      );
+    }
+    ctx.restore();
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = "rgba(53,56,58,.10)";
+    ctx.lineWidth = Math.max(1, ratio);
+    ctx.beginPath();
+    ctx.arc(size / 2, size / 2, size / 2 - ctx.lineWidth / 2, 0, Math.PI * 2);
+    ctx.stroke();
+
+    const blob = await new Promise(resolve => output.toBlob(resolve, "image/jpeg", 0.95));
+    if(!blob) throw new Error("JPG 파일을 만들지 못했습니다.");
+    const now = new Date();
+    const pad = value => String(value).padStart(2, "0");
+    const stamp = `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}`;
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `donggu-figure-ground-${stamp}.jpg`;
+    link.click();
+    setTimeout(()=>URL.revokeObjectURL(url), 1000);
+  }catch(error){
+    console.error("[figure-ground export]", error);
+    setFigureGroundStatus(error.message || "JPG 저장에 실패했습니다.", true);
+  }finally{
+    if(button){ button.disabled = false; button.textContent = originalText; }
+  }
 }
 
 // 날짜 포맷 헬퍼 (YYYYMMDD → YYYY.MM.DD)
