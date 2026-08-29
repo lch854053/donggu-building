@@ -411,12 +411,13 @@
   .fg-age-toggle input:focus-visible+.fg-toggle-track{outline:2px solid #b44758;outline-offset:3px}
   .fg-age-toggle b{display:block;font-size:12px;line-height:1.25}
   .fg-age-toggle small{display:block;margin-top:2px;font-size:9px;color:#747672}
-  .fg-age-legend{padding:10px 0 2px;border-top:1px solid #cfccc3}
+  .fg-age-legend{position:absolute;z-index:450;left:8%;bottom:8%;width:190px;padding:10px 11px;background:rgba(247,244,238,.78);border:1px solid rgba(126,119,109,.28);border-radius:8px;box-shadow:0 4px 14px rgba(45,47,45,.1);pointer-events:none}
   .fg-age-scale{display:grid;grid-template-columns:1fr 1fr;gap:5px 8px}
   .fg-age-scale span{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:8px;color:#5f615d;white-space:nowrap}
   .fg-age-scale i{width:11px;height:11px;flex:none;background:var(--age-color)}
-  .fg-age-legend p{margin:9px 0 0;font-family:var(--mono);font-size:8px;line-height:1.45;color:#747672}
-  .fg-save{width:100%;margin-top:18px;background:transparent;border-color:#aaa89f;color:#454743}
+  .fg-age-legend p{margin:9px 0 0;padding-top:7px;border-top:1px solid rgba(126,119,109,.24);font-family:var(--mono);font-size:8px;line-height:1.45;color:#5f615d}
+  .fg-save-row{display:flex;gap:7px;margin-top:18px}
+  .fg-save{flex:1 1 0;min-width:0;background:transparent;border-color:#aaa89f;color:#454743}
   .fg-save:disabled{opacity:.55;cursor:wait}
   .fg-source{margin-top:14px;font-family:var(--mono);font-size:9px;color:#858680}
   .fg-stage{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;padding:8px}
@@ -541,8 +542,8 @@
     .fg-layout{flex-direction:column;align-items:stretch;padding:14px;min-height:auto}
     .fg-side{flex:none;padding:10px 8px 0}
     .fg-side p{margin-bottom:12px}
-    .fg-key,.fg-source{display:none}.fg-save{width:auto;margin-top:10px}
-    .fg-age-toggle{margin-top:4px;padding:8px 0}.fg-age-legend{max-height:132px;overflow:auto}.fg-age-scale{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .fg-key,.fg-source{display:none}.fg-save-row{margin-top:10px}
+    .fg-age-toggle{margin-top:4px;padding:8px 0}.fg-age-legend{left:7%;bottom:7%;width:min(180px,52%);padding:8px 9px}.fg-age-scale{grid-template-columns:1fr 1fr}
     .fg-stage{padding:4px 0 8px}.fg-disc{width:min(88vw,620px)}
   }
 
