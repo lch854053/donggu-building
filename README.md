@@ -79,6 +79,7 @@ node --test
 | `npm run probe-footprints` | VWorld 건물 BBOX 조회 지원 여부 확인 |
 | `npm run collect-footprints` | Figure-Ground 건물 도형 수집·격자 분할 |
 | `npm run import-footprints -- --shp-dir=<폴더>` | 주소기반산업지원서비스 AL_D010 SHP에서 건물 도형 갱신 |
+| `npm run import-road-footprints -- --shp-dir=<폴더>` | 도로명주소 건물 SHP로 재개발 공동주택 도형 보정 |
 | `npm run update-officetel` | 건축인허가 기반 오피스텔 목록 |
 
 수집 스크립트는 환경변수를 `process.env`에서 직접 읽습니다. 필요한 키를 명령 앞에 지정하거나, 지원되는 스크립트는 실행 중인 프록시를 `BASE_URL=http://localhost:3000`으로 지정합니다. GitHub Actions는 K-APT를 매주, 공동주택·빈집·통계를 매월 갱신합니다.

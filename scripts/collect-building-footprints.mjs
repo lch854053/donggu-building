@@ -24,6 +24,7 @@ const OUTPUT_CELL_SIZE = 0.01;
 const PNU_CONCURRENCY = 3;
 const MIN_FEATURES = Number(process.env.FG_MIN_FEATURES || 1000);
 const ADDRESS_SHP_CRS = "+proj=tmerc +lat_0=38 +lon_0=127 +k=1 +x_0=200000 +y_0=600000 +ellps=GRS80 +units=m +no_defs";
+const ROAD_ADDRESS_SHP_CRS = "+proj=tmerc +lat_0=38 +lon_0=127.5 +k=0.9996 +x_0=1000000 +y_0=2000000 +ellps=GRS80 +units=m +no_defs";
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 const round6 = value => Math.round(Number(value) * 1e6) / 1e6;
@@ -492,6 +493,141 @@ async function collectByShapefile(directory) {
   return { features, sourceDate };
 }
 
+function roadRecordPnu(record, fields) {
+  const sigungu = dbfText(record, fields.get("SIG_CD"));
+  const dong = dbfText(record, fields.get("EMD_CD")) + dbfText(record, fields.get("LI_CD"));
+  const land = dbfText(record, fields.get("MNTN_YN")) === "1" ? "2" : "1";
+  const main = dbfText(record, fields.get("LNBR_MNNM")).padStart(4, "0");
+  const sub = dbfText(record, fields.get("LNBR_SLNO")).padStart(4, "0");
+  return `${sigungu}${dong}${land}${main}${sub}`;
+}
+
+async function collectRoadShapefile(shpPath) {
+  const base = shpPath.slice(0, -4);
+  const dbfHandle = await open(`${base}.dbf`, "r");
+  const candidates = [];
+  let sourceDate = "";
+  try {
+    const header = await readDbfHeader(dbfHandle);
+    const required = ["BD_MGT_SN", "BUL_MAN_NO", "EMD_CD", "LI_CD", "LNBR_MNNM", "LNBR_SLNO", "MNTN_YN", "OPERT_DE", "SIG_CD"];
+    for (const name of required) {
+      if (!header.fields.has(name)) throw new Error(`${shpPath}: DBF 필드 ${name}이 없습니다.`);
+    }
+    const batchSize = 5000;
+    const buffer = Buffer.alloc(header.recordLength * batchSize);
+    for (let start = 0; start < header.recordCount; start += batchSize) {
+      const count = Math.min(batchSize, header.recordCount - start);
+      await dbfHandle.read(buffer, 0, count * header.recordLength, header.headerLength + start * header.recordLength);
+      for (let index = 0; index < count; index++) {
+        const record = buffer.subarray(index * header.recordLength, (index + 1) * header.recordLength);
+        if (record[0] === 0x2a || dbfText(record, header.fields.get("SIG_CD")) !== "12210") continue;
+        const pnu = roadRecordPnu(record, header.fields);
+        const management = dbfText(record, header.fields.get("BD_MGT_SN"));
+        const building = dbfText(record, header.fields.get("BUL_MAN_NO"));
+        const operated = dbfText(record, header.fields.get("OPERT_DE")).slice(0, 8);
+        if (/^12210\d{14}$/.test(pnu)) candidates.push({ index: start + index, id: `road:${management || "none"}:${building}`, pnu });
+        if (operated > sourceDate) sourceDate = operated;
+      }
+    }
+  } finally {
+    await dbfHandle.close();
+  }
+
+  const index = await readFile(`${base}.shx`);
+  const shpHandle = await open(shpPath, "r");
+  const features = [];
+  try {
+    for (const candidate of candidates) {
+      const indexOffset = 100 + candidate.index * 8;
+      if (indexOffset + 8 > index.length) throw new Error(`${shpPath}: SHX 인덱스가 DBF보다 짧습니다.`);
+      const offset = index.readInt32BE(indexOffset) * 2 + 8;
+      const length = index.readInt32BE(indexOffset + 4) * 2;
+      const content = Buffer.alloc(length);
+      await shpHandle.read(content, 0, length, offset);
+      const geometry = parseShpPolygon(content, coordinate => proj4(ROAD_ADDRESS_SHP_CRS, "EPSG:4326", coordinate));
+      const feature = normalizeFeature({ properties: { gis_idntfc_no: candidate.id, pnu: candidate.pnu }, geometry });
+      if (feature) features.push(feature);
+    }
+  } finally {
+    await shpHandle.close();
+  }
+  console.log(`  도로명주소 SHP ${shpPath}: 동구 ${features.length}건`);
+  return { features, sourceDate: isoDate(sourceDate) };
+}
+
+async function collectByRoadShapefile(directory) {
+  if (!directory) throw new Error("도로명주소 SHP 수집에는 --shp-dir 경로가 필요합니다.");
+  const names = (await readdir(directory)).filter(name => name.toLowerCase().endsWith(".shp")).sort();
+  if (!names.length) throw new Error(`${directory}: SHP 파일이 없습니다.`);
+  const features = [];
+  let sourceDate = "";
+  let sourceVersion = "";
+  for (const name of names) {
+    const result = await collectRoadShapefile(join(directory, name));
+    features.push(...result.features);
+    if (result.sourceDate > sourceDate) sourceDate = result.sourceDate;
+    const version = name.match(/_(\d{4})(\d{2})\.shp$/i);
+    if (version) sourceVersion = `${version[1]}-${version[2]}`;
+  }
+  return { features, sourceDate, sourceVersion };
+}
+
+function legacyPnu(pnu) {
+  const value = String(pnu || "");
+  return value.startsWith("12210") ? `29110${value.slice(5)}` : value;
+}
+
+function geometryContainsPoint(geometry, point) {
+  if (!geometry || !point) return false;
+  const polygons = geometry.type === "Polygon" ? [geometry.coordinates] : geometry.coordinates;
+  return (polygons || []).some(polygon => polygon?.[0]
+    && pointInRing(point, polygon[0])
+    && !polygon.slice(1).some(hole => pointInRing(point, hole)));
+}
+
+function geometryCenter(geometry) {
+  const bounds = geometryBounds(geometry);
+  return bounds ? [(bounds[0] + bounds[2]) / 2, (bounds[1] + bounds[3]) / 2] : null;
+}
+
+export function mergeRoadApartmentFootprints(current, road, apartments) {
+  const base = (current || []).filter(feature => !String(feature?.id || "").startsWith("road:"));
+  const apartmentByPnu = new Map((apartments || [])
+    .filter(item => item?.pnu && ["Polygon", "MultiPolygon"].includes(item.geometry?.type))
+    .map(item => [String(item.pnu), item]));
+  const currentPnus = new Set(base.map(feature => legacyPnu(feature?.properties?.pnu)));
+  const roadByPnu = new Map();
+  for (const feature of road || []) {
+    const pnu = legacyPnu(feature?.properties?.pnu);
+    if (!apartmentByPnu.has(pnu)) continue;
+    if (!roadByPnu.has(pnu)) roadByPnu.set(pnu, []);
+    roadByPnu.get(pnu).push(feature);
+  }
+  const replacementPnus = [...roadByPnu.keys()].filter(pnu => !currentPnus.has(pnu));
+  const replacementParcels = replacementPnus.map(pnu => apartmentByPnu.get(pnu).geometry);
+  const retained = base.filter(feature => {
+    const center = geometryCenter(feature.geometry);
+    return !replacementParcels.some(parcel => geometryContainsPoint(parcel, center));
+  });
+  const added = replacementPnus.flatMap(pnu => roadByPnu.get(pnu));
+  return {
+    features: [...retained, ...added],
+    replacementCount: replacementPnus.length,
+    removedCount: base.length - retained.length,
+    addedCount: added.length,
+  };
+}
+
+async function readCurrentDataset() {
+  const manifest = JSON.parse(await readFile(join(OUTPUT_DIR, "manifest.json"), "utf8"));
+  const features = [];
+  for (const cell of manifest.cells || []) {
+    const collection = JSON.parse(await readFile(join(OUTPUT_DIR, cell.file), "utf8"));
+    features.push(...(collection.features || []));
+  }
+  return features;
+}
+
 export function partitionFeatures(features, cellSize = OUTPUT_CELL_SIZE) {
   const cells = new Map();
   const width = Math.ceil((DONGGU_BOUNDS[2] - DONGGU_BOUNDS[0]) / cellSize);
@@ -582,12 +718,24 @@ function cliOption(name, fallback = "") {
 async function main() {
   const probeOnly = process.argv.includes("--probe");
   const requestedMode = cliOption("mode", "auto");
-  if (!["auto", "bbox", "pnu", "shp"].includes(requestedMode)) throw new Error("--mode는 auto, bbox, pnu, shp 중 하나여야 합니다.");
+  if (!["auto", "bbox", "pnu", "shp", "road-shp"].includes(requestedMode)) throw new Error("--mode는 auto, bbox, pnu, shp, road-shp 중 하나여야 합니다.");
   if (requestedMode === "shp") {
     const result = await collectByShapefile(cliOption("shp-dir"));
     await writeDataset(result.features, "shp", {
       source: "주소기반산업지원서비스 GIS건물통합정보 AL_D010",
       sourceDate: result.sourceDate,
+    });
+    return;
+  }
+  if (requestedMode === "road-shp") {
+    const road = await collectByRoadShapefile(cliOption("shp-dir"));
+    const current = await readCurrentDataset();
+    const apartments = JSON.parse(await readFile(join(ROOT, "apt_geo.json"), "utf8"));
+    const merged = mergeRoadApartmentFootprints(current, road.features, apartments);
+    console.log(`공동주택 필지 교체: ${merged.replacementCount}개 단지 / 기존 ${merged.removedCount}건 제거 / 현행 ${merged.addedCount}건 추가`);
+    await writeDataset(merged.features, "road-shp", {
+      source: "VWorld GIS건물통합정보 + 도로명주소 건물",
+      sourceDate: road.sourceVersion || road.sourceDate,
     });
     return;
   }

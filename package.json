@@ -15,6 +15,7 @@
     "probe-footprints": "node scripts/collect-building-footprints.mjs --probe",
     "collect-footprints": "node scripts/collect-building-footprints.mjs",
     "import-footprints": "node scripts/collect-building-footprints.mjs --mode=shp",
+    "import-road-footprints": "node scripts/collect-building-footprints.mjs --mode=road-shp",
     "update-officetel": "node scripts/update-officetel.mjs"
   },
   "engines": {

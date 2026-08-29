@@ -4,6 +4,7 @@ import { existsSync, readFileSync } from "node:fs";
 import {
   boundsIntersect,
   geometryBounds,
+  mergeRoadApartmentFootprints,
   normalizeFeature,
   normalizeGeometry,
   partitionFeatures,
@@ -65,6 +66,40 @@ test("features are deterministically partitioned into viewport cells", () => {
   assert.equal(cells.length, 2);
   assert.deepEqual(cells.map(cell => cell.features.length), [1, 1]);
   assert.deepEqual(cells.map(cell => cell.id), [...cells.map(cell => cell.id)].sort());
+});
+
+test("road-address footprints replace stale buildings only for missing apartment PNUs", () => {
+  const stale = normalizeFeature({
+    properties: { gis_idntfc_no: "stale", pnu: "1221010900113400000" },
+    geometry: polygon([[126.924, 35.16], [126.925, 35.16], [126.925, 35.161], [126.924, 35.16]]),
+  });
+  const retained = normalizeFeature({
+    properties: { gis_idntfc_no: "retained", pnu: "1221011000100010000" },
+    geometry: polygon([[126.94, 35.17], [126.941, 35.17], [126.941, 35.171], [126.94, 35.17]]),
+  });
+  const currentApartment = normalizeFeature({
+    properties: { gis_idntfc_no: "current", pnu: "1221011000100020000" },
+    geometry: polygon([[126.95, 35.17], [126.951, 35.17], [126.951, 35.171], [126.95, 35.17]]),
+  });
+  const replacement = normalizeFeature({
+    properties: { gis_idntfc_no: "road:new", pnu: "1221010900118690000" },
+    geometry: polygon([[126.9242, 35.1602], [126.9248, 35.1602], [126.9248, 35.1608], [126.9242, 35.1602]]),
+  });
+  const ignored = normalizeFeature({
+    properties: { gis_idntfc_no: "road:existing", pnu: "1221011000100020000" },
+    geometry: polygon([[126.9502, 35.1702], [126.9508, 35.1702], [126.9508, 35.1708], [126.9502, 35.1702]]),
+  });
+  const apartments = [
+    { pnu: "2911010900118690000", geometry: polygon([[126.923, 35.159], [126.926, 35.159], [126.926, 35.162], [126.923, 35.162], [126.923, 35.159]]) },
+    { pnu: "2911011000100020000", geometry: polygon([[126.949, 35.169], [126.952, 35.169], [126.952, 35.172], [126.949, 35.172], [126.949, 35.169]]) },
+  ];
+  const merged = mergeRoadApartmentFootprints([stale, retained, currentApartment], [replacement, ignored], apartments);
+  assert.equal(merged.replacementCount, 1);
+  assert.equal(merged.removedCount, 1);
+  assert.equal(merged.addedCount, 1);
+  assert.deepEqual(merged.features.map(feature => feature.id).sort(), ["current", "retained", "road:new"]);
+  const repeated = mergeRoadApartmentFootprints(merged.features, [replacement, ignored], apartments);
+  assert.deepEqual(repeated.features, merged.features);
 });
 
 test("generated Figure-Ground dataset is internally consistent when present", () => {
