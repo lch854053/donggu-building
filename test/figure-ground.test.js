@@ -154,6 +154,10 @@ test("map page exposes a lazy-loaded Figure-Ground subtab", () => {
   assert.match(page, /saveFigureGroundJpg/);
   assert.match(page, /fgAgeToggle/);
   assert.match(page, /setFigureGroundAgeMode/);
+  assert.match(page, /setFigureGroundShape/);
+  assert.match(page, /name="fgShape" value="circle"/);
+  assert.match(page, /name="fgShape" value="square"/);
+  assert.match(page, /disc\.classList\.contains\("is-square"\)/);
   assert.match(page, /fgFeatureStyle/);
   assert.match(page, /"image\/png"/);
   assert.match(page, /"image\/jpeg"/);

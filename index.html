@@ -578,6 +578,11 @@
             <span class="fg-toggle-track" aria-hidden="true"><span></span></span>
             <span><b>건축물 연령 구분</b><small>사용승인연도 기준 · 10년 간격</small></span>
           </label>
+          <fieldset class="fg-shape-picker">
+            <legend>배경 형태</legend>
+            <label><input type="radio" name="fgShape" value="circle" checked onchange="setFigureGroundShape(this.value)"><span>원형</span></label>
+            <label><input type="radio" name="fgShape" value="square" onchange="setFigureGroundShape(this.value)"><span>사각형</span></label>
+          </fieldset>
           <div class="fg-save-row">
             <button class="ghost fg-save" id="fgPngBtn" onclick="saveFigureGroundPng()">PNG 저장</button>
             <button class="ghost fg-save" id="fgJpgBtn" onclick="saveFigureGroundJpg()">JPG 저장</button>
@@ -5118,6 +5123,13 @@ function setFigureGroundAgeMode(enabled){
   for(const layer of FG_CELL_LAYERS.values()) layer.setStyle(fgFeatureStyle);
 }
 
+function setFigureGroundShape(shape){
+  const disc = document.querySelector(".fg-disc");
+  if(!disc) return;
+  disc.classList.toggle("is-square", shape === "square");
+  setTimeout(()=>FG_MAP?.invalidateSize(), 60);
+}
+
 function switchMapSubtab(which){
   if(!["general","figure"].includes(which)) which = "general";
   MAP_SUBTAB = which;
@@ -5252,6 +5264,7 @@ async function saveFigureGroundImage(format){
     output.width = size;
     output.height = size;
     const ctx = output.getContext("2d");
+    const isCircle = !disc.classList.contains("is-square");
 
     // PNG는 투명 배경을 유지하고, 투명도를 지원하지 않는 JPG만 흰색 바탕과 지도 원판을 채운다.
     if(isJpg){
@@ -5259,9 +5272,11 @@ async function saveFigureGroundImage(format){
       ctx.fillRect(0, 0, size, size);
     }
     ctx.save();
-    ctx.beginPath();
-    ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
-    ctx.clip();
+    if(isCircle){
+      ctx.beginPath();
+      ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
+      ctx.clip();
+    }
     if(isJpg){
       ctx.fillStyle = "#f3f1eb";
       ctx.fillRect(0, 0, size, size);
