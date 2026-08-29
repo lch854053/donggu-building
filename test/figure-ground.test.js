@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import {
+  approvalYear,
   boundsIntersect,
   geometryBounds,
   mergeRoadApartmentFootprints,
@@ -38,6 +39,18 @@ test("footprint feature keeps only stable map properties", () => {
   assert.equal(feature.id, "building-1");
   assert.deepEqual(feature.properties, { id: "building-1", pnu: "1221010100100010001" });
   assert.deepEqual(geometryBounds(feature.geometry), [126.91, 35.15, 126.911, 35.151]);
+});
+
+test("footprint approval year accepts official dates and rejects implausible values", () => {
+  assert.equal(approvalYear("2022-10-06"), 2022);
+  assert.equal(approvalYear("19730706"), 1973);
+  assert.equal(approvalYear(""), null);
+  assert.equal(approvalYear("2028"), null);
+  const feature = normalizeFeature({
+    properties: { gis_idntfc_no: "dated", pnu: "1221010100100010001", useAprDay: "20060522" },
+    geometry: polygon([[126.91, 35.15], [126.911, 35.15], [126.911, 35.151], [126.91, 35.15]]),
+  });
+  assert.equal(feature.properties.year, 2006);
 });
 
 test("BBOX splitting covers four quadrants and intersection includes touching edges", () => {
@@ -90,7 +103,7 @@ test("road-address footprints replace stale buildings only for missing apartment
     geometry: polygon([[126.9502, 35.1702], [126.9508, 35.1702], [126.9508, 35.1708], [126.9502, 35.1702]]),
   });
   const apartments = [
-    { pnu: "2911010900118690000", geometry: polygon([[126.923, 35.159], [126.926, 35.159], [126.926, 35.162], [126.923, 35.162], [126.923, 35.159]]) },
+    { pnu: "2911010900118690000", useAprDay: "20221006", geometry: polygon([[126.923, 35.159], [126.926, 35.159], [126.926, 35.162], [126.923, 35.162], [126.923, 35.159]]) },
     { pnu: "2911011000100020000", geometry: polygon([[126.949, 35.169], [126.952, 35.169], [126.952, 35.172], [126.949, 35.172], [126.949, 35.169]]) },
   ];
   const merged = mergeRoadApartmentFootprints([stale, retained, currentApartment], [replacement, ignored], apartments);
@@ -98,6 +111,7 @@ test("road-address footprints replace stale buildings only for missing apartment
   assert.equal(merged.removedCount, 1);
   assert.equal(merged.addedCount, 1);
   assert.deepEqual(merged.features.map(feature => feature.id).sort(), ["current", "retained", "road:new"]);
+  assert.equal(merged.features.find(feature => feature.id === "road:new").properties.year, 2022);
   const repeated = mergeRoadApartmentFootprints(merged.features, [replacement, ignored], apartments);
   assert.deepEqual(repeated.features, merged.features);
 });
@@ -110,6 +124,8 @@ test("generated Figure-Ground dataset is internally consistent when present", ()
   assert.ok(manifest.featureCount >= 1000);
   assert.ok(Array.isArray(manifest.cells) && manifest.cells.length > 0);
   assert.equal(manifest.cells.reduce((sum, cell) => sum + cell.count, 0), manifest.featureCount);
+  assert.equal(manifest.ageKnownCount + manifest.ageUnknownCount, manifest.featureCount);
+  assert.ok(manifest.ageKnownCount / manifest.featureCount >= 0.6);
   const ids = new Set();
   for (const cell of manifest.cells) {
     const collection = JSON.parse(readFileSync(new URL(`../data/figure-ground/${cell.file}`, import.meta.url), "utf8"));
@@ -120,6 +136,7 @@ test("generated Figure-Ground dataset is internally consistent when present", ()
       assert.ok(!ids.has(feature.id), `duplicate building id: ${feature.id}`);
       ids.add(feature.id);
       assert.match(feature.properties.pnu, /^(12210|29110)\d{14}$/);
+      if (feature.properties.year !== undefined) assert.equal(approvalYear(feature.properties.year), feature.properties.year);
     }
   }
   assert.equal(ids.size, manifest.featureCount);
@@ -134,6 +151,9 @@ test("map page exposes a lazy-loaded Figure-Ground subtab", () => {
   assert.match(page, /loadFigureGroundViewport/);
   assert.match(page, /manifest\.sourceDate/);
   assert.match(page, /saveFigureGroundPng/);
+  assert.match(page, /fgAgeToggle/);
+  assert.match(page, /setFigureGroundAgeMode/);
+  assert.match(page, /fgFeatureStyle/);
   assert.match(page, /toBlob\(resolve, "image\/png"/);
   assert.match(page, /투명 PNG 저장/);
   assert.doesNotMatch(page, /output\.toBlob\(resolve, "image\/jpeg"/);

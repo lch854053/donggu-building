@@ -572,7 +572,13 @@
           <div class="fg-kicker">FIGURE / GROUND</div>
           <h2>동구 건물 형태</h2>
           <p>도로와 지명을 걷어내고 건물의 배치와 도시 조직만 표현합니다.</p>
-          <div class="fg-key"><span></span><b>건물 footprint</b></div>
+          <div class="fg-key" id="fgDefaultKey"><span></span><b>건물 footprint</b></div>
+          <label class="fg-age-toggle" for="fgAgeToggle">
+            <input type="checkbox" id="fgAgeToggle" onchange="setFigureGroundAgeMode(this.checked)">
+            <span class="fg-toggle-track" aria-hidden="true"><span></span></span>
+            <span><b>건축물 연령 구분</b><small>사용승인연도 기준 · 5년 간격</small></span>
+          </label>
+          <div class="fg-age-legend" id="fgAgeLegend" hidden></div>
           <button class="ghost fg-save" id="fgSaveBtn" onclick="saveFigureGroundPng()">투명 PNG 저장</button>
           <div class="fg-source" id="fgSource">GIS건물통합정보</div>
         </aside>
@@ -5062,8 +5068,60 @@ let FG_MANIFEST = null;
 let FG_RENDERER = null;
 let FG_MOVE_TIMER = null;
 let FG_LOAD_ID = 0;
+let FG_AGE_MODE = false;
 const FG_CELL_DATA = new Map();
 const FG_CELL_LAYERS = new Map();
+const FG_AGE_BUCKETS = [
+  { max:4, label:"0–4년", color:"#fde725" },
+  { max:9, label:"5–9년", color:"#d8e219" },
+  { max:14, label:"10–14년", color:"#addc30" },
+  { max:19, label:"15–19년", color:"#7ad151" },
+  { max:24, label:"20–24년", color:"#42be71" },
+  { max:29, label:"25–29년", color:"#22a884" },
+  { max:34, label:"30–34년", color:"#21918c" },
+  { max:39, label:"35–39년", color:"#2a788e" },
+  { max:44, label:"40–44년", color:"#355f8d" },
+  { max:49, label:"45–49년", color:"#414487" },
+  { max:54, label:"50–54년", color:"#482878" },
+  { max:59, label:"55–59년", color:"#440154" },
+  { max:Infinity, label:"60년 이상", color:"#2b1638" },
+];
+const FG_UNKNOWN_COLOR = "#9b9992";
+
+function fgAgeBucket(year){
+  const value = Number(year);
+  if(!Number.isInteger(value) || value < 1800 || value > new Date().getFullYear()) return null;
+  const age = Math.max(0, new Date().getFullYear() - value);
+  return FG_AGE_BUCKETS.find(bucket => age <= bucket.max) || FG_AGE_BUCKETS.at(-1);
+}
+
+function fgFeatureStyle(feature){
+  const bucket = FG_AGE_MODE ? fgAgeBucket(feature?.properties?.year) : null;
+  const color = FG_AGE_MODE ? (bucket?.color || FG_UNKNOWN_COLOR) : "#35383a";
+  return { color, weight:0, fillColor:color, fillOpacity:0.96, interactive:false };
+}
+
+function renderFigureGroundAgeLegend(){
+  const legend = document.getElementById("fgAgeLegend");
+  if(!legend) return;
+  const known = Number(FG_MANIFEST?.ageKnownCount || 0);
+  const unknown = Number(FG_MANIFEST?.ageUnknownCount || 0);
+  legend.innerHTML = `<div class="fg-age-scale">${FG_AGE_BUCKETS.map(bucket =>
+    `<span><i style="--age-color:${bucket.color}"></i>${bucket.label}</span>`).join("")}
+    <span><i style="--age-color:${FG_UNKNOWN_COLOR}"></i>미확인</span></div>
+    <p>승인연도 확인 ${known.toLocaleString("ko-KR")}건 · 미확인 ${unknown.toLocaleString("ko-KR")}건</p>`;
+}
+
+function setFigureGroundAgeMode(enabled){
+  FG_AGE_MODE = Boolean(enabled);
+  const toggle = document.getElementById("fgAgeToggle");
+  if(toggle && toggle.checked !== FG_AGE_MODE) toggle.checked = FG_AGE_MODE;
+  const defaultKey = document.getElementById("fgDefaultKey");
+  const legend = document.getElementById("fgAgeLegend");
+  if(defaultKey) defaultKey.hidden = FG_AGE_MODE;
+  if(legend){ legend.hidden = !FG_AGE_MODE; if(FG_AGE_MODE) renderFigureGroundAgeLegend(); }
+  for(const layer of FG_CELL_LAYERS.values()) layer.setStyle(fgFeatureStyle);
+}
 
 function switchMapSubtab(which){
   if(!["general","figure"].includes(which)) which = "general";
@@ -5104,6 +5162,7 @@ async function initFigureGroundMap(){
     const manifest = await response.json();
     if(!manifest?.cells?.length) throw new Error("건물 데이터가 비어 있습니다.");
     FG_MANIFEST = manifest;
+    renderFigureGroundAgeLegend();
     const sourceEl = document.getElementById("fgSource");
     if(sourceEl) sourceEl.textContent = [manifest.source, manifest.sourceDate && `기준일 ${manifest.sourceDate}`].filter(Boolean).join(" · ");
     await loadFigureGroundViewport();
@@ -5151,7 +5210,7 @@ async function loadFigureGroundViewport(){
         if(loadId !== FG_LOAD_ID || !neededIds.has(cell.id)) continue;
         const layer = L.geoJSON(collection, {
           renderer:FG_RENDERER,
-          style:{ color:"#35383a", weight:0, fillColor:"#35383a", fillOpacity:0.96, interactive:false },
+          style:fgFeatureStyle,
         }).addTo(FG_MAP);
         FG_CELL_LAYERS.set(cell.id, layer);
       }catch(error){ console.error("[figure-ground]", error); }

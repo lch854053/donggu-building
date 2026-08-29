@@ -158,12 +158,18 @@ export function normalizeFeature(feature) {
   if (!boundsIntersect(bounds, DONGGU_BOUNDS)) return null;
   const properties = feature.properties || {};
   const id = featureId(properties, geometry);
+  const year = approvalYear(properties.year || properties.useAprDay);
   return {
     type: "Feature",
     id,
-    properties: { id, pnu: String(properties.pnu || "") },
+    properties: { id, pnu: String(properties.pnu || ""), ...(year ? { year } : {}) },
     geometry,
   };
+}
+
+export function approvalYear(value) {
+  const year = Number(String(value || "").replace(/\D/g, "").slice(0, 4));
+  return Number.isInteger(year) && year >= 1800 && year <= new Date().getFullYear() ? year : null;
 }
 
 function isDongguFeature(feature) {
@@ -609,7 +615,13 @@ export function mergeRoadApartmentFootprints(current, road, apartments) {
     const center = geometryCenter(feature.geometry);
     return !replacementParcels.some(parcel => geometryContainsPoint(parcel, center));
   });
-  const added = replacementPnus.flatMap(pnu => roadByPnu.get(pnu));
+  const added = replacementPnus.flatMap(pnu => {
+    const year = approvalYear(apartmentByPnu.get(pnu)?.useAprDay);
+    return roadByPnu.get(pnu).map(feature => ({
+      ...feature,
+      properties: { ...feature.properties, ...(year ? { year } : {}) },
+    }));
+  });
   return {
     features: [...retained, ...added],
     replacementCount: replacementPnus.length,
@@ -626,6 +638,34 @@ async function readCurrentDataset() {
     features.push(...(collection.features || []));
   }
   return features;
+}
+
+async function readFacilityApprovalYears(dbfPath) {
+  if (!dbfPath) throw new Error("연령 보강에는 --facility-dbf 경로가 필요합니다.");
+  const handle = await open(dbfPath, "r");
+  const years = new Map();
+  try {
+    const header = await readDbfHeader(handle);
+    for (const name of ["UFID", "USEAPR_DAY"]) {
+      if (!header.fields.has(name)) throw new Error(`${dbfPath}: DBF 필드 ${name}이 없습니다.`);
+    }
+    const batchSize = 5000;
+    const buffer = Buffer.alloc(header.recordLength * batchSize);
+    for (let start = 0; start < header.recordCount; start += batchSize) {
+      const count = Math.min(batchSize, header.recordCount - start);
+      await handle.read(buffer, 0, count * header.recordLength, header.headerLength + start * header.recordLength);
+      for (let index = 0; index < count; index++) {
+        const record = buffer.subarray(index * header.recordLength, (index + 1) * header.recordLength);
+        if (record[0] === 0x2a) continue;
+        const id = dbfText(record, header.fields.get("UFID"));
+        const year = approvalYear(dbfText(record, header.fields.get("USEAPR_DAY")));
+        if (id && year) years.set(id, year);
+      }
+    }
+  } finally {
+    await handle.close();
+  }
+  return years;
 }
 
 export function partitionFeatures(features, cellSize = OUTPUT_CELL_SIZE) {
@@ -694,6 +734,8 @@ async function writeDataset(features, mode, metadata = {}) {
     bounds: DONGGU_BOUNDS,
     cellSize: OUTPUT_CELL_SIZE,
     featureCount: sorted.length,
+    ageKnownCount: sorted.filter(feature => approvalYear(feature.properties?.year)).length,
+    ageUnknownCount: sorted.filter(feature => !approvalYear(feature.properties?.year)).length,
     cells: manifestCells,
   };
   await writeFile(join(nextDir, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n", "utf8");
@@ -729,7 +771,11 @@ async function main() {
   }
   if (requestedMode === "road-shp") {
     const road = await collectByRoadShapefile(cliOption("shp-dir"));
-    const current = await readCurrentDataset();
+    const years = await readFacilityApprovalYears(cliOption("facility-dbf"));
+    const current = (await readCurrentDataset()).map(feature => {
+      const year = years.get(String(feature.id));
+      return year ? { ...feature, properties: { ...feature.properties, year } } : feature;
+    });
     const apartments = JSON.parse(await readFile(join(ROOT, "apt_geo.json"), "utf8"));
     const merged = mergeRoadApartmentFootprints(current, road.features, apartments);
     console.log(`공동주택 필지 교체: ${merged.replacementCount}개 단지 / 기존 ${merged.removedCount}건 제거 / 현행 ${merged.addedCount}건 추가`);

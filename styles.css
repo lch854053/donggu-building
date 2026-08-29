@@ -402,6 +402,20 @@
   .fg-side p{font-size:12px;line-height:1.65;color:#666863;margin:0 0 22px}
   .fg-key{display:flex;align-items:center;gap:9px;padding:12px 0;border-top:1px solid #cfccc3;border-bottom:1px solid #cfccc3;font-size:12px}
   .fg-key span{width:18px;height:18px;background:#35383a;display:inline-block}
+  .fg-age-toggle{display:flex;align-items:center;gap:10px;margin-top:12px;padding:10px 0;cursor:pointer;color:#454743}
+  .fg-age-toggle input{position:absolute;opacity:0;pointer-events:none}
+  .fg-toggle-track{position:relative;flex:0 0 34px;height:19px;border-radius:20px;background:#aaa89f;transition:background .2s ease-out}
+  .fg-toggle-track>span{position:absolute;left:3px;top:3px;width:13px;height:13px;border-radius:50%;background:#f3f1eb;box-shadow:0 2px 5px rgba(45,47,45,.2);transition:transform .2s ease-out}
+  .fg-age-toggle input:checked+.fg-toggle-track{background:#2a788e}
+  .fg-age-toggle input:checked+.fg-toggle-track>span{transform:translateX(15px)}
+  .fg-age-toggle input:focus-visible+.fg-toggle-track{outline:2px solid #2a788e;outline-offset:3px}
+  .fg-age-toggle b{display:block;font-size:12px;line-height:1.25}
+  .fg-age-toggle small{display:block;margin-top:2px;font-size:9px;color:#747672}
+  .fg-age-legend{padding:10px 0 2px;border-top:1px solid #cfccc3}
+  .fg-age-scale{display:grid;grid-template-columns:1fr 1fr;gap:5px 8px}
+  .fg-age-scale span{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:8px;color:#5f615d;white-space:nowrap}
+  .fg-age-scale i{width:11px;height:11px;flex:none;background:var(--age-color)}
+  .fg-age-legend p{margin:9px 0 0;font-family:var(--mono);font-size:8px;line-height:1.45;color:#747672}
   .fg-save{width:100%;margin-top:18px;background:transparent;border-color:#aaa89f;color:#454743}
   .fg-save:disabled{opacity:.55;cursor:wait}
   .fg-source{margin-top:14px;font-family:var(--mono);font-size:9px;color:#858680}
@@ -527,7 +541,8 @@
     .fg-layout{flex-direction:column;align-items:stretch;padding:14px;min-height:auto}
     .fg-side{flex:none;padding:10px 8px 0}
     .fg-side p{margin-bottom:12px}
-    .fg-key,.fg-source{display:none}.fg-save{width:auto;margin-top:4px}
+    .fg-key,.fg-source{display:none}.fg-save{width:auto;margin-top:10px}
+    .fg-age-toggle{margin-top:4px;padding:8px 0}.fg-age-legend{max-height:132px;overflow:auto}.fg-age-scale{grid-template-columns:repeat(3,minmax(0,1fr))}
     .fg-stage{padding:4px 0 8px}.fg-disc{width:min(88vw,620px)}
   }
 
