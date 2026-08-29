@@ -14,6 +14,7 @@
     "collect-apt-geo": "node scripts/collect-apt-geo.mjs",
     "probe-footprints": "node scripts/collect-building-footprints.mjs --probe",
     "collect-footprints": "node scripts/collect-building-footprints.mjs",
+    "import-footprints": "node scripts/collect-building-footprints.mjs --mode=shp",
     "update-officetel": "node scripts/update-officetel.mjs"
   },
   "engines": {

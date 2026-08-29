@@ -574,7 +574,7 @@
           <p>도로와 지명을 걷어내고 건물의 배치와 도시 조직만 표현합니다.</p>
           <div class="fg-key"><span></span><b>건물 footprint</b></div>
           <button class="ghost fg-save" id="fgSaveBtn" onclick="saveFigureGroundPng()">투명 PNG 저장</button>
-          <div class="fg-source">VWorld GIS건물통합정보</div>
+          <div class="fg-source" id="fgSource">GIS건물통합정보</div>
         </aside>
         <div class="fg-stage">
           <div class="fg-disc">
@@ -4207,7 +4207,7 @@ function renderSgisStats(d){
 const MAP_CENTER = [35.1595, 126.9225];
 const MAP_DEFAULT_ZOOM = 15;
 // 동구 경계 (데이터 실측값 + 여유) — 타일 로드·패닝·축소를 이 영역으로 제한해 로딩 단축
-const MAP_BOUNDS = [[35.068, 126.889], [35.185, 126.976]];
+const MAP_BOUNDS = [[35.068, 126.889], [35.185, 127.008]];
 // 조회(결과 전체 맞춤) 시 줌 하한선 — 결과가 넓게 퍼져도 이 줌보다 더 축소하지 않음
 // (maxZoom=19가 가장 확대. 15면 최대확대에서 5단계 축소한 수준)
 const MAP_SEARCH_ZOOM_FLOOR = 15;
@@ -5104,6 +5104,8 @@ async function initFigureGroundMap(){
     const manifest = await response.json();
     if(!manifest?.cells?.length) throw new Error("건물 데이터가 비어 있습니다.");
     FG_MANIFEST = manifest;
+    const sourceEl = document.getElementById("fgSource");
+    if(sourceEl) sourceEl.textContent = [manifest.source, manifest.sourceDate && `기준일 ${manifest.sourceDate}`].filter(Boolean).join(" · ");
     await loadFigureGroundViewport();
   }catch(error){
     setFigureGroundStatus(error.message || "건물 데이터를 불러오지 못했습니다.", true);

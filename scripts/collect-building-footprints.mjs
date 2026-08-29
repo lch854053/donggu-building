@@ -1,9 +1,10 @@
 // VWorld GIS건물통합정보(dt_d010)의 동구 건물 윤곽을 수집해
 // Figure-Ground 지도용 격자 GeoJSON으로 저장한다.
 import { createHash } from "node:crypto";
-import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { mkdir, open, readFile, readdir, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import proj4 from "proj4";
 import { unwrapGov } from "../api/_lib/govapi.js";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -13,7 +14,7 @@ const BBOX_CACHE_DIR = join(ROOT, ".cache", "figure-ground", "bbox");
 const VWORLD_WFS = "https://api.vworld.kr/ned/wfs/getBldgisSpceWFS";
 const BLD_HUB = "https://apis.data.go.kr/1613000/BldRgstHubService/getBrTitleInfo";
 const DOMAIN = "https://donggu-building.vercel.app";
-const DONGGU_BOUNDS = [126.889, 35.068, 126.976, 35.185];
+const DONGGU_BOUNDS = [126.889, 35.068, 127.008, 35.185];
 const PROBE_BOUNDS = [126.91, 35.145, 126.925, 35.158];
 const ALL_BJD = Array.from({ length: 34 }, (_, i) => String(101 + i).padStart(3, "0") + "00");
 const MAX_FEATURES = 100;
@@ -22,6 +23,7 @@ const COLLECTION_CELL_SIZE = 0.005;
 const OUTPUT_CELL_SIZE = 0.01;
 const PNU_CONCURRENCY = 3;
 const MIN_FEATURES = Number(process.env.FG_MIN_FEATURES || 1000);
+const ADDRESS_SHP_CRS = "+proj=tmerc +lat_0=38 +lon_0=127 +k=1 +x_0=200000 +y_0=600000 +ellps=GRS80 +units=m +no_defs";
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 const round6 = value => Math.round(Number(value) * 1e6) / 1e6;
@@ -53,6 +55,72 @@ export function normalizeGeometry(geometry) {
   return geometry.type === "Polygon"
     ? { type: "Polygon", coordinates: normalized[0] }
     : { type: "MultiPolygon", coordinates: normalized };
+}
+
+function ringArea(ring) {
+  let area = 0;
+  for (let i = 0; i < ring.length; i++) {
+    const next = ring[(i + 1) % ring.length];
+    area += ring[i][0] * next[1] - next[0] * ring[i][1];
+  }
+  return area / 2;
+}
+
+function pointInRing(point, ring) {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [xi, yi] = ring[i];
+    const [xj, yj] = ring[j];
+    if ((yi > point[1]) !== (yj > point[1])
+      && point[0] < ((xj - xi) * (point[1] - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+
+export function ringsToGeometry(rings) {
+  const nodes = rings
+    .filter(ring => Array.isArray(ring) && ring.length >= 3)
+    .map(ring => ({ ring, area: Math.abs(ringArea(ring)), parent: null, depth: 0 }))
+    .sort((a, b) => b.area - a.area);
+  for (let i = 0; i < nodes.length; i++) {
+    const node = nodes[i];
+    for (let j = i - 1; j >= 0; j--) {
+      const candidate = nodes[j];
+      if (pointInRing(node.ring[0], candidate.ring)) {
+        if (!node.parent || candidate.area < node.parent.area) node.parent = candidate;
+      }
+    }
+    node.depth = node.parent ? node.parent.depth + 1 : 0;
+  }
+  const polygons = nodes
+    .filter(node => node.depth % 2 === 0)
+    .map(node => [node.ring, ...nodes
+      .filter(child => child.parent === node && child.depth % 2 === 1)
+      .map(child => child.ring)]);
+  return polygons.length ? { type: "MultiPolygon", coordinates: polygons } : null;
+}
+
+export function parseShpPolygon(content, project = coordinate => coordinate) {
+  if (!Buffer.isBuffer(content) || content.length < 44) return null;
+  const shapeType = content.readInt32LE(0);
+  if (![5, 15, 25].includes(shapeType)) return null;
+  const partCount = content.readInt32LE(36);
+  const pointCount = content.readInt32LE(40);
+  const partsOffset = 44;
+  const pointsOffset = partsOffset + partCount * 4;
+  if (partCount < 1 || pointCount < 3 || pointsOffset + pointCount * 16 > content.length) return null;
+  const starts = Array.from({ length: partCount }, (_, index) => content.readInt32LE(partsOffset + index * 4));
+  starts.push(pointCount);
+  const rings = [];
+  for (let part = 0; part < partCount; part++) {
+    const ring = [];
+    for (let index = starts[part]; index < starts[part + 1]; index++) {
+      const offset = pointsOffset + index * 16;
+      ring.push(project([content.readDoubleLE(offset), content.readDoubleLE(offset + 8)]));
+    }
+    if (ring.length >= 3) rings.push(ring);
+  }
+  return ringsToGeometry(rings);
 }
 
 export function geometryBounds(geometry) {
@@ -312,6 +380,118 @@ async function collectByPnu(vworldKey, buildingKey) {
   return [...collected.values()];
 }
 
+async function readDbfHeader(handle) {
+  const prefix = Buffer.alloc(32);
+  await handle.read(prefix, 0, prefix.length, 0);
+  const recordCount = prefix.readUInt32LE(4);
+  const headerLength = prefix.readUInt16LE(8);
+  const recordLength = prefix.readUInt16LE(10);
+  const header = Buffer.alloc(headerLength);
+  await handle.read(header, 0, header.length, 0);
+  const fields = new Map();
+  let position = 1;
+  for (let offset = 32; offset < headerLength - 1; offset += 32) {
+    let end = offset;
+    while (end < offset + 11 && header[end]) end++;
+    const name = header.subarray(offset, end).toString("ascii");
+    const length = header[offset + 16];
+    fields.set(name, { position, length });
+    position += length;
+  }
+  return { recordCount, headerLength, recordLength, fields };
+}
+
+function dbfText(record, field) {
+  return record.toString("ascii", field.position, field.position + field.length).replace(/\0/g, "").trim();
+}
+
+function isoDate(value) {
+  return /^\d{8}$/.test(value) ? `${value.slice(0, 4)}-${value.slice(4, 6)}-${value.slice(6, 8)}` : value;
+}
+
+async function collectShapefile(shpPath) {
+  const base = shpPath.slice(0, -4);
+  const dbfHandle = await open(`${base}.dbf`, "r");
+  let candidates = [];
+  let sourceDate = "";
+  try {
+    const header = await readDbfHeader(dbfHandle);
+    const required = ["A1", "A2", "A22", "A23"];
+    for (const name of required) {
+      if (!header.fields.has(name)) throw new Error(`${shpPath}: DBF 필드 ${name}이 없습니다.`);
+    }
+    const batchSize = 5000;
+    const buffer = Buffer.alloc(header.recordLength * batchSize);
+    for (let start = 0; start < header.recordCount; start += batchSize) {
+      const count = Math.min(batchSize, header.recordCount - start);
+      await dbfHandle.read(buffer, 0, count * header.recordLength, header.headerLength + start * header.recordLength);
+      for (let index = 0; index < count; index++) {
+        const record = buffer.subarray(index * header.recordLength, (index + 1) * header.recordLength);
+        if (record[0] === 0x2a || dbfText(record, header.fields.get("A23")) !== "12210") continue;
+        const pnu = dbfText(record, header.fields.get("A2"));
+        const id = dbfText(record, header.fields.get("A1"));
+        const date = dbfText(record, header.fields.get("A22"));
+        if (/^12210\d{14}$/.test(pnu) && id) candidates.push({ index: start + index, id, pnu });
+        if (date > sourceDate) sourceDate = date;
+      }
+    }
+  } finally {
+    await dbfHandle.close();
+  }
+  if (!candidates.length) return { features: [], sourceDate: "" };
+
+  const index = await readFile(`${base}.shx`);
+  const shpHandle = await open(shpPath, "r");
+  const features = [];
+  let invalidGeometry = 0;
+  let outsideBounds = 0;
+  const outsideSamples = [];
+  try {
+    for (const candidate of candidates) {
+      const indexOffset = 100 + candidate.index * 8;
+      if (indexOffset + 8 > index.length) throw new Error(`${shpPath}: SHX 인덱스가 DBF보다 짧습니다.`);
+      const offset = index.readInt32BE(indexOffset) * 2 + 8;
+      const length = index.readInt32BE(indexOffset + 4) * 2;
+      const content = Buffer.alloc(length);
+      await shpHandle.read(content, 0, length, offset);
+      const geometry = parseShpPolygon(content, coordinate => proj4(ADDRESS_SHP_CRS, "EPSG:4326", coordinate));
+      if (!geometry) {
+        invalidGeometry++;
+        continue;
+      }
+      const feature = normalizeFeature({
+        properties: { gis_idntfc_no: candidate.id, pnu: candidate.pnu },
+        geometry,
+      });
+      if (feature) features.push(feature);
+      else {
+        outsideBounds++;
+        if (outsideSamples.length < 5) outsideSamples.push(`${candidate.pnu} ${geometryBounds(geometry)?.join(",")}`);
+      }
+    }
+  } finally {
+    await shpHandle.close();
+  }
+  console.log(`  SHP ${shpPath}: 동구 ${features.length}건 (무효 도형 ${invalidGeometry}, 범위 밖 ${outsideBounds})`);
+  if (outsideSamples.length) console.warn(`  범위 밖 표본: ${outsideSamples.join(" / ")}`);
+  return { features, sourceDate: isoDate(sourceDate) };
+}
+
+async function collectByShapefile(directory) {
+  if (!directory) throw new Error("SHP 수집에는 --shp-dir 경로가 필요합니다.");
+  const names = (await readdir(directory)).filter(name => name.toLowerCase().endsWith(".shp")).sort();
+  if (!names.length) throw new Error(`${directory}: SHP 파일이 없습니다.`);
+  const features = [];
+  let sourceDate = "";
+  for (const name of names) {
+    const result = await collectShapefile(join(directory, name));
+    features.push(...result.features);
+    if (result.sourceDate > sourceDate) sourceDate = result.sourceDate;
+  }
+  console.log(`SHP 수집 완료: ${features.length}건 / 원천 기준일 ${sourceDate || "미상"}`);
+  return { features, sourceDate };
+}
+
 export function partitionFeatures(features, cellSize = OUTPUT_CELL_SIZE) {
   const cells = new Map();
   const width = Math.ceil((DONGGU_BOUNDS[2] - DONGGU_BOUNDS[0]) / cellSize);
@@ -346,7 +526,7 @@ async function previousFeatureCount() {
   } catch { return 0; }
 }
 
-async function writeDataset(features, mode) {
+async function writeDataset(features, mode, metadata = {}) {
   const unique = new Map(features.map(feature => [feature.id, feature]));
   const sorted = [...unique.values()].sort((a, b) => String(a.id).localeCompare(String(b.id)));
   if (sorted.length < MIN_FEATURES) throw new Error(`수집 건수 ${sorted.length}건이 최소 기준 ${MIN_FEATURES}건보다 적습니다.`);
@@ -372,7 +552,8 @@ async function writeDataset(features, mode) {
   const manifest = {
     schemaVersion: 1,
     generatedAt: new Date().toISOString(),
-    source: "VWorld GIS건물통합정보 dt_d010",
+    source: metadata.source || "VWorld GIS건물통합정보 dt_d010",
+    ...(metadata.sourceDate ? { sourceDate: metadata.sourceDate } : {}),
     collectionMode: mode,
     bounds: DONGGU_BOUNDS,
     cellSize: OUTPUT_CELL_SIZE,
@@ -399,9 +580,20 @@ function cliOption(name, fallback = "") {
 }
 
 async function main() {
+  const probeOnly = process.argv.includes("--probe");
+  const requestedMode = cliOption("mode", "auto");
+  if (!["auto", "bbox", "pnu", "shp"].includes(requestedMode)) throw new Error("--mode는 auto, bbox, pnu, shp 중 하나여야 합니다.");
+  if (requestedMode === "shp") {
+    const result = await collectByShapefile(cliOption("shp-dir"));
+    await writeDataset(result.features, "shp", {
+      source: "주소기반산업지원서비스 GIS건물통합정보 AL_D010",
+      sourceDate: result.sourceDate,
+    });
+    return;
+  }
+
   const vworldKey = process.env.VWORLD_KEY;
   if (!vworldKey) throw new Error("VWORLD_KEY가 필요합니다.");
-  const probeOnly = process.argv.includes("--probe");
   if (probeOnly) {
     const result = await probeBBox(vworldKey);
     console.log(JSON.stringify(result, null, 2));
@@ -409,8 +601,6 @@ async function main() {
     return;
   }
 
-  const requestedMode = cliOption("mode", "auto");
-  if (!["auto", "bbox", "pnu"].includes(requestedMode)) throw new Error("--mode는 auto, bbox, pnu 중 하나여야 합니다.");
   let mode = requestedMode;
   let features;
   if (mode === "auto" || mode === "bbox") {

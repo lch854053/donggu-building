@@ -7,6 +7,7 @@ import {
   normalizeFeature,
   normalizeGeometry,
   partitionFeatures,
+  ringsToGeometry,
   splitBounds,
 } from "../scripts/collect-building-footprints.mjs";
 
@@ -25,6 +26,7 @@ test("footprint geometry normalization closes rings and rounds coordinates", () 
 test("footprint normalization rejects non-polygon and out-of-district geometry", () => {
   assert.equal(normalizeFeature({ geometry: { type: "Point", coordinates: [126.92, 35.15] } }), null);
   assert.equal(normalizeFeature({ geometry: polygon([[127, 36], [127.1, 36], [127.1, 36.1], [127, 36]]) }), null);
+  assert.ok(normalizeFeature({ geometry: polygon([[126.982, 35.13], [126.983, 35.13], [126.983, 35.131], [126.982, 35.13]]) }));
 });
 
 test("footprint feature keeps only stable map properties", () => {
@@ -42,6 +44,16 @@ test("BBOX splitting covers four quadrants and intersection includes touching ed
   assert.deepEqual(parts, [[0, 0, 1, 1], [1, 0, 2, 1], [0, 1, 1, 2], [1, 1, 2, 2]]);
   assert.equal(boundsIntersect(parts[0], parts[3]), true);
   assert.equal(boundsIntersect(parts[0], [1.1, 1.1, 2, 2]), false);
+});
+
+test("shapefile rings are grouped into multipolygons with holes", () => {
+  const outer = [[0, 0], [10, 0], [10, 10], [0, 10], [0, 0]];
+  const hole = [[2, 2], [2, 4], [4, 4], [4, 2], [2, 2]];
+  const separate = [[20, 20], [22, 20], [22, 22], [20, 22], [20, 20]];
+  const geometry = ringsToGeometry([hole, separate, outer]);
+  assert.equal(geometry.type, "MultiPolygon");
+  assert.equal(geometry.coordinates.length, 2);
+  assert.equal(geometry.coordinates[0].length, 2);
 });
 
 test("features are deterministically partitioned into viewport cells", () => {
@@ -85,6 +97,7 @@ test("map page exposes a lazy-loaded Figure-Ground subtab", () => {
   assert.match(page, /figure-ground\/manifest\.json/);
   assert.match(page, /L\.canvas\(/);
   assert.match(page, /loadFigureGroundViewport/);
+  assert.match(page, /manifest\.sourceDate/);
   assert.match(page, /saveFigureGroundPng/);
   assert.match(page, /toBlob\(resolve, "image\/png"/);
   assert.match(page, /투명 PNG 저장/);
