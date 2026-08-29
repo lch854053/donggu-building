@@ -5072,21 +5072,21 @@ let FG_AGE_MODE = false;
 const FG_CELL_DATA = new Map();
 const FG_CELL_LAYERS = new Map();
 const FG_AGE_BUCKETS = [
-  { max:4, label:"0–4년", color:"#fde725" },
-  { max:9, label:"5–9년", color:"#d8e219" },
-  { max:14, label:"10–14년", color:"#addc30" },
-  { max:19, label:"15–19년", color:"#7ad151" },
-  { max:24, label:"20–24년", color:"#42be71" },
-  { max:29, label:"25–29년", color:"#22a884" },
-  { max:34, label:"30–34년", color:"#21918c" },
-  { max:39, label:"35–39년", color:"#2a788e" },
-  { max:44, label:"40–44년", color:"#355f8d" },
-  { max:49, label:"45–49년", color:"#414487" },
-  { max:54, label:"50–54년", color:"#482878" },
-  { max:59, label:"55–59년", color:"#440154" },
-  { max:Infinity, label:"60년 이상", color:"#2b1638" },
+  { max:4, label:"0–4년", color:"#d2c4b2" },
+  { max:9, label:"5–9년", color:"#ceb7a5" },
+  { max:14, label:"10–14년", color:"#cba99f" },
+  { max:19, label:"15–19년", color:"#c99b9a" },
+  { max:24, label:"20–24년", color:"#c78d94" },
+  { max:29, label:"25–29년", color:"#c57f8d" },
+  { max:34, label:"30–34년", color:"#c37184" },
+  { max:39, label:"35–39년", color:"#c06478" },
+  { max:44, label:"40–44년", color:"#bd596d" },
+  { max:49, label:"45–49년", color:"#b94f62" },
+  { max:54, label:"50–54년", color:"#b44758" },
+  { max:59, label:"55–59년", color:"#ad4050" },
+  { max:Infinity, label:"60년 이상", color:"#a33848" },
 ];
-const FG_UNKNOWN_COLOR = "#9b9992";
+const FG_UNKNOWN_COLOR = "#aaa7a1";
 
 function fgAgeBucket(year){
   const value = Number(year);
@@ -5098,7 +5098,7 @@ function fgAgeBucket(year){
 function fgFeatureStyle(feature){
   const bucket = FG_AGE_MODE ? fgAgeBucket(feature?.properties?.year) : null;
   const color = FG_AGE_MODE ? (bucket?.color || FG_UNKNOWN_COLOR) : "#35383a";
-  return { color, weight:0, fillColor:color, fillOpacity:0.96, interactive:false };
+  return { color, weight:0, fillColor:color, fillOpacity:FG_AGE_MODE ? 0.9 : 0.96, interactive:false };
 }
 
 function renderFigureGroundAgeLegend(){
