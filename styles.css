@@ -411,6 +411,8 @@
   .fg-age-toggle input:focus-visible+.fg-toggle-track{outline:2px solid #b44758;outline-offset:3px}
   .fg-purpose-toggle input:checked+.fg-toggle-track{background:#6c82b7}
   .fg-purpose-toggle input:focus-visible+.fg-toggle-track{outline-color:#6c82b7}
+  .fg-far-toggle input:checked+.fg-toggle-track{background:#4f858e}
+  .fg-far-toggle input:focus-visible+.fg-toggle-track{outline-color:#4f858e}
   .fg-age-toggle b{display:block;font-size:12px;line-height:1.25}
   .fg-age-toggle small{display:block;margin-top:2px;font-size:9px;color:#747672}
   .fg-mode-note{margin:0 0 4px;font-family:var(--mono);font-size:8px;color:#858680}
@@ -425,8 +427,10 @@
   .fg-shape-picker input:focus-visible+span{outline:2px solid #b44758;outline-offset:2px}
   .fg-legend{position:absolute;z-index:450;left:12px;bottom:14px;width:204px;padding:10px 11px;background:rgba(247,244,238,.78);border:1px solid rgba(126,119,109,.28);border-radius:8px;box-shadow:0 4px 14px rgba(45,47,45,.1);pointer-events:none}
   .fg-age-scale{display:grid;grid-template-columns:1fr 1fr;gap:5px 8px}
-  .fg-age-scale span{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:8px;color:#5f615d;white-space:nowrap}
+  .fg-far-scale{display:grid;grid-template-columns:1fr 1fr;gap:5px 8px}
+  .fg-age-scale span,.fg-far-scale span{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:8px;color:#5f615d;white-space:nowrap}
   .fg-age-scale i{width:11px;height:11px;flex:none;background:var(--age-color)}
+  .fg-far-scale i{width:11px;height:11px;flex:none;background:var(--far-color)}
   .fg-purpose-scale{display:grid;gap:5px}
   .fg-purpose-scale span{display:flex;align-items:center;gap:6px;font-size:9px;color:#5f615d;white-space:nowrap}
   .fg-purpose-scale i{width:11px;height:11px;flex:none;background:var(--purpose-color)}
@@ -561,7 +565,7 @@
     .fg-side{flex:none;padding:10px 8px 0}
     .fg-side p{margin-bottom:12px}
     .fg-key,.fg-source{display:none}.fg-save-row{margin-top:10px}
-    .fg-age-toggle{margin-top:4px;padding:8px 0}.fg-shape-picker{margin-top:0}.fg-legend{left:12px;bottom:12px;width:min(196px,54%);padding:8px 9px}.fg-age-scale{grid-template-columns:1fr 1fr}
+    .fg-age-toggle{margin-top:4px;padding:8px 0}.fg-shape-picker{margin-top:0}.fg-legend{left:12px;bottom:12px;width:min(196px,54%);padding:8px 9px}.fg-age-scale,.fg-far-scale{grid-template-columns:1fr 1fr}
     .fg-stage{padding:4px 0 8px}.fg-disc{width:min(88vw,620px)}
   }
 

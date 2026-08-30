@@ -5,6 +5,7 @@ import {
   approvalYear,
   boundsIntersect,
   FIGURE_GROUND_PURPOSES,
+  floorAreaRatio,
   figureGroundPurpose,
   geometryBounds,
   mergeRegistryFootprints,
@@ -62,6 +63,19 @@ test("footprint approval year accepts official dates and rejects implausible val
     geometry: polygon([[126.91, 35.15], [126.911, 35.15], [126.911, 35.151], [126.91, 35.15]]),
   });
   assert.equal(feature.properties.year, 2006);
+});
+
+test("footprint floor-area ratio keeps positive registry values and treats zero as unknown", () => {
+  assert.equal(floorAreaRatio("515.928400000"), 515.9284);
+  assert.equal(floorAreaRatio("1,250.5"), 1250.5);
+  assert.equal(floorAreaRatio("0"), null);
+  assert.equal(floorAreaRatio("-1"), null);
+  assert.equal(floorAreaRatio(""), null);
+  const feature = normalizeFeature({
+    properties: { gis_idntfc_no: "far-coded", pnu: "1221010100100010001", far: "245.678" },
+    geometry: polygon([[126.91, 35.15], [126.911, 35.15], [126.911, 35.151], [126.91, 35.15]]),
+  });
+  assert.equal(feature.properties.far, 245.678);
 });
 
 test("footprint purpose keeps the five common categories and folds the rest into 기타", () => {
@@ -163,9 +177,12 @@ test("generated Figure-Ground dataset is internally consistent when present", ()
   assert.equal(manifest.ageKnownCount + manifest.ageUnknownCount, manifest.featureCount);
   assert.equal(Object.values(manifest.purposeCounts).reduce((sum, count) => sum + count, 0), manifest.featureCount);
   assert.equal(typeof manifest.registrySupplementCount, "number");
+  assert.equal(typeof manifest.farKnownCount, "number");
+  assert.equal(typeof manifest.farUnknownCount, "number");
   assert.ok(manifest.ageKnownCount / manifest.featureCount >= 0.6);
   const ids = new Set();
   let registryCount = 0;
+  let farCount = 0;
   for (const cell of manifest.cells) {
     const collection = JSON.parse(readFileSync(new URL(`../data/figure-ground/${cell.file}`, import.meta.url), "utf8"));
     assert.equal(collection.type, "FeatureCollection");
@@ -177,11 +194,17 @@ test("generated Figure-Ground dataset is internally consistent when present", ()
       assert.match(feature.properties.pnu, /^(12210|29110)\d{14}$/);
       assert.ok(FIGURE_GROUND_PURPOSES.includes(feature.properties.purpose));
       if (feature.properties.source === "registry") registryCount++;
+      if (feature.properties.far !== undefined) {
+        farCount++;
+        assert.equal(floorAreaRatio(feature.properties.far), feature.properties.far);
+      }
       if (feature.properties.year !== undefined) assert.equal(approvalYear(feature.properties.year), feature.properties.year);
     }
   }
   assert.equal(ids.size, manifest.featureCount);
   assert.equal(registryCount, manifest.registrySupplementCount);
+  assert.equal(farCount, manifest.farKnownCount);
+  assert.equal(farCount + manifest.farUnknownCount, manifest.featureCount);
 });
 
 test("map page exposes a lazy-loaded Figure-Ground subtab", () => {
@@ -201,6 +224,10 @@ test("map page exposes a lazy-loaded Figure-Ground subtab", () => {
   assert.match(page, /setFigureGroundAgeMode/);
   assert.match(page, /fgPurposeToggle/);
   assert.match(page, /setFigureGroundPurposeMode/);
+  assert.match(page, /fgFarToggle/);
+  assert.match(page, /setFigureGroundFarMode/);
+  assert.match(page, /FG_FAR_BUCKETS/);
+  assert.match(page, /farKnownCount/);
   assert.match(page, /FG_PURPOSE_BUCKETS/);
   assert.match(page, /purposeCounts/);
   assert.match(page, /setFigureGroundShape/);

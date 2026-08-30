@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-08-30T03:59:14.718Z",
+  "generatedAt": "2026-08-30T04:36:43.955Z",
   "source": "VWorld GIS건물통합정보 + 도로명주소 건물 + 시설물통합정보",
   "sourceDate": "2026-08",
   "collectionMode": "road-shp",
@@ -14,6 +14,8 @@
   "featureCount": 24012,
   "ageKnownCount": 14990,
   "ageUnknownCount": 9022,
+  "farKnownCount": 5957,
+  "farUnknownCount": 18055,
   "registrySupplementCount": 32,
   "purposeCounts": {
     "단독주택": 11975,
@@ -33,7 +35,7 @@
         35.158
       ],
       "count": 34,
-      "bytes": 12648,
+      "bytes": 12696,
       "file": "cells/x01-y08.geojson"
     },
     {
@@ -45,7 +47,7 @@
         35.118
       ],
       "count": 9,
-      "bytes": 3809,
+      "bytes": 3821,
       "file": "cells/x02-y04.geojson"
     },
     {
@@ -57,7 +59,7 @@
         35.148
       ],
       "count": 1118,
-      "bytes": 442339,
+      "bytes": 447588,
       "file": "cells/x02-y07.geojson"
     },
     {
@@ -69,7 +71,7 @@
         35.158
       ],
       "count": 2148,
-      "bytes": 896279,
+      "bytes": 904520,
       "file": "cells/x02-y08.geojson"
     },
     {
@@ -81,7 +83,7 @@
         35.168
       ],
       "count": 1250,
-      "bytes": 563364,
+      "bytes": 567269,
       "file": "cells/x02-y09.geojson"
     },
     {
@@ -93,7 +95,7 @@
         35.098
       ],
       "count": 18,
-      "bytes": 6561,
+      "bytes": 6632,
       "file": "cells/x03-y02.geojson"
     },
     {
@@ -105,7 +107,7 @@
         35.108
       ],
       "count": 34,
-      "bytes": 13082,
+      "bytes": 13283,
       "file": "cells/x03-y03.geojson"
     },
     {
@@ -117,7 +119,7 @@
         35.118
       ],
       "count": 104,
-      "bytes": 38966,
+      "bytes": 39361,
       "file": "cells/x03-y04.geojson"
     },
     {
@@ -129,7 +131,7 @@
         35.128
       ],
       "count": 94,
-      "bytes": 46350,
+      "bytes": 46413,
       "file": "cells/x03-y05.geojson"
     },
     {
@@ -141,7 +143,7 @@
         35.138
       ],
       "count": 1401,
-      "bytes": 531325,
+      "bytes": 532825,
       "file": "cells/x03-y06.geojson"
     },
     {
@@ -153,7 +155,7 @@
         35.148
       ],
       "count": 1960,
-      "bytes": 761237,
+      "bytes": 768611,
       "file": "cells/x03-y07.geojson"
     },
     {
@@ -165,7 +167,7 @@
         35.158
       ],
       "count": 3700,
-      "bytes": 1609548,
+      "bytes": 1619767,
       "file": "cells/x03-y08.geojson"
     },
     {
@@ -177,7 +179,7 @@
         35.168
       ],
       "count": 1443,
-      "bytes": 613716,
+      "bytes": 616373,
       "file": "cells/x03-y09.geojson"
     },
     {
@@ -189,7 +191,7 @@
         35.088
       ],
       "count": 2,
-      "bytes": 1091,
+      "bytes": 1102,
       "file": "cells/x04-y01.geojson"
     },
     {
@@ -201,7 +203,7 @@
         35.098
       ],
       "count": 190,
-      "bytes": 69912,
+      "bytes": 70360,
       "file": "cells/x04-y02.geojson"
     },
     {
@@ -213,7 +215,7 @@
         35.108
       ],
       "count": 137,
-      "bytes": 67798,
+      "bytes": 68194,
       "file": "cells/x04-y03.geojson"
     },
     {
@@ -225,7 +227,7 @@
         35.118
       ],
       "count": 104,
-      "bytes": 37250,
+      "bytes": 37504,
       "file": "cells/x04-y04.geojson"
     },
     {
@@ -237,7 +239,7 @@
         35.128
       ],
       "count": 1643,
-      "bytes": 650640,
+      "bytes": 655141,
       "file": "cells/x04-y05.geojson"
     },
     {
@@ -249,7 +251,7 @@
         35.138
       ],
       "count": 1468,
-      "bytes": 591905,
+      "bytes": 595720,
       "file": "cells/x04-y06.geojson"
     },
     {
@@ -261,7 +263,7 @@
         35.148
       ],
       "count": 620,
-      "bytes": 244637,
+      "bytes": 247667,
       "file": "cells/x04-y07.geojson"
     },
     {
@@ -273,7 +275,7 @@
         35.158
       ],
       "count": 3695,
-      "bytes": 1502917,
+      "bytes": 1518732,
       "file": "cells/x04-y08.geojson"
     },
     {
@@ -285,7 +287,7 @@
         35.168
       ],
       "count": 814,
-      "bytes": 324410,
+      "bytes": 326458,
       "file": "cells/x04-y09.geojson"
     },
     {
@@ -297,7 +299,7 @@
         35.078
       ],
       "count": 3,
-      "bytes": 1040,
+      "bytes": 1051,
       "file": "cells/x05-y00.geojson"
     },
     {
@@ -309,7 +311,7 @@
         35.088
       ],
       "count": 5,
-      "bytes": 1777,
+      "bytes": 1810,
       "file": "cells/x05-y01.geojson"
     },
     {
@@ -321,7 +323,7 @@
         35.098
       ],
       "count": 190,
-      "bytes": 80731,
+      "bytes": 81141,
       "file": "cells/x05-y02.geojson"
     },
     {
@@ -333,7 +335,7 @@
         35.108
       ],
       "count": 96,
-      "bytes": 38420,
+      "bytes": 38711,
       "file": "cells/x05-y03.geojson"
     },
     {
@@ -345,7 +347,7 @@
         35.118
       ],
       "count": 11,
-      "bytes": 3858,
+      "bytes": 3881,
       "file": "cells/x05-y04.geojson"
     },
     {
@@ -357,7 +359,7 @@
         35.128
       ],
       "count": 72,
-      "bytes": 25121,
+      "bytes": 25252,
       "file": "cells/x05-y05.geojson"
     },
     {
@@ -369,7 +371,7 @@
         35.138
       ],
       "count": 406,
-      "bytes": 160836,
+      "bytes": 162291,
       "file": "cells/x05-y06.geojson"
     },
     {
@@ -381,7 +383,7 @@
         35.148
       ],
       "count": 134,
-      "bytes": 49234,
+      "bytes": 49575,
       "file": "cells/x05-y07.geojson"
     },
     {
@@ -393,7 +395,7 @@
         35.158
       ],
       "count": 295,
-      "bytes": 109449,
+      "bytes": 109991,
       "file": "cells/x05-y08.geojson"
     },
     {
@@ -429,7 +431,7 @@
         35.088
       ],
       "count": 7,
-      "bytes": 3200,
+      "bytes": 3211,
       "file": "cells/x06-y01.geojson"
     },
     {
@@ -441,7 +443,7 @@
         35.098
       ],
       "count": 131,
-      "bytes": 68679,
+      "bytes": 69037,
       "file": "cells/x06-y02.geojson"
     },
     {
@@ -477,7 +479,7 @@
         35.128
       ],
       "count": 24,
-      "bytes": 8196,
+      "bytes": 8297,
       "file": "cells/x06-y05.geojson"
     },
     {
@@ -489,7 +491,7 @@
         35.138
       ],
       "count": 272,
-      "bytes": 102251,
+      "bytes": 103229,
       "file": "cells/x06-y06.geojson"
     },
     {
@@ -501,7 +503,7 @@
         35.148
       ],
       "count": 12,
-      "bytes": 4040,
+      "bytes": 4051,
       "file": "cells/x06-y07.geojson"
     },
     {
@@ -513,7 +515,7 @@
         35.158
       ],
       "count": 19,
-      "bytes": 6844,
+      "bytes": 6867,
       "file": "cells/x06-y08.geojson"
     },
     {
@@ -525,7 +527,7 @@
         35.098
       ],
       "count": 137,
-      "bytes": 49699,
+      "bytes": 50214,
       "file": "cells/x07-y02.geojson"
     },
     {
@@ -537,7 +539,7 @@
         35.108
       ],
       "count": 12,
-      "bytes": 4724,
+      "bytes": 4747,
       "file": "cells/x07-y03.geojson"
     },
     {
@@ -561,7 +563,7 @@
         35.138
       ],
       "count": 136,
-      "bytes": 46225,
+      "bytes": 46310,
       "file": "cells/x07-y06.geojson"
     },
     {
@@ -597,7 +599,7 @@
         35.128
       ],
       "count": 29,
-      "bytes": 9775,
+      "bytes": 9810,
       "file": "cells/x08-y05.geojson"
     },
     {

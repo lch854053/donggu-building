@@ -197,6 +197,7 @@ export function normalizeFeature(feature) {
   const properties = feature.properties || {};
   const id = featureId(properties, geometry);
   const year = approvalYear(properties.year || properties.useAprDay);
+  const far = floorAreaRatio(properties.far ?? properties.vlRat);
   const rawPurpose = sourcePurpose(properties);
   const purpose = rawPurpose === null ? null : figureGroundPurpose(rawPurpose);
   return {
@@ -207,6 +208,7 @@ export function normalizeFeature(feature) {
       pnu: String(properties.pnu || ""),
       ...(year ? { year } : {}),
       ...(purpose ? { purpose } : {}),
+      ...(far !== null ? { far } : {}),
     },
     geometry,
   };
@@ -215,6 +217,13 @@ export function normalizeFeature(feature) {
 export function approvalYear(value) {
   const year = Number(String(value || "").replace(/\D/g, "").slice(0, 4));
   return Number.isInteger(year) && year >= 1800 && year <= new Date().getFullYear() ? year : null;
+}
+
+export function floorAreaRatio(value) {
+  const raw = String(value ?? "").replace(/,/g, "").trim();
+  if (!raw) return null;
+  const ratio = Number(raw);
+  return Number.isFinite(ratio) && ratio > 0 ? ratio : null;
 }
 
 function isDongguFeature(feature) {
@@ -575,7 +584,7 @@ async function readRegistryAttributes(csvPath) {
   if (!lines.length) throw new Error(`${csvPath}: CSV가 비어 있습니다.`);
   const headers = parseCsvLine(lines[0]).map(value => value.trim());
   const indexes = new Map(headers.map((name, index) => [name, index]));
-  for (const name of ["GIS건물통합식별번호", "고유번호", "주요용도코드", "사용승인일자", "데이터기준일자"]) {
+  for (const name of ["GIS건물통합식별번호", "고유번호", "주요용도코드", "사용승인일자", "용적율", "데이터기준일자"]) {
     if (!indexes.has(name)) throw new Error(`${csvPath}: CSV 필드 ${name}이 없습니다.`);
   }
 
@@ -590,10 +599,12 @@ async function readRegistryAttributes(csvPath) {
     const date = values[indexes.get("데이터기준일자")] || "";
     if (date > sourceDate) sourceDate = date;
     const year = approvalYear(values[indexes.get("사용승인일자")]);
+    const far = floorAreaRatio(values[indexes.get("용적율")]);
     attributes.set(id, {
       pnu,
       purpose: figureGroundPurpose(values[indexes.get("주요용도코드")]),
       ...(year ? { year } : {}),
+      ...(far !== null ? { far } : {}),
     });
   }
   return { attributes, sourceDate, rowCount: attributes.size };
@@ -664,6 +675,7 @@ async function collectRegistryShapefile(shpPath, attributes, excludeIds = new Se
           pnu: candidate.pnu,
           purpose: candidate.attribute.purpose,
           year: candidate.attribute.year,
+          far: candidate.attribute.far,
         },
         geometry,
       });
@@ -909,6 +921,19 @@ async function previousPurposeMap() {
   return byId;
 }
 
+async function previousFarMap() {
+  const byId = new Map();
+  try {
+    for (const feature of await readCurrentDataset()) {
+      const far = floorAreaRatio(feature.properties?.far);
+      if (far === null) continue;
+      byId.set(`id:${feature.id}`, far);
+      if (feature.properties?.pnu) byId.set(`pnu:${legacyPnu(feature.properties.pnu)}`, far);
+    }
+  } catch { /* 기존 데이터가 없는 최초 생성 */ }
+  return byId;
+}
+
 async function previousRegistryFeatures() {
   try {
     return (await readCurrentDataset()).filter(feature => feature.properties?.source === "registry");
@@ -920,11 +945,15 @@ async function writeDataset(features, mode, metadata = {}) {
   const featureIds = new Set((features || []).map(feature => String(feature?.id || "")));
   const input = [...(features || []), ...preserved.filter(feature => !featureIds.has(String(feature.id)))];
   const previousPurposes = await previousPurposeMap();
+  const previousFars = await previousFarMap();
   const enriched = input.map(feature => {
     const previous = previousPurposes.get(`id:${feature.id}`)
       || previousPurposes.get(`pnu:${legacyPnu(feature.properties?.pnu)}`);
+    const far = floorAreaRatio(feature.properties?.far)
+      ?? previousFars.get(`id:${feature.id}`)
+      ?? previousFars.get(`pnu:${legacyPnu(feature.properties?.pnu)}`);
     const purpose = figureGroundPurpose(feature.properties?.purpose || previous);
-    return { ...feature, properties: { ...feature.properties, purpose } };
+    return { ...feature, properties: { ...feature.properties, purpose, ...(far !== undefined ? { far } : {}) } };
   });
   const unique = new Map(enriched.map(feature => [feature.id, feature]));
   const sorted = [...unique.values()].sort((a, b) => String(a.id).localeCompare(String(b.id)));
@@ -961,6 +990,8 @@ async function writeDataset(features, mode, metadata = {}) {
     featureCount: sorted.length,
     ageKnownCount: sorted.filter(feature => approvalYear(feature.properties?.year)).length,
     ageUnknownCount: sorted.filter(feature => !approvalYear(feature.properties?.year)).length,
+    farKnownCount: sorted.filter(feature => floorAreaRatio(feature.properties?.far)).length,
+    farUnknownCount: sorted.filter(feature => !floorAreaRatio(feature.properties?.far)).length,
     registrySupplementCount: sorted.filter(feature => feature.properties?.source === "registry").length,
     purposeCounts,
     cells: manifestCells,
@@ -1005,20 +1036,25 @@ async function main() {
     if (Boolean(registryShpPath) !== Boolean(registryCsvPath)) {
       throw new Error("건축물대장 보완에는 --registry-shp와 --registry-csv를 함께 지정해야 합니다.");
     }
+    const registry = registryCsvPath ? await readRegistryAttributes(registryCsvPath) : null;
     const currentDataset = await readCurrentDataset();
     const current = currentDataset
       .filter(feature => !(registryShpPath && feature.properties?.source === "registry"))
       .map(feature => {
-      const data = attributes.get(String(feature.id));
-      return data ? { ...feature, properties: { ...feature.properties, ...data } } : feature;
-    });
+        const data = attributes.get(String(feature.id));
+        const far = registry?.attributes.get(String(feature.id))?.far;
+        if (!data && far === undefined) return feature;
+        return {
+          ...feature,
+          properties: { ...feature.properties, ...(data || {}), ...(far !== undefined ? { far } : {}) },
+        };
+      });
     const apartments = JSON.parse(await readFile(join(ROOT, "apt_geo.json"), "utf8"));
     const merged = mergeRoadApartmentFootprints(current, road.features, apartments);
     console.log(`공동주택 필지 교체: ${merged.replacementCount}개 단지 / 기존 ${merged.removedCount}건 제거 / 현행 ${merged.addedCount}건 추가`);
     let result = merged.features;
     let registryMetadata = {};
-    if (registryShpPath) {
-      const registry = await readRegistryAttributes(registryCsvPath);
+    if (registry) {
       const fallback = await collectRegistryShapefile(
         registryShpPath,
         registry.attributes,

@@ -583,6 +583,11 @@
             <span class="fg-toggle-track" aria-hidden="true"><span></span></span>
             <span><b>건축물 용도 구분</b><small>주요 5종 기준 · 나머지는 기타</small></span>
           </label>
+          <label class="fg-age-toggle fg-far-toggle" for="fgFarToggle">
+            <input type="checkbox" id="fgFarToggle" onchange="setFigureGroundFarMode(this.checked)">
+            <span class="fg-toggle-track" aria-hidden="true"><span></span></span>
+            <span><b>건축물 용적률 구분</b><small>건축물대장 기재값 · 구간별 색상</small></span>
+          </label>
           <div class="fg-mode-note">색상 방식은 한 가지만 선택됩니다.</div>
           <fieldset class="fg-shape-picker">
             <legend>배경 형태</legend>
@@ -5103,6 +5108,13 @@ const FG_PURPOSE_BUCKETS = [
   { label:"숙박시설", color:"#a274a7" },
   { label:"기타", color:FG_UNKNOWN_COLOR },
 ];
+const FG_FAR_BUCKETS = [
+  { max:100, label:"100% 이하", color:"#d6e4df" },
+  { max:200, label:"100% 초과–200% 이하", color:"#a9cbc3" },
+  { max:300, label:"200% 초과–300% 이하", color:"#79aaa7" },
+  { max:500, label:"300% 초과–500% 이하", color:"#4f858e" },
+  { max:Infinity, label:"500% 초과", color:"#315d78" },
+];
 
 function fgAgeBucket(year){
   const value = Number(year);
@@ -5115,11 +5127,18 @@ function fgPurposeBucket(purpose){
   return FG_PURPOSE_BUCKETS.find(bucket => bucket.label === purpose) || FG_PURPOSE_BUCKETS.at(-1);
 }
 
+function fgFarBucket(far){
+  const value = Number(far);
+  if(!Number.isFinite(value) || value <= 0) return null;
+  return FG_FAR_BUCKETS.find(bucket => value <= bucket.max) || FG_FAR_BUCKETS.at(-1);
+}
+
 function fgFeatureStyle(feature){
   const ageBucket = FG_COLOR_MODE === "age" ? fgAgeBucket(feature?.properties?.year) : null;
   const purposeBucket = FG_COLOR_MODE === "purpose" ? fgPurposeBucket(feature?.properties?.purpose) : null;
-  const bucket = ageBucket || purposeBucket;
-  const color = bucket?.color || (FG_COLOR_MODE === "age" ? FG_UNKNOWN_COLOR : "#35383a");
+  const farBucket = FG_COLOR_MODE === "far" ? fgFarBucket(feature?.properties?.far) : null;
+  const bucket = ageBucket || purposeBucket || farBucket;
+  const color = bucket?.color || (["age", "far"].includes(FG_COLOR_MODE) ? FG_UNKNOWN_COLOR : "#35383a");
   return { color, weight:0, fillColor:color, fillOpacity:FG_COLOR_MODE === "plain" ? 0.96 : 0.9, interactive:false };
 }
 
@@ -5131,6 +5150,15 @@ function renderFigureGroundLegend(){
     legend.innerHTML = `<div class="fg-purpose-scale">${FG_PURPOSE_BUCKETS.map(bucket =>
       `<span><i style="--purpose-color:${bucket.color}"></i><b>${bucket.label}</b><em>${Number(counts[bucket.label] || 0).toLocaleString("ko-KR")}</em></span>`).join("")}</div>
       <p>상위 5개 용도 외 건물은 기타로 표시</p>`;
+    return;
+  }
+  if(FG_COLOR_MODE === "far"){
+    const known = Number(FG_MANIFEST?.farKnownCount || 0);
+    const unknown = Number(FG_MANIFEST?.farUnknownCount || 0);
+    legend.innerHTML = `<div class="fg-far-scale">${FG_FAR_BUCKETS.map(bucket =>
+      `<span><i style="--far-color:${bucket.color}"></i>${bucket.label}</span>`).join("")}
+      <span><i style="--far-color:${FG_UNKNOWN_COLOR}"></i>미확인</span></div>
+      <p>기재값 확인 ${known.toLocaleString("ko-KR")}건 · 미확인 ${unknown.toLocaleString("ko-KR")}건<br>법정 허용 용적률 판정이 아닌 건축물대장 기재값</p>`;
     return;
   }
   if(FG_COLOR_MODE !== "age"){
@@ -5146,11 +5174,13 @@ function renderFigureGroundLegend(){
 }
 
 function setFigureGroundColorMode(mode){
-  FG_COLOR_MODE = ["age", "purpose"].includes(mode) ? mode : "plain";
+  FG_COLOR_MODE = ["age", "purpose", "far"].includes(mode) ? mode : "plain";
   const ageToggle = document.getElementById("fgAgeToggle");
   const purposeToggle = document.getElementById("fgPurposeToggle");
+  const farToggle = document.getElementById("fgFarToggle");
   if(ageToggle) ageToggle.checked = FG_COLOR_MODE === "age";
   if(purposeToggle) purposeToggle.checked = FG_COLOR_MODE === "purpose";
+  if(farToggle) farToggle.checked = FG_COLOR_MODE === "far";
   const legend = document.getElementById("fgLegend");
   if(legend){
     legend.hidden = FG_COLOR_MODE === "plain";
@@ -5165,6 +5195,10 @@ function setFigureGroundAgeMode(enabled){
 
 function setFigureGroundPurposeMode(enabled){
   setFigureGroundColorMode(enabled ? "purpose" : (FG_COLOR_MODE === "purpose" ? "plain" : FG_COLOR_MODE));
+}
+
+function setFigureGroundFarMode(enabled){
+  setFigureGroundColorMode(enabled ? "far" : (FG_COLOR_MODE === "far" ? "plain" : FG_COLOR_MODE));
 }
 
 function setFigureGroundShape(shape){
