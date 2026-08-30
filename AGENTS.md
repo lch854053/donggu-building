@@ -88,6 +88,7 @@ npm run update-officetel # 건축인허가 기반 오피스텔 자동 발견
 - **주차대수**: `totPkngCnt` 우선, 없으면 `indrAutoUtcnt + oudrAutoUtcnt + indrMechUtcnt + oudrMechUtcnt` 합산.
 - **K-APT 미등록 공동주택**: `aptlist_extra_donggu.json`에 수동 추가. `update-officetel`이 자동으로 오피스텔을 찾아 병합.
 - **Figure-Ground 용적률**: D199 `용적율` 양수만 `far`로 저장하고 0·음수·미기재는 미확인으로 처리한다. 지도 구간은 `100% 이하`·`100% 초과–200% 이하`·`200% 초과–300% 이하`·`300% 초과–500% 이하`·`500% 초과`다.
+- **Figure-Ground 지상층수**: D199 `지상층수` 양의 정수만 `floors`로 저장하고 0·미기재는 미확인으로 처리한다. 지도 구간은 `1층`·`2–3층`·`4–5층`·`6–9층`·`10–19층`·`20층 이상`이다.
 
 ## 주의사항
 

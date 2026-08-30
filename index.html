@@ -588,6 +588,11 @@
             <span class="fg-toggle-track" aria-hidden="true"><span></span></span>
             <span><b>건축물 용적률 구분</b><small>건축물대장 기재값 · 구간별 색상</small></span>
           </label>
+          <label class="fg-age-toggle fg-floor-toggle" for="fgFloorToggle">
+            <input type="checkbox" id="fgFloorToggle" onchange="setFigureGroundFloorMode(this.checked)">
+            <span class="fg-toggle-track" aria-hidden="true"><span></span></span>
+            <span><b>건축물 지상층수 구분</b><small>건축물대장 기재값 · 구간별 색상</small></span>
+          </label>
           <div class="fg-mode-note">색상 방식은 한 가지만 선택됩니다.</div>
           <fieldset class="fg-shape-picker">
             <legend>배경 형태</legend>
@@ -5115,6 +5120,14 @@ const FG_FAR_BUCKETS = [
   { max:500, label:"300% 초과–500% 이하", color:"#4f858e" },
   { max:Infinity, label:"500% 초과", color:"#315d78" },
 ];
+const FG_FLOOR_BUCKETS = [
+  { max:1, label:"1층", color:"#d9dfcf" },
+  { max:3, label:"2–3층", color:"#bdc9a8" },
+  { max:5, label:"4–5층", color:"#9eaf86" },
+  { max:9, label:"6–9층", color:"#7f966d" },
+  { max:19, label:"10–19층", color:"#607b5d" },
+  { max:Infinity, label:"20층 이상", color:"#405c4e" },
+];
 
 function fgAgeBucket(year){
   const value = Number(year);
@@ -5133,12 +5146,19 @@ function fgFarBucket(far){
   return FG_FAR_BUCKETS.find(bucket => value <= bucket.max) || FG_FAR_BUCKETS.at(-1);
 }
 
+function fgFloorBucket(floors){
+  const value = Number(floors);
+  if(!Number.isInteger(value) || value <= 0) return null;
+  return FG_FLOOR_BUCKETS.find(bucket => value <= bucket.max) || FG_FLOOR_BUCKETS.at(-1);
+}
+
 function fgFeatureStyle(feature){
   const ageBucket = FG_COLOR_MODE === "age" ? fgAgeBucket(feature?.properties?.year) : null;
   const purposeBucket = FG_COLOR_MODE === "purpose" ? fgPurposeBucket(feature?.properties?.purpose) : null;
   const farBucket = FG_COLOR_MODE === "far" ? fgFarBucket(feature?.properties?.far) : null;
-  const bucket = ageBucket || purposeBucket || farBucket;
-  const color = bucket?.color || (["age", "far"].includes(FG_COLOR_MODE) ? FG_UNKNOWN_COLOR : "#35383a");
+  const floorBucket = FG_COLOR_MODE === "floor" ? fgFloorBucket(feature?.properties?.floors) : null;
+  const bucket = ageBucket || purposeBucket || farBucket || floorBucket;
+  const color = bucket?.color || (["age", "far", "floor"].includes(FG_COLOR_MODE) ? FG_UNKNOWN_COLOR : "#35383a");
   return { color, weight:0, fillColor:color, fillOpacity:FG_COLOR_MODE === "plain" ? 0.96 : 0.9, interactive:false };
 }
 
@@ -5156,9 +5176,18 @@ function renderFigureGroundLegend(){
     const known = Number(FG_MANIFEST?.farKnownCount || 0);
     const unknown = Number(FG_MANIFEST?.farUnknownCount || 0);
     legend.innerHTML = `<div class="fg-far-scale">${FG_FAR_BUCKETS.map(bucket =>
-      `<span><i style="--far-color:${bucket.color}"></i>${bucket.label}</span>`).join("")}
+      `<span><i style="--far-color:${bucket.color}"></i><b>${bucket.label}</b></span>`).join("")}
       <span><i style="--far-color:${FG_UNKNOWN_COLOR}"></i>미확인</span></div>
       <p>기재값 확인 ${known.toLocaleString("ko-KR")}건 · 미확인 ${unknown.toLocaleString("ko-KR")}건<br>법정 허용 용적률 판정이 아닌 건축물대장 기재값</p>`;
+    return;
+  }
+  if(FG_COLOR_MODE === "floor"){
+    const known = Number(FG_MANIFEST?.floorKnownCount || 0);
+    const unknown = Number(FG_MANIFEST?.floorUnknownCount || 0);
+    legend.innerHTML = `<div class="fg-floor-scale">${FG_FLOOR_BUCKETS.map(bucket =>
+      `<span><i style="--floor-color:${bucket.color}"></i>${bucket.label}</span>`).join("")}
+      <span><i style="--floor-color:${FG_UNKNOWN_COLOR}"></i>미확인</span></div>
+      <p>지상층수 확인 ${known.toLocaleString("ko-KR")}건 · 미확인 ${unknown.toLocaleString("ko-KR")}건<br>건축물대장 기재값</p>`;
     return;
   }
   if(FG_COLOR_MODE !== "age"){
@@ -5174,13 +5203,15 @@ function renderFigureGroundLegend(){
 }
 
 function setFigureGroundColorMode(mode){
-  FG_COLOR_MODE = ["age", "purpose", "far"].includes(mode) ? mode : "plain";
+  FG_COLOR_MODE = ["age", "purpose", "far", "floor"].includes(mode) ? mode : "plain";
   const ageToggle = document.getElementById("fgAgeToggle");
   const purposeToggle = document.getElementById("fgPurposeToggle");
   const farToggle = document.getElementById("fgFarToggle");
+  const floorToggle = document.getElementById("fgFloorToggle");
   if(ageToggle) ageToggle.checked = FG_COLOR_MODE === "age";
   if(purposeToggle) purposeToggle.checked = FG_COLOR_MODE === "purpose";
   if(farToggle) farToggle.checked = FG_COLOR_MODE === "far";
+  if(floorToggle) floorToggle.checked = FG_COLOR_MODE === "floor";
   const legend = document.getElementById("fgLegend");
   if(legend){
     legend.hidden = FG_COLOR_MODE === "plain";
@@ -5199,6 +5230,10 @@ function setFigureGroundPurposeMode(enabled){
 
 function setFigureGroundFarMode(enabled){
   setFigureGroundColorMode(enabled ? "far" : (FG_COLOR_MODE === "far" ? "plain" : FG_COLOR_MODE));
+}
+
+function setFigureGroundFloorMode(enabled){
+  setFigureGroundColorMode(enabled ? "floor" : (FG_COLOR_MODE === "floor" ? "plain" : FG_COLOR_MODE));
 }
 
 function setFigureGroundShape(shape){

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import {
   approvalYear,
+  buildingFloors,
   boundsIntersect,
   FIGURE_GROUND_PURPOSES,
   floorAreaRatio,
@@ -76,6 +77,19 @@ test("footprint floor-area ratio keeps positive registry values and treats zero 
     geometry: polygon([[126.91, 35.15], [126.911, 35.15], [126.911, 35.151], [126.91, 35.15]]),
   });
   assert.equal(feature.properties.far, 245.678);
+});
+
+test("footprint ground-floor count keeps positive integers and treats zero as unknown", () => {
+  assert.equal(buildingFloors("12"), 12);
+  assert.equal(buildingFloors("2.0"), 2);
+  assert.equal(buildingFloors("0"), null);
+  assert.equal(buildingFloors("-1"), null);
+  assert.equal(buildingFloors(""), null);
+  const feature = normalizeFeature({
+    properties: { gis_idntfc_no: "floors-coded", pnu: "1221010100100010001", floors: "5" },
+    geometry: polygon([[126.91, 35.15], [126.911, 35.15], [126.911, 35.151], [126.91, 35.15]]),
+  });
+  assert.equal(feature.properties.floors, 5);
 });
 
 test("footprint purpose keeps the five common categories and folds the rest into 기타", () => {
@@ -179,10 +193,13 @@ test("generated Figure-Ground dataset is internally consistent when present", ()
   assert.equal(typeof manifest.registrySupplementCount, "number");
   assert.equal(typeof manifest.farKnownCount, "number");
   assert.equal(typeof manifest.farUnknownCount, "number");
+  assert.equal(typeof manifest.floorKnownCount, "number");
+  assert.equal(typeof manifest.floorUnknownCount, "number");
   assert.ok(manifest.ageKnownCount / manifest.featureCount >= 0.6);
   const ids = new Set();
   let registryCount = 0;
   let farCount = 0;
+  let floorCount = 0;
   for (const cell of manifest.cells) {
     const collection = JSON.parse(readFileSync(new URL(`../data/figure-ground/${cell.file}`, import.meta.url), "utf8"));
     assert.equal(collection.type, "FeatureCollection");
@@ -198,6 +215,10 @@ test("generated Figure-Ground dataset is internally consistent when present", ()
         farCount++;
         assert.equal(floorAreaRatio(feature.properties.far), feature.properties.far);
       }
+      if (feature.properties.floors !== undefined) {
+        floorCount++;
+        assert.equal(buildingFloors(feature.properties.floors), feature.properties.floors);
+      }
       if (feature.properties.year !== undefined) assert.equal(approvalYear(feature.properties.year), feature.properties.year);
     }
   }
@@ -205,6 +226,8 @@ test("generated Figure-Ground dataset is internally consistent when present", ()
   assert.equal(registryCount, manifest.registrySupplementCount);
   assert.equal(farCount, manifest.farKnownCount);
   assert.equal(farCount + manifest.farUnknownCount, manifest.featureCount);
+  assert.equal(floorCount, manifest.floorKnownCount);
+  assert.equal(floorCount + manifest.floorUnknownCount, manifest.featureCount);
 });
 
 test("map page exposes a lazy-loaded Figure-Ground subtab", () => {
@@ -228,6 +251,10 @@ test("map page exposes a lazy-loaded Figure-Ground subtab", () => {
   assert.match(page, /setFigureGroundFarMode/);
   assert.match(page, /FG_FAR_BUCKETS/);
   assert.match(page, /farKnownCount/);
+  assert.match(page, /fgFloorToggle/);
+  assert.match(page, /setFigureGroundFloorMode/);
+  assert.match(page, /FG_FLOOR_BUCKETS/);
+  assert.match(page, /floorKnownCount/);
   assert.match(page, /FG_PURPOSE_BUCKETS/);
   assert.match(page, /purposeCounts/);
   assert.match(page, /setFigureGroundShape/);
@@ -236,6 +263,8 @@ test("map page exposes a lazy-loaded Figure-Ground subtab", () => {
   assert.match(page, /name="fgShape" value="square"/);
   assert.match(page, /disc\.classList\.contains\("is-square"\)/);
   assert.match(styles, /\.fg-shape-picker span\{[^}]*white-space:nowrap/);
+  assert.match(styles, /\.fg-far-scale\{[^}]*minmax\(0,1fr\)/);
+  assert.match(styles, /\.fg-far-scale b\{[^}]*overflow-wrap:anywhere/);
   assert.match(styles, /\.fg-stage\{position:relative/);
   assert.match(page, /fgFeatureStyle/);
   assert.match(page, /"image\/png"/);

@@ -198,6 +198,7 @@ export function normalizeFeature(feature) {
   const id = featureId(properties, geometry);
   const year = approvalYear(properties.year || properties.useAprDay);
   const far = floorAreaRatio(properties.far ?? properties.vlRat);
+  const floors = buildingFloors(properties.floors);
   const rawPurpose = sourcePurpose(properties);
   const purpose = rawPurpose === null ? null : figureGroundPurpose(rawPurpose);
   return {
@@ -209,6 +210,7 @@ export function normalizeFeature(feature) {
       ...(year ? { year } : {}),
       ...(purpose ? { purpose } : {}),
       ...(far !== null ? { far } : {}),
+      ...(floors !== null ? { floors } : {}),
     },
     geometry,
   };
@@ -224,6 +226,13 @@ export function floorAreaRatio(value) {
   if (!raw) return null;
   const ratio = Number(raw);
   return Number.isFinite(ratio) && ratio > 0 ? ratio : null;
+}
+
+export function buildingFloors(value) {
+  const raw = String(value ?? "").replace(/,/g, "").trim();
+  if (!raw) return null;
+  const floors = Number(raw);
+  return Number.isInteger(floors) && floors > 0 ? floors : null;
 }
 
 function isDongguFeature(feature) {
@@ -584,7 +593,7 @@ async function readRegistryAttributes(csvPath) {
   if (!lines.length) throw new Error(`${csvPath}: CSV가 비어 있습니다.`);
   const headers = parseCsvLine(lines[0]).map(value => value.trim());
   const indexes = new Map(headers.map((name, index) => [name, index]));
-  for (const name of ["GIS건물통합식별번호", "고유번호", "주요용도코드", "사용승인일자", "용적율", "데이터기준일자"]) {
+  for (const name of ["GIS건물통합식별번호", "고유번호", "주요용도코드", "사용승인일자", "용적율", "지상층수", "데이터기준일자"]) {
     if (!indexes.has(name)) throw new Error(`${csvPath}: CSV 필드 ${name}이 없습니다.`);
   }
 
@@ -600,11 +609,13 @@ async function readRegistryAttributes(csvPath) {
     if (date > sourceDate) sourceDate = date;
     const year = approvalYear(values[indexes.get("사용승인일자")]);
     const far = floorAreaRatio(values[indexes.get("용적율")]);
+    const floors = buildingFloors(values[indexes.get("지상층수")]);
     attributes.set(id, {
       pnu,
       purpose: figureGroundPurpose(values[indexes.get("주요용도코드")]),
       ...(year ? { year } : {}),
       ...(far !== null ? { far } : {}),
+      ...(floors !== null ? { floors } : {}),
     });
   }
   return { attributes, sourceDate, rowCount: attributes.size };
@@ -676,6 +687,7 @@ async function collectRegistryShapefile(shpPath, attributes, excludeIds = new Se
           purpose: candidate.attribute.purpose,
           year: candidate.attribute.year,
           far: candidate.attribute.far,
+          floors: candidate.attribute.floors,
         },
         geometry,
       });
@@ -934,6 +946,19 @@ async function previousFarMap() {
   return byId;
 }
 
+async function previousFloorMap() {
+  const byId = new Map();
+  try {
+    for (const feature of await readCurrentDataset()) {
+      const floors = buildingFloors(feature.properties?.floors);
+      if (floors === null) continue;
+      byId.set(`id:${feature.id}`, floors);
+      if (feature.properties?.pnu) byId.set(`pnu:${legacyPnu(feature.properties.pnu)}`, floors);
+    }
+  } catch { /* 기존 데이터가 없는 최초 생성 */ }
+  return byId;
+}
+
 async function previousRegistryFeatures() {
   try {
     return (await readCurrentDataset()).filter(feature => feature.properties?.source === "registry");
@@ -945,15 +970,28 @@ async function writeDataset(features, mode, metadata = {}) {
   const featureIds = new Set((features || []).map(feature => String(feature?.id || "")));
   const input = [...(features || []), ...preserved.filter(feature => !featureIds.has(String(feature.id)))];
   const previousPurposes = await previousPurposeMap();
-  const previousFars = await previousFarMap();
+  const preservePreviousRegistryMetrics = metadata.preservePreviousRegistryMetrics !== false;
+  const previousFars = preservePreviousRegistryMetrics ? await previousFarMap() : new Map();
+  const previousFloors = preservePreviousRegistryMetrics ? await previousFloorMap() : new Map();
   const enriched = input.map(feature => {
     const previous = previousPurposes.get(`id:${feature.id}`)
       || previousPurposes.get(`pnu:${legacyPnu(feature.properties?.pnu)}`);
     const far = floorAreaRatio(feature.properties?.far)
       ?? previousFars.get(`id:${feature.id}`)
       ?? previousFars.get(`pnu:${legacyPnu(feature.properties?.pnu)}`);
+    const floors = buildingFloors(feature.properties?.floors)
+      ?? previousFloors.get(`id:${feature.id}`)
+      ?? previousFloors.get(`pnu:${legacyPnu(feature.properties?.pnu)}`);
     const purpose = figureGroundPurpose(feature.properties?.purpose || previous);
-    return { ...feature, properties: { ...feature.properties, purpose, ...(far !== undefined ? { far } : {}) } };
+    return {
+      ...feature,
+      properties: {
+        ...feature.properties,
+        purpose,
+        ...(far !== undefined ? { far } : {}),
+        ...(floors !== undefined ? { floors } : {}),
+      },
+    };
   });
   const unique = new Map(enriched.map(feature => [feature.id, feature]));
   const sorted = [...unique.values()].sort((a, b) => String(a.id).localeCompare(String(b.id)));
@@ -992,6 +1030,8 @@ async function writeDataset(features, mode, metadata = {}) {
     ageUnknownCount: sorted.filter(feature => !approvalYear(feature.properties?.year)).length,
     farKnownCount: sorted.filter(feature => floorAreaRatio(feature.properties?.far)).length,
     farUnknownCount: sorted.filter(feature => !floorAreaRatio(feature.properties?.far)).length,
+    floorKnownCount: sorted.filter(feature => buildingFloors(feature.properties?.floors)).length,
+    floorUnknownCount: sorted.filter(feature => !buildingFloors(feature.properties?.floors)).length,
     registrySupplementCount: sorted.filter(feature => feature.properties?.source === "registry").length,
     purposeCounts,
     cells: manifestCells,
@@ -1041,12 +1081,27 @@ async function main() {
     const current = currentDataset
       .filter(feature => !(registryShpPath && feature.properties?.source === "registry"))
       .map(feature => {
+        const baseProperties = { ...feature.properties };
+        if (registry) {
+          // D199 is authoritative for these building-level metrics in this mode.
+          delete baseProperties.far;
+          delete baseProperties.floors;
+        }
         const data = attributes.get(String(feature.id));
-        const far = registry?.attributes.get(String(feature.id))?.far;
-        if (!data && far === undefined) return feature;
+        const registryData = registry?.attributes.get(String(feature.id));
+        const far = registryData?.far;
+        const floors = registryData?.floors;
+        if (!data && far === undefined && floors === undefined) {
+          return registry ? { ...feature, properties: baseProperties } : feature;
+        }
         return {
           ...feature,
-          properties: { ...feature.properties, ...(data || {}), ...(far !== undefined ? { far } : {}) },
+          properties: {
+            ...baseProperties,
+            ...(data || {}),
+            ...(far !== undefined ? { far } : {}),
+            ...(floors !== undefined ? { floors } : {}),
+          },
         };
       });
     const apartments = JSON.parse(await readFile(join(ROOT, "apt_geo.json"), "utf8"));
@@ -1073,6 +1128,7 @@ async function main() {
     await writeDataset(result, "road-shp", {
       source: "VWorld GIS건물통합정보 + 도로명주소 건물 + 시설물통합정보",
       sourceDate: road.sourceVersion || road.sourceDate,
+      preservePreviousRegistryMetrics: !registry,
       ...registryMetadata,
     });
     return;
