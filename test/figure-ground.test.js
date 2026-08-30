@@ -144,7 +144,10 @@ test("generated Figure-Ground dataset is internally consistent when present", ()
 
 test("map page exposes a lazy-loaded Figure-Ground subtab", () => {
   const page = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+  const styles = readFileSync(new URL("../styles.css", import.meta.url), "utf8");
   assert.match(page, /data-map-sub="figure"/);
+  assert.match(page, />건물윤곽지도</);
+  assert.doesNotMatch(page, />테마지도 조회</);
   assert.match(page, /figureGroundMap/);
   assert.match(page, /figure-ground\/manifest\.json/);
   assert.match(page, /L\.canvas\(/);
@@ -155,9 +158,12 @@ test("map page exposes a lazy-loaded Figure-Ground subtab", () => {
   assert.match(page, /fgAgeToggle/);
   assert.match(page, /setFigureGroundAgeMode/);
   assert.match(page, /setFigureGroundShape/);
+  assert.match(page, /stage\.classList\.toggle\("is-square"/);
   assert.match(page, /name="fgShape" value="circle"/);
   assert.match(page, /name="fgShape" value="square"/);
   assert.match(page, /disc\.classList\.contains\("is-square"\)/);
+  assert.match(styles, /\.fg-shape-picker span\{[^}]*white-space:nowrap/);
+  assert.match(styles, /\.fg-stage\{position:relative/);
   assert.match(page, /fgFeatureStyle/);
   assert.match(page, /"image\/png"/);
   assert.match(page, /"image\/jpeg"/);

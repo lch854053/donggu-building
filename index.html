@@ -488,7 +488,7 @@
   <div id="tab-map" style="display:none">
     <div class="b-subtabs map-subtabs">
       <button class="b-subtab active" data-map-sub="general" onclick="switchMapSubtab('general')">일반지도</button>
-      <button class="b-subtab" data-map-sub="figure" onclick="switchMapSubtab('figure')">테마지도 조회</button>
+      <button class="b-subtab" data-map-sub="figure" onclick="switchMapSubtab('figure')">건물윤곽지도</button>
     </div>
     <div id="map-sub-general" class="map-subpanel">
     <div class="map-layout">
@@ -582,7 +582,7 @@
             <legend>배경 형태</legend>
             <label><input type="radio" name="fgShape" value="circle" checked onchange="setFigureGroundShape(this.value)"><span>원형</span></label>
             <label><input type="radio" name="fgShape" value="square" onchange="setFigureGroundShape(this.value)"><span>사각형</span></label>
-          </fieldset>
+        </fieldset>
           <div class="fg-save-row">
             <button class="ghost fg-save" id="fgPngBtn" onclick="saveFigureGroundPng()">PNG 저장</button>
             <button class="ghost fg-save" id="fgJpgBtn" onclick="saveFigureGroundJpg()">JPG 저장</button>
@@ -592,9 +592,9 @@
         <div class="fg-stage">
           <div class="fg-disc">
             <div id="figureGroundMap" class="fg-map"></div>
-            <div class="fg-age-legend" id="fgAgeLegend" hidden></div>
             <div id="fgStatus" class="fg-status">데이터 준비 중…</div>
           </div>
+          <div class="fg-age-legend" id="fgAgeLegend" hidden></div>
         </div>
       </div>
     </div><!-- /map-sub-figure -->
@@ -5125,8 +5125,10 @@ function setFigureGroundAgeMode(enabled){
 
 function setFigureGroundShape(shape){
   const disc = document.querySelector(".fg-disc");
-  if(!disc) return;
+  const stage = disc?.parentElement;
+  if(!disc || !stage) return;
   disc.classList.toggle("is-square", shape === "square");
+  stage.classList.toggle("is-square", shape === "square");
   setTimeout(()=>FG_MAP?.invalidateSize(), 60);
 }
 
