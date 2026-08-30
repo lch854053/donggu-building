@@ -544,6 +544,140 @@ async function collectByShapefile(directory) {
   return { features, sourceDate };
 }
 
+function parseCsvLine(line) {
+  const values = [];
+  let value = "";
+  let quoted = false;
+  for (let index = 0; index < line.length; index++) {
+    const character = line[index];
+    if (character === '"') {
+      if (quoted && line[index + 1] === '"') {
+        value += '"';
+        index++;
+      } else {
+        quoted = !quoted;
+      }
+    } else if (character === "," && !quoted) {
+      values.push(value);
+      value = "";
+    } else {
+      value += character;
+    }
+  }
+  values.push(value);
+  return values;
+}
+
+async function readRegistryAttributes(csvPath) {
+  if (!csvPath) throw new Error("건축물대장 속성 보완에는 --registry-csv 경로가 필요합니다.");
+  const text = new TextDecoder("euc-kr").decode(await readFile(csvPath));
+  const lines = text.replace(/^\uFEFF/, "").split(/\r?\n/).filter(line => line.trim());
+  if (!lines.length) throw new Error(`${csvPath}: CSV가 비어 있습니다.`);
+  const headers = parseCsvLine(lines[0]).map(value => value.trim());
+  const indexes = new Map(headers.map((name, index) => [name, index]));
+  for (const name of ["GIS건물통합식별번호", "고유번호", "주요용도코드", "사용승인일자", "데이터기준일자"]) {
+    if (!indexes.has(name)) throw new Error(`${csvPath}: CSV 필드 ${name}이 없습니다.`);
+  }
+
+  const attributes = new Map();
+  let sourceDate = "";
+  for (const line of lines.slice(1)) {
+    const values = parseCsvLine(line).map(value => value.trim());
+    const id = values[indexes.get("GIS건물통합식별번호")] || "";
+    const pnu = values[indexes.get("고유번호")] || "";
+    if (!id || !/^12210\d{14}$/.test(pnu)) continue;
+    if (attributes.has(id)) throw new Error(`${csvPath}: GIS건물통합식별번호 ${id}가 중복됩니다.`);
+    const date = values[indexes.get("데이터기준일자")] || "";
+    if (date > sourceDate) sourceDate = date;
+    const year = approvalYear(values[indexes.get("사용승인일자")]);
+    attributes.set(id, {
+      pnu,
+      purpose: figureGroundPurpose(values[indexes.get("주요용도코드")]),
+      ...(year ? { year } : {}),
+    });
+  }
+  return { attributes, sourceDate, rowCount: attributes.size };
+}
+
+async function collectRegistryShapefile(shpPath, attributes, excludeIds = new Set()) {
+  if (!shpPath) throw new Error("건축물대장 도형 보완에는 --registry-shp 경로가 필요합니다.");
+  const base = shpPath.slice(0, -4);
+  const dbfHandle = await open(`${base}.dbf`, "r");
+  const candidates = [];
+  let missingAttributes = 0;
+  let pnuMismatches = 0;
+  let recordCount = 0;
+  try {
+    const header = await readDbfHeader(dbfHandle);
+    recordCount = header.recordCount;
+    for (const name of ["A1", "A2"]) {
+      if (!header.fields.has(name)) throw new Error(`${base}.dbf: DBF 필드 ${name}이 없습니다.`);
+    }
+    const batchSize = 5000;
+    const buffer = Buffer.alloc(header.recordLength * batchSize);
+    for (let start = 0; start < header.recordCount; start += batchSize) {
+      const count = Math.min(batchSize, header.recordCount - start);
+      await dbfHandle.read(buffer, 0, count * header.recordLength, header.headerLength + start * header.recordLength);
+      for (let index = 0; index < count; index++) {
+        const record = buffer.subarray(index * header.recordLength, (index + 1) * header.recordLength);
+        if (record[0] === 0x2a) continue;
+        const id = dbfText(record, header.fields.get("A1"));
+        const pnu = dbfText(record, header.fields.get("A2"));
+        if (!id || !/^12210\d{14}$/.test(pnu) || excludeIds.has(id)) continue;
+        const attribute = attributes.get(id);
+        if (!attribute) {
+          missingAttributes++;
+          continue;
+        }
+        if (attribute.pnu && attribute.pnu !== pnu) {
+          pnuMismatches++;
+          continue;
+        }
+        candidates.push({ index: start + index, id, pnu, attribute });
+      }
+    }
+  } finally {
+    await dbfHandle.close();
+  }
+  if (!candidates.length) return { features: [], recordCount, missingAttributes, pnuMismatches, invalidGeometry: 0 };
+
+  const index = await readFile(`${base}.shx`);
+  const shpHandle = await open(shpPath, "r");
+  const features = [];
+  let invalidGeometry = 0;
+  try {
+    for (const candidate of candidates) {
+      const indexOffset = 100 + candidate.index * 8;
+      if (indexOffset + 8 > index.length) throw new Error(`${shpPath}: SHX 인덱스가 DBF보다 짧습니다.`);
+      const offset = index.readInt32BE(indexOffset) * 2 + 8;
+      const length = index.readInt32BE(indexOffset + 4) * 2;
+      const content = Buffer.alloc(length);
+      await shpHandle.read(content, 0, length, offset);
+      const geometry = parseShpPolygon(content, coordinate => proj4(ADDRESS_SHP_CRS, "EPSG:4326", coordinate));
+      if (!geometry) {
+        invalidGeometry++;
+        continue;
+      }
+      const feature = normalizeFeature({
+        properties: {
+          gis_idntfc_no: candidate.id,
+          pnu: candidate.pnu,
+          purpose: candidate.attribute.purpose,
+          year: candidate.attribute.year,
+        },
+        geometry,
+      });
+      if (feature) features.push({
+        ...feature,
+        properties: { ...feature.properties, source: "registry" },
+      });
+    }
+  } finally {
+    await shpHandle.close();
+  }
+  return { features, recordCount, missingAttributes, pnuMismatches, invalidGeometry };
+}
+
 function roadRecordPnu(record, fields) {
   const sigungu = dbfText(record, fields.get("SIG_CD"));
   const dong = dbfText(record, fields.get("EMD_CD")) + dbfText(record, fields.get("LI_CD"));
@@ -675,6 +809,20 @@ export function mergeRoadApartmentFootprints(current, road, apartments) {
   };
 }
 
+export function mergeRegistryFootprints(current, registry) {
+  const features = [...(current || [])];
+  const ids = new Set(features.map(feature => String(feature?.id || "")));
+  let addedCount = 0;
+  for (const feature of registry || []) {
+    const id = String(feature?.id || "");
+    if (!id || ids.has(id)) continue;
+    ids.add(id);
+    features.push(feature);
+    addedCount++;
+  }
+  return { features, addedCount, skippedCount: (registry || []).length - addedCount };
+}
+
 async function readCurrentDataset() {
   const manifest = JSON.parse(await readFile(join(OUTPUT_DIR, "manifest.json"), "utf8"));
   const features = [];
@@ -761,9 +909,18 @@ async function previousPurposeMap() {
   return byId;
 }
 
+async function previousRegistryFeatures() {
+  try {
+    return (await readCurrentDataset()).filter(feature => feature.properties?.source === "registry");
+  } catch { return []; }
+}
+
 async function writeDataset(features, mode, metadata = {}) {
+  const preserved = metadata.replaceRegistrySupplement ? [] : await previousRegistryFeatures();
+  const featureIds = new Set((features || []).map(feature => String(feature?.id || "")));
+  const input = [...(features || []), ...preserved.filter(feature => !featureIds.has(String(feature.id)))];
   const previousPurposes = await previousPurposeMap();
-  const enriched = features.map(feature => {
+  const enriched = input.map(feature => {
     const previous = previousPurposes.get(`id:${feature.id}`)
       || previousPurposes.get(`pnu:${legacyPnu(feature.properties?.pnu)}`);
     const purpose = figureGroundPurpose(feature.properties?.purpose || previous);
@@ -804,6 +961,7 @@ async function writeDataset(features, mode, metadata = {}) {
     featureCount: sorted.length,
     ageKnownCount: sorted.filter(feature => approvalYear(feature.properties?.year)).length,
     ageUnknownCount: sorted.filter(feature => !approvalYear(feature.properties?.year)).length,
+    registrySupplementCount: sorted.filter(feature => feature.properties?.source === "registry").length,
     purposeCounts,
     cells: manifestCells,
   };
@@ -835,22 +993,51 @@ async function main() {
     await writeDataset(result.features, "shp", {
       source: "주소기반산업지원서비스 GIS건물통합정보 AL_D010",
       sourceDate: result.sourceDate,
+      replaceRegistrySupplement: true,
     });
     return;
   }
   if (requestedMode === "road-shp") {
     const road = await collectByRoadShapefile(cliOption("shp-dir"));
     const attributes = await readFacilityAttributes(cliOption("facility-dbf"));
-    const current = (await readCurrentDataset()).map(feature => {
+    const registryShpPath = cliOption("registry-shp");
+    const registryCsvPath = cliOption("registry-csv");
+    if (Boolean(registryShpPath) !== Boolean(registryCsvPath)) {
+      throw new Error("건축물대장 보완에는 --registry-shp와 --registry-csv를 함께 지정해야 합니다.");
+    }
+    const currentDataset = await readCurrentDataset();
+    const current = currentDataset
+      .filter(feature => !(registryShpPath && feature.properties?.source === "registry"))
+      .map(feature => {
       const data = attributes.get(String(feature.id));
       return data ? { ...feature, properties: { ...feature.properties, ...data } } : feature;
     });
     const apartments = JSON.parse(await readFile(join(ROOT, "apt_geo.json"), "utf8"));
     const merged = mergeRoadApartmentFootprints(current, road.features, apartments);
     console.log(`공동주택 필지 교체: ${merged.replacementCount}개 단지 / 기존 ${merged.removedCount}건 제거 / 현행 ${merged.addedCount}건 추가`);
-    await writeDataset(merged.features, "road-shp", {
+    let result = merged.features;
+    let registryMetadata = {};
+    if (registryShpPath) {
+      const registry = await readRegistryAttributes(registryCsvPath);
+      const fallback = await collectRegistryShapefile(
+        registryShpPath,
+        registry.attributes,
+        new Set(current.map(feature => String(feature.id))),
+      );
+      const supplemented = mergeRegistryFootprints(merged.features, fallback.features);
+      console.log(`건축물대장 누락 보완: ${supplemented.addedCount}건 추가 / ${supplemented.skippedCount}건 중복·제외 (CSV ${registry.rowCount}건, 기준일 ${registry.sourceDate || "미상"})`);
+      if (fallback.missingAttributes || fallback.pnuMismatches || fallback.invalidGeometry) {
+        console.log(`  보완 제외: 속성 없음 ${fallback.missingAttributes}건 / PNU 불일치 ${fallback.pnuMismatches}건 / 무효 도형 ${fallback.invalidGeometry}건`);
+      }
+      result = supplemented.features;
+      registryMetadata = {
+        replaceRegistrySupplement: true,
+      };
+    }
+    await writeDataset(result, "road-shp", {
       source: "VWorld GIS건물통합정보 + 도로명주소 건물 + 시설물통합정보",
       sourceDate: road.sourceVersion || road.sourceDate,
+      ...registryMetadata,
     });
     return;
   }

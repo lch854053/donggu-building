@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-08-30T02:14:57.908Z",
+  "generatedAt": "2026-08-30T03:59:14.718Z",
   "source": "VWorld GIS건물통합정보 + 도로명주소 건물 + 시설물통합정보",
   "sourceDate": "2026-08",
   "collectionMode": "road-shp",
@@ -11,16 +11,17 @@
     35.185
   ],
   "cellSize": 0.01,
-  "featureCount": 23980,
-  "ageKnownCount": 14978,
-  "ageUnknownCount": 9002,
+  "featureCount": 24012,
+  "ageKnownCount": 14990,
+  "ageUnknownCount": 9022,
+  "registrySupplementCount": 32,
   "purposeCounts": {
-    "단독주택": 11953,
-    "공동주택": 768,
-    "제1종 근린생활시설": 2472,
-    "제2종 근린생활시설": 2308,
+    "단독주택": 11975,
+    "공동주택": 769,
+    "제1종 근린생활시설": 2478,
+    "제2종 근린생활시설": 2310,
     "숙박시설": 296,
-    "기타": 6183
+    "기타": 6184
   },
   "cells": [
     {
@@ -67,8 +68,8 @@
         126.919,
         35.158
       ],
-      "count": 2142,
-      "bytes": 894004,
+      "count": 2148,
+      "bytes": 896279,
       "file": "cells/x02-y08.geojson"
     },
     {
@@ -139,8 +140,8 @@
         126.929,
         35.138
       ],
-      "count": 1379,
-      "bytes": 523316,
+      "count": 1401,
+      "bytes": 531325,
       "file": "cells/x03-y06.geojson"
     },
     {
@@ -163,8 +164,8 @@
         126.929,
         35.158
       ],
-      "count": 3698,
-      "bytes": 1608793,
+      "count": 3700,
+      "bytes": 1609548,
       "file": "cells/x03-y08.geojson"
     },
     {
@@ -259,8 +260,8 @@
         126.939,
         35.148
       ],
-      "count": 619,
-      "bytes": 244233,
+      "count": 620,
+      "bytes": 244637,
       "file": "cells/x04-y07.geojson"
     },
     {
@@ -367,8 +368,8 @@
         126.949,
         35.138
       ],
-      "count": 405,
-      "bytes": 160488,
+      "count": 406,
+      "bytes": 160836,
       "file": "cells/x05-y06.geojson"
     },
     {

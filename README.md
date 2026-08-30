@@ -82,6 +82,8 @@ node --test
 | `npm run import-road-footprints -- --shp-dir=<폴더> --facility-dbf=<파일>` | 도로명주소 건물 SHP 보정 및 건축물 용도·승인연도 결합 |
 | `npm run update-officetel` | 건축인허가 기반 오피스텔 목록 |
 
+`import-road-footprints`에 `--registry-shp=<D198 SHP>`와 `--registry-csv=<D199 CSV>`를 함께 지정하면 현재 Figure-Ground에 없는 건축물대장 도형만 보완합니다. CSV의 용도·사용승인연도는 보완 도형 속성에 결합되며, 원본 SHP·CSV는 저장소에 포함하지 않습니다.
+
 수집 스크립트는 환경변수를 `process.env`에서 직접 읽습니다. 필요한 키를 명령 앞에 지정하거나, 지원되는 스크립트는 실행 중인 프록시를 `BASE_URL=http://localhost:3000`으로 지정합니다. GitHub Actions는 K-APT를 매주, 공동주택·빈집·통계를 매월 갱신합니다.
 
 ## 동구 코드 규칙

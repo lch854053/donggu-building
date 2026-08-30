@@ -44,6 +44,7 @@ npm run update-reb-stats  # 한국부동산원 동구 주택시장 통계 (월 1
 npm run collect-apt-geo  # VWorld 연속지적도에서 아파트 폴리곤
 npm run collect-footprints # VWorld GIS건물통합정보 Figure-Ground 격자 데이터
 npm run import-road-footprints -- --shp-dir=<폴더> --facility-dbf=<파일> # 재개발 공동주택 도형 + 용도·승인연도 보정
+npm run import-road-footprints -- --shp-dir=<폴더> --facility-dbf=<파일> --registry-shp=<D198 SHP> --registry-csv=<D199 CSV> # 건축물대장 누락 도형 추가
 npm run update-officetel # 건축인허가 기반 오피스텔 자동 발견
 ```
 

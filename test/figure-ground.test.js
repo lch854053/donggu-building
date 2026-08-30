@@ -7,6 +7,7 @@ import {
   FIGURE_GROUND_PURPOSES,
   figureGroundPurpose,
   geometryBounds,
+  mergeRegistryFootprints,
   mergeRoadApartmentFootprints,
   normalizeFeature,
   normalizeGeometry,
@@ -138,6 +139,19 @@ test("road-address footprints replace stale buildings only for missing apartment
   assert.deepEqual(repeated.features, merged.features);
 });
 
+test("registry footprints add only unseen GIS IDs", () => {
+  const current = [{ id: "existing", properties: { id: "existing" } }];
+  const registry = [
+    { id: "missing", properties: { id: "missing", source: "registry" } },
+    { id: "existing", properties: { id: "existing", source: "registry" } },
+  ];
+  const merged = mergeRegistryFootprints(current, registry);
+  assert.equal(merged.addedCount, 1);
+  assert.equal(merged.skippedCount, 1);
+  assert.deepEqual(merged.features.map(feature => feature.id), ["existing", "missing"]);
+  assert.equal(merged.features.find(feature => feature.id === "missing").properties.source, "registry");
+});
+
 test("generated Figure-Ground dataset is internally consistent when present", () => {
   const manifestUrl = new URL("../data/figure-ground/manifest.json", import.meta.url);
   if (!existsSync(manifestUrl)) return;
@@ -148,8 +162,10 @@ test("generated Figure-Ground dataset is internally consistent when present", ()
   assert.equal(manifest.cells.reduce((sum, cell) => sum + cell.count, 0), manifest.featureCount);
   assert.equal(manifest.ageKnownCount + manifest.ageUnknownCount, manifest.featureCount);
   assert.equal(Object.values(manifest.purposeCounts).reduce((sum, count) => sum + count, 0), manifest.featureCount);
+  assert.equal(typeof manifest.registrySupplementCount, "number");
   assert.ok(manifest.ageKnownCount / manifest.featureCount >= 0.6);
   const ids = new Set();
+  let registryCount = 0;
   for (const cell of manifest.cells) {
     const collection = JSON.parse(readFileSync(new URL(`../data/figure-ground/${cell.file}`, import.meta.url), "utf8"));
     assert.equal(collection.type, "FeatureCollection");
@@ -160,10 +176,12 @@ test("generated Figure-Ground dataset is internally consistent when present", ()
       ids.add(feature.id);
       assert.match(feature.properties.pnu, /^(12210|29110)\d{14}$/);
       assert.ok(FIGURE_GROUND_PURPOSES.includes(feature.properties.purpose));
+      if (feature.properties.source === "registry") registryCount++;
       if (feature.properties.year !== undefined) assert.equal(approvalYear(feature.properties.year), feature.properties.year);
     }
   }
   assert.equal(ids.size, manifest.featureCount);
+  assert.equal(registryCount, manifest.registrySupplementCount);
 });
 
 test("map page exposes a lazy-loaded Figure-Ground subtab", () => {
