@@ -199,6 +199,7 @@ export function normalizeFeature(feature) {
   const year = approvalYear(properties.year || properties.useAprDay);
   const far = floorAreaRatio(properties.far ?? properties.vlRat);
   const floors = buildingFloors(properties.floors);
+  const structure = buildingStructure(properties.structure);
   const rawPurpose = sourcePurpose(properties);
   const purpose = rawPurpose === null ? null : figureGroundPurpose(rawPurpose);
   return {
@@ -211,6 +212,7 @@ export function normalizeFeature(feature) {
       ...(purpose ? { purpose } : {}),
       ...(far !== null ? { far } : {}),
       ...(floors !== null ? { floors } : {}),
+      ...(structure ? { structure } : {}),
     },
     geometry,
   };
@@ -233,6 +235,11 @@ export function buildingFloors(value) {
   if (!raw) return null;
   const floors = Number(raw);
   return Number.isInteger(floors) && floors > 0 ? floors : null;
+}
+
+export function buildingStructure(value) {
+  const structure = String(value ?? "").trim();
+  return structure || null;
 }
 
 function isDongguFeature(feature) {
@@ -593,7 +600,7 @@ async function readRegistryAttributes(csvPath) {
   if (!lines.length) throw new Error(`${csvPath}: CSV가 비어 있습니다.`);
   const headers = parseCsvLine(lines[0]).map(value => value.trim());
   const indexes = new Map(headers.map((name, index) => [name, index]));
-  for (const name of ["GIS건물통합식별번호", "고유번호", "주요용도코드", "사용승인일자", "용적율", "지상층수", "데이터기준일자"]) {
+  for (const name of ["GIS건물통합식별번호", "고유번호", "주요용도코드", "사용승인일자", "용적율", "지상층수", "건축물구조명", "데이터기준일자"]) {
     if (!indexes.has(name)) throw new Error(`${csvPath}: CSV 필드 ${name}이 없습니다.`);
   }
 
@@ -610,12 +617,14 @@ async function readRegistryAttributes(csvPath) {
     const year = approvalYear(values[indexes.get("사용승인일자")]);
     const far = floorAreaRatio(values[indexes.get("용적율")]);
     const floors = buildingFloors(values[indexes.get("지상층수")]);
+    const structure = buildingStructure(values[indexes.get("건축물구조명")]);
     attributes.set(id, {
       pnu,
       purpose: figureGroundPurpose(values[indexes.get("주요용도코드")]),
       ...(year ? { year } : {}),
       ...(far !== null ? { far } : {}),
       ...(floors !== null ? { floors } : {}),
+      ...(structure ? { structure } : {}),
     });
   }
   return { attributes, sourceDate, rowCount: attributes.size };
@@ -688,6 +697,7 @@ async function collectRegistryShapefile(shpPath, attributes, excludeIds = new Se
           year: candidate.attribute.year,
           far: candidate.attribute.far,
           floors: candidate.attribute.floors,
+          structure: candidate.attribute.structure,
         },
         geometry,
       });
@@ -959,6 +969,19 @@ async function previousFloorMap() {
   return byId;
 }
 
+async function previousStructureMap() {
+  const byId = new Map();
+  try {
+    for (const feature of await readCurrentDataset()) {
+      const structure = buildingStructure(feature.properties?.structure);
+      if (structure === null) continue;
+      byId.set(`id:${feature.id}`, structure);
+      if (feature.properties?.pnu) byId.set(`pnu:${legacyPnu(feature.properties.pnu)}`, structure);
+    }
+  } catch { /* 기존 데이터가 없는 최초 생성 */ }
+  return byId;
+}
+
 async function previousRegistryFeatures() {
   try {
     return (await readCurrentDataset()).filter(feature => feature.properties?.source === "registry");
@@ -970,9 +993,10 @@ async function writeDataset(features, mode, metadata = {}) {
   const featureIds = new Set((features || []).map(feature => String(feature?.id || "")));
   const input = [...(features || []), ...preserved.filter(feature => !featureIds.has(String(feature.id)))];
   const previousPurposes = await previousPurposeMap();
-  const preservePreviousRegistryMetrics = metadata.preservePreviousRegistryMetrics !== false;
-  const previousFars = preservePreviousRegistryMetrics ? await previousFarMap() : new Map();
-  const previousFloors = preservePreviousRegistryMetrics ? await previousFloorMap() : new Map();
+  const preservePreviousRegistryAttributes = metadata.preservePreviousRegistryAttributes !== false;
+  const previousFars = preservePreviousRegistryAttributes ? await previousFarMap() : new Map();
+  const previousFloors = preservePreviousRegistryAttributes ? await previousFloorMap() : new Map();
+  const previousStructures = preservePreviousRegistryAttributes ? await previousStructureMap() : new Map();
   const enriched = input.map(feature => {
     const previous = previousPurposes.get(`id:${feature.id}`)
       || previousPurposes.get(`pnu:${legacyPnu(feature.properties?.pnu)}`);
@@ -982,6 +1006,9 @@ async function writeDataset(features, mode, metadata = {}) {
     const floors = buildingFloors(feature.properties?.floors)
       ?? previousFloors.get(`id:${feature.id}`)
       ?? previousFloors.get(`pnu:${legacyPnu(feature.properties?.pnu)}`);
+    const structure = buildingStructure(feature.properties?.structure)
+      ?? previousStructures.get(`id:${feature.id}`)
+      ?? previousStructures.get(`pnu:${legacyPnu(feature.properties?.pnu)}`);
     const purpose = figureGroundPurpose(feature.properties?.purpose || previous);
     return {
       ...feature,
@@ -990,6 +1017,7 @@ async function writeDataset(features, mode, metadata = {}) {
         purpose,
         ...(far !== undefined ? { far } : {}),
         ...(floors !== undefined ? { floors } : {}),
+        ...(structure !== undefined ? { structure } : {}),
       },
     };
   });
@@ -1004,6 +1032,11 @@ async function writeDataset(features, mode, metadata = {}) {
   const cells = partitionFeatures(sorted);
   const purposeCounts = Object.fromEntries(FIGURE_GROUND_PURPOSES.map(purpose => [purpose, 0]));
   for (const feature of sorted) purposeCounts[feature.properties.purpose]++;
+  const structureCounts = {};
+  for (const feature of sorted) {
+    const structure = buildingStructure(feature.properties?.structure);
+    if (structure) structureCounts[structure] = (structureCounts[structure] || 0) + 1;
+  }
   const nextDir = `${OUTPUT_DIR}.next`;
   const backupDir = `${OUTPUT_DIR}.backup`;
   await rm(nextDir, { recursive: true, force: true });
@@ -1032,6 +1065,9 @@ async function writeDataset(features, mode, metadata = {}) {
     farUnknownCount: sorted.filter(feature => !floorAreaRatio(feature.properties?.far)).length,
     floorKnownCount: sorted.filter(feature => buildingFloors(feature.properties?.floors)).length,
     floorUnknownCount: sorted.filter(feature => !buildingFloors(feature.properties?.floors)).length,
+    structureKnownCount: sorted.filter(feature => buildingStructure(feature.properties?.structure)).length,
+    structureUnknownCount: sorted.filter(feature => !buildingStructure(feature.properties?.structure)).length,
+    structureCounts,
     registrySupplementCount: sorted.filter(feature => feature.properties?.source === "registry").length,
     purposeCounts,
     cells: manifestCells,
@@ -1086,12 +1122,14 @@ async function main() {
           // D199 is authoritative for these building-level metrics in this mode.
           delete baseProperties.far;
           delete baseProperties.floors;
+          delete baseProperties.structure;
         }
         const data = attributes.get(String(feature.id));
         const registryData = registry?.attributes.get(String(feature.id));
         const far = registryData?.far;
         const floors = registryData?.floors;
-        if (!data && far === undefined && floors === undefined) {
+        const structure = registryData?.structure;
+        if (!data && far === undefined && floors === undefined && structure === undefined) {
           return registry ? { ...feature, properties: baseProperties } : feature;
         }
         return {
@@ -1101,6 +1139,7 @@ async function main() {
             ...(data || {}),
             ...(far !== undefined ? { far } : {}),
             ...(floors !== undefined ? { floors } : {}),
+            ...(structure !== undefined ? { structure } : {}),
           },
         };
       });
@@ -1128,7 +1167,7 @@ async function main() {
     await writeDataset(result, "road-shp", {
       source: "VWorld GIS건물통합정보 + 도로명주소 건물 + 시설물통합정보",
       sourceDate: road.sourceVersion || road.sourceDate,
-      preservePreviousRegistryMetrics: !registry,
+      preservePreviousRegistryAttributes: !registry,
       ...registryMetadata,
     });
     return;

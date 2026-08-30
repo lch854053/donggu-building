@@ -4,6 +4,7 @@ import { existsSync, readFileSync } from "node:fs";
 import {
   approvalYear,
   buildingFloors,
+  buildingStructure,
   boundsIntersect,
   FIGURE_GROUND_PURPOSES,
   floorAreaRatio,
@@ -90,6 +91,17 @@ test("footprint ground-floor count keeps positive integers and treats zero as un
     geometry: polygon([[126.91, 35.15], [126.911, 35.15], [126.911, 35.151], [126.91, 35.15]]),
   });
   assert.equal(feature.properties.floors, 5);
+});
+
+test("footprint structure keeps the trimmed source name and treats blank values as unknown", () => {
+  assert.equal(buildingStructure("  철근콘크리트구조  "), "철근콘크리트구조");
+  assert.equal(buildingStructure(""), null);
+  assert.equal(buildingStructure(null), null);
+  const feature = normalizeFeature({
+    properties: { gis_idntfc_no: "structure-coded", pnu: "1221010100100010001", structure: "벽돌구조" },
+    geometry: polygon([[126.91, 35.15], [126.911, 35.15], [126.911, 35.151], [126.91, 35.15]]),
+  });
+  assert.equal(feature.properties.structure, "벽돌구조");
 });
 
 test("footprint purpose keeps the five common categories and folds the rest into 기타", () => {
@@ -195,11 +207,16 @@ test("generated Figure-Ground dataset is internally consistent when present", ()
   assert.equal(typeof manifest.farUnknownCount, "number");
   assert.equal(typeof manifest.floorKnownCount, "number");
   assert.equal(typeof manifest.floorUnknownCount, "number");
+  assert.equal(typeof manifest.structureKnownCount, "number");
+  assert.equal(typeof manifest.structureUnknownCount, "number");
+  assert.equal(Object.values(manifest.structureCounts).reduce((sum, count) => sum + count, 0), manifest.structureKnownCount);
   assert.ok(manifest.ageKnownCount / manifest.featureCount >= 0.6);
   const ids = new Set();
   let registryCount = 0;
   let farCount = 0;
   let floorCount = 0;
+  let structureCount = 0;
+  const structureCounts = {};
   for (const cell of manifest.cells) {
     const collection = JSON.parse(readFileSync(new URL(`../data/figure-ground/${cell.file}`, import.meta.url), "utf8"));
     assert.equal(collection.type, "FeatureCollection");
@@ -219,6 +236,11 @@ test("generated Figure-Ground dataset is internally consistent when present", ()
         floorCount++;
         assert.equal(buildingFloors(feature.properties.floors), feature.properties.floors);
       }
+      if (feature.properties.structure !== undefined) {
+        structureCount++;
+        structureCounts[feature.properties.structure] = (structureCounts[feature.properties.structure] || 0) + 1;
+        assert.equal(buildingStructure(feature.properties.structure), feature.properties.structure);
+      }
       if (feature.properties.year !== undefined) assert.equal(approvalYear(feature.properties.year), feature.properties.year);
     }
   }
@@ -228,6 +250,9 @@ test("generated Figure-Ground dataset is internally consistent when present", ()
   assert.equal(farCount + manifest.farUnknownCount, manifest.featureCount);
   assert.equal(floorCount, manifest.floorKnownCount);
   assert.equal(floorCount + manifest.floorUnknownCount, manifest.featureCount);
+  assert.equal(structureCount, manifest.structureKnownCount);
+  assert.equal(structureCount + manifest.structureUnknownCount, manifest.featureCount);
+  assert.deepEqual(structureCounts, manifest.structureCounts);
 });
 
 test("map page exposes a lazy-loaded Figure-Ground subtab", () => {
@@ -247,10 +272,13 @@ test("map page exposes a lazy-loaded Figure-Ground subtab", () => {
   assert.match(page, /setFigureGroundAgeMode/);
   assert.match(page, /fgPurposeToggle/);
   assert.match(page, /setFigureGroundPurposeMode/);
-  assert.match(page, /fgFarToggle/);
-  assert.match(page, /setFigureGroundFarMode/);
-  assert.match(page, /FG_FAR_BUCKETS/);
-  assert.match(page, /farKnownCount/);
+  assert.doesNotMatch(page, /fgFarToggle/);
+  assert.doesNotMatch(page, /setFigureGroundFarMode/);
+  assert.doesNotMatch(page, /FG_FAR_BUCKETS/);
+  assert.match(page, /fgStructureToggle/);
+  assert.match(page, /setFigureGroundStructureMode/);
+  assert.match(page, /FG_STRUCTURE_BUCKETS/);
+  assert.match(page, /structureKnownCount/);
   assert.match(page, /fgFloorToggle/);
   assert.match(page, /setFigureGroundFloorMode/);
   assert.match(page, /FG_FLOOR_BUCKETS/);
@@ -263,8 +291,8 @@ test("map page exposes a lazy-loaded Figure-Ground subtab", () => {
   assert.match(page, /name="fgShape" value="square"/);
   assert.match(page, /disc\.classList\.contains\("is-square"\)/);
   assert.match(styles, /\.fg-shape-picker span\{[^}]*white-space:nowrap/);
-  assert.match(styles, /\.fg-far-scale\{[^}]*minmax\(0,1fr\)/);
-  assert.match(styles, /\.fg-far-scale b\{[^}]*overflow-wrap:anywhere/);
+  assert.doesNotMatch(styles, /\.fg-far-scale/);
+  assert.match(styles, /\.fg-structure-scale/);
   assert.match(styles, /\.fg-stage\{position:relative/);
   assert.match(page, /fgFeatureStyle/);
   assert.match(page, /"image\/png"/);
