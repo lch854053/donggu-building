@@ -4,6 +4,8 @@ import { existsSync, readFileSync } from "node:fs";
 import {
   approvalYear,
   boundsIntersect,
+  FIGURE_GROUND_PURPOSES,
+  figureGroundPurpose,
   geometryBounds,
   mergeRoadApartmentFootprints,
   normalizeFeature,
@@ -41,6 +43,14 @@ test("footprint feature keeps only stable map properties", () => {
   assert.deepEqual(geometryBounds(feature.geometry), [126.91, 35.15, 126.911, 35.151]);
 });
 
+test("footprint normalization reads a building purpose code from source properties", () => {
+  const feature = normalizeFeature({
+    properties: { gis_idntfc_no: "purpose-coded", pnu: "1221010100100010001", USABILITY: "04000" },
+    geometry: polygon([[126.91, 35.15], [126.911, 35.15], [126.911, 35.151], [126.91, 35.15]]),
+  });
+  assert.equal(feature.properties.purpose, "제2종 근린생활시설");
+});
+
 test("footprint approval year accepts official dates and rejects implausible values", () => {
   assert.equal(approvalYear("2022-10-06"), 2022);
   assert.equal(approvalYear("19730706"), 1973);
@@ -51,6 +61,17 @@ test("footprint approval year accepts official dates and rejects implausible val
     geometry: polygon([[126.91, 35.15], [126.911, 35.15], [126.911, 35.151], [126.91, 35.15]]),
   });
   assert.equal(feature.properties.year, 2006);
+});
+
+test("footprint purpose keeps the five common categories and folds the rest into 기타", () => {
+  assert.equal(figureGroundPurpose("01000"), "단독주택");
+  assert.equal(figureGroundPurpose("02000"), "공동주택");
+  assert.equal(figureGroundPurpose("03000"), "제1종 근린생활시설");
+  assert.equal(figureGroundPurpose("4000"), "제2종 근린생활시설");
+  assert.equal(figureGroundPurpose("15000"), "숙박시설");
+  assert.equal(figureGroundPurpose("교육연구시설"), "기타");
+  assert.equal(figureGroundPurpose(""), "기타");
+  assert.ok(FIGURE_GROUND_PURPOSES.includes("기타"));
 });
 
 test("BBOX splitting covers four quadrants and intersection includes touching edges", () => {
@@ -112,6 +133,7 @@ test("road-address footprints replace stale buildings only for missing apartment
   assert.equal(merged.addedCount, 1);
   assert.deepEqual(merged.features.map(feature => feature.id).sort(), ["current", "retained", "road:new"]);
   assert.equal(merged.features.find(feature => feature.id === "road:new").properties.year, 2022);
+  assert.equal(merged.features.find(feature => feature.id === "road:new").properties.purpose, "공동주택");
   const repeated = mergeRoadApartmentFootprints(merged.features, [replacement, ignored], apartments);
   assert.deepEqual(repeated.features, merged.features);
 });
@@ -120,11 +142,12 @@ test("generated Figure-Ground dataset is internally consistent when present", ()
   const manifestUrl = new URL("../data/figure-ground/manifest.json", import.meta.url);
   if (!existsSync(manifestUrl)) return;
   const manifest = JSON.parse(readFileSync(manifestUrl, "utf8"));
-  assert.equal(manifest.schemaVersion, 1);
+  assert.equal(manifest.schemaVersion, 2);
   assert.ok(manifest.featureCount >= 1000);
   assert.ok(Array.isArray(manifest.cells) && manifest.cells.length > 0);
   assert.equal(manifest.cells.reduce((sum, cell) => sum + cell.count, 0), manifest.featureCount);
   assert.equal(manifest.ageKnownCount + manifest.ageUnknownCount, manifest.featureCount);
+  assert.equal(Object.values(manifest.purposeCounts).reduce((sum, count) => sum + count, 0), manifest.featureCount);
   assert.ok(manifest.ageKnownCount / manifest.featureCount >= 0.6);
   const ids = new Set();
   for (const cell of manifest.cells) {
@@ -136,6 +159,7 @@ test("generated Figure-Ground dataset is internally consistent when present", ()
       assert.ok(!ids.has(feature.id), `duplicate building id: ${feature.id}`);
       ids.add(feature.id);
       assert.match(feature.properties.pnu, /^(12210|29110)\d{14}$/);
+      assert.ok(FIGURE_GROUND_PURPOSES.includes(feature.properties.purpose));
       if (feature.properties.year !== undefined) assert.equal(approvalYear(feature.properties.year), feature.properties.year);
     }
   }
@@ -157,6 +181,10 @@ test("map page exposes a lazy-loaded Figure-Ground subtab", () => {
   assert.match(page, /saveFigureGroundJpg/);
   assert.match(page, /fgAgeToggle/);
   assert.match(page, /setFigureGroundAgeMode/);
+  assert.match(page, /fgPurposeToggle/);
+  assert.match(page, /setFigureGroundPurposeMode/);
+  assert.match(page, /FG_PURPOSE_BUCKETS/);
+  assert.match(page, /purposeCounts/);
   assert.match(page, /setFigureGroundShape/);
   assert.match(page, /stage\.classList\.toggle\("is-square"/);
   assert.match(page, /name="fgShape" value="circle"/);

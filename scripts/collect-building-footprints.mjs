@@ -1,4 +1,4 @@
-// VWorld GIS건물통합정보(dt_d010)의 동구 건물 윤곽을 수집해
+// VWorld GIS건물통합정보(dt_d010)의 동구 건물 윤곽과 용도를 수집해
 // Figure-Ground 지도용 격자 GeoJSON으로 저장한다.
 import { createHash } from "node:crypto";
 import { mkdir, open, readFile, readdir, rename, rm, writeFile } from "node:fs/promises";
@@ -25,6 +25,26 @@ const PNU_CONCURRENCY = 3;
 const MIN_FEATURES = Number(process.env.FG_MIN_FEATURES || 1000);
 const ADDRESS_SHP_CRS = "+proj=tmerc +lat_0=38 +lon_0=127 +k=1 +x_0=200000 +y_0=600000 +ellps=GRS80 +units=m +no_defs";
 const ROAD_ADDRESS_SHP_CRS = "+proj=tmerc +lat_0=38 +lon_0=127.5 +k=0.9996 +x_0=1000000 +y_0=2000000 +ellps=GRS80 +units=m +no_defs";
+const FG_OTHER_PURPOSE = "기타";
+const FG_PURPOSE_BY_CODE = Object.freeze({
+  "01000": "단독주택",
+  "02000": "공동주택",
+  "03000": "제1종 근린생활시설",
+  "04000": "제2종 근린생활시설",
+  "15000": "숙박시설",
+});
+export const FIGURE_GROUND_PURPOSES = Object.freeze([
+  "단독주택",
+  "공동주택",
+  "제1종 근린생활시설",
+  "제2종 근린생활시설",
+  "숙박시설",
+  FG_OTHER_PURPOSE,
+]);
+const PURPOSE_PROPERTY_KEYS = [
+  "purpose", "USABILITY", "usability", "mainPurpsCdNm", "mainPurpsCd",
+  "main_purps_cd_nm", "main_purps_cd", "mainPurps", "main_purps",
+];
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 const round6 = value => Math.round(Number(value) * 1e6) / 1e6;
@@ -151,6 +171,24 @@ function featureId(properties, geometry) {
   return createHash("sha1").update(`${properties.pnu || ""}:${JSON.stringify(geometry)}`).digest("hex").slice(0, 20);
 }
 
+function sourcePurpose(properties) {
+  for (const key of PURPOSE_PROPERTY_KEYS) {
+    const value = properties?.[key];
+    if (value !== undefined && value !== null && String(value).trim()) return value;
+  }
+  return null;
+}
+
+export function figureGroundPurpose(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return FG_OTHER_PURPOSE;
+  const compact = raw.replace(/\s+/g, "");
+  const knownLabel = FIGURE_GROUND_PURPOSES.find(label => label.replace(/\s+/g, "") === compact);
+  if (knownLabel) return knownLabel;
+  const code = /^\d+$/.test(raw) ? raw.padStart(5, "0") : raw;
+  return FG_PURPOSE_BY_CODE[code] || FG_OTHER_PURPOSE;
+}
+
 export function normalizeFeature(feature) {
   const geometry = normalizeGeometry(feature?.geometry);
   if (!geometry) return null;
@@ -159,10 +197,17 @@ export function normalizeFeature(feature) {
   const properties = feature.properties || {};
   const id = featureId(properties, geometry);
   const year = approvalYear(properties.year || properties.useAprDay);
+  const rawPurpose = sourcePurpose(properties);
+  const purpose = rawPurpose === null ? null : figureGroundPurpose(rawPurpose);
   return {
     type: "Feature",
     id,
-    properties: { id, pnu: String(properties.pnu || ""), ...(year ? { year } : {}) },
+    properties: {
+      id,
+      pnu: String(properties.pnu || ""),
+      ...(year ? { year } : {}),
+      ...(purpose ? { purpose } : {}),
+    },
     geometry,
   };
 }
@@ -619,7 +664,7 @@ export function mergeRoadApartmentFootprints(current, road, apartments) {
     const year = approvalYear(apartmentByPnu.get(pnu)?.useAprDay);
     return roadByPnu.get(pnu).map(feature => ({
       ...feature,
-      properties: { ...feature.properties, ...(year ? { year } : {}) },
+      properties: { ...feature.properties, purpose: "공동주택", ...(year ? { year } : {}) },
     }));
   });
   return {
@@ -640,13 +685,13 @@ async function readCurrentDataset() {
   return features;
 }
 
-async function readFacilityApprovalYears(dbfPath) {
-  if (!dbfPath) throw new Error("연령 보강에는 --facility-dbf 경로가 필요합니다.");
+async function readFacilityAttributes(dbfPath) {
+  if (!dbfPath) throw new Error("용도·연령 보강에는 --facility-dbf 경로가 필요합니다.");
   const handle = await open(dbfPath, "r");
-  const years = new Map();
+  const attributes = new Map();
   try {
     const header = await readDbfHeader(handle);
-    for (const name of ["UFID", "USEAPR_DAY"]) {
+    for (const name of ["UFID", "USEAPR_DAY", "USABILITY"]) {
       if (!header.fields.has(name)) throw new Error(`${dbfPath}: DBF 필드 ${name}이 없습니다.`);
     }
     const batchSize = 5000;
@@ -659,13 +704,14 @@ async function readFacilityApprovalYears(dbfPath) {
         if (record[0] === 0x2a) continue;
         const id = dbfText(record, header.fields.get("UFID"));
         const year = approvalYear(dbfText(record, header.fields.get("USEAPR_DAY")));
-        if (id && year) years.set(id, year);
+        const purpose = figureGroundPurpose(dbfText(record, header.fields.get("USABILITY")));
+        if (id) attributes.set(id, { purpose, ...(year ? { year } : {}) });
       }
     }
   } finally {
     await handle.close();
   }
-  return years;
+  return attributes;
 }
 
 export function partitionFeatures(features, cellSize = OUTPUT_CELL_SIZE) {
@@ -702,8 +748,28 @@ async function previousFeatureCount() {
   } catch { return 0; }
 }
 
+async function previousPurposeMap() {
+  const byId = new Map();
+  try {
+    for (const feature of await readCurrentDataset()) {
+      const purpose = feature.properties?.purpose;
+      if (!purpose) continue;
+      byId.set(`id:${feature.id}`, purpose);
+      if (feature.properties?.pnu) byId.set(`pnu:${legacyPnu(feature.properties.pnu)}`, purpose);
+    }
+  } catch { /* 기존 데이터가 없는 최초 생성 */ }
+  return byId;
+}
+
 async function writeDataset(features, mode, metadata = {}) {
-  const unique = new Map(features.map(feature => [feature.id, feature]));
+  const previousPurposes = await previousPurposeMap();
+  const enriched = features.map(feature => {
+    const previous = previousPurposes.get(`id:${feature.id}`)
+      || previousPurposes.get(`pnu:${legacyPnu(feature.properties?.pnu)}`);
+    const purpose = figureGroundPurpose(feature.properties?.purpose || previous);
+    return { ...feature, properties: { ...feature.properties, purpose } };
+  });
+  const unique = new Map(enriched.map(feature => [feature.id, feature]));
   const sorted = [...unique.values()].sort((a, b) => String(a.id).localeCompare(String(b.id)));
   if (sorted.length < MIN_FEATURES) throw new Error(`수집 건수 ${sorted.length}건이 최소 기준 ${MIN_FEATURES}건보다 적습니다.`);
   const previous = await previousFeatureCount();
@@ -712,6 +778,8 @@ async function writeDataset(features, mode, metadata = {}) {
   }
 
   const cells = partitionFeatures(sorted);
+  const purposeCounts = Object.fromEntries(FIGURE_GROUND_PURPOSES.map(purpose => [purpose, 0]));
+  for (const feature of sorted) purposeCounts[feature.properties.purpose]++;
   const nextDir = `${OUTPUT_DIR}.next`;
   const backupDir = `${OUTPUT_DIR}.backup`;
   await rm(nextDir, { recursive: true, force: true });
@@ -726,7 +794,7 @@ async function writeDataset(features, mode, metadata = {}) {
     manifestCells.push({ id: cell.id, bounds: cell.bounds, count: cell.features.length, bytes: Buffer.byteLength(text), file });
   }
   const manifest = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     generatedAt: new Date().toISOString(),
     source: metadata.source || "VWorld GIS건물통합정보 dt_d010",
     ...(metadata.sourceDate ? { sourceDate: metadata.sourceDate } : {}),
@@ -736,6 +804,7 @@ async function writeDataset(features, mode, metadata = {}) {
     featureCount: sorted.length,
     ageKnownCount: sorted.filter(feature => approvalYear(feature.properties?.year)).length,
     ageUnknownCount: sorted.filter(feature => !approvalYear(feature.properties?.year)).length,
+    purposeCounts,
     cells: manifestCells,
   };
   await writeFile(join(nextDir, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n", "utf8");
@@ -771,16 +840,16 @@ async function main() {
   }
   if (requestedMode === "road-shp") {
     const road = await collectByRoadShapefile(cliOption("shp-dir"));
-    const years = await readFacilityApprovalYears(cliOption("facility-dbf"));
+    const attributes = await readFacilityAttributes(cliOption("facility-dbf"));
     const current = (await readCurrentDataset()).map(feature => {
-      const year = years.get(String(feature.id));
-      return year ? { ...feature, properties: { ...feature.properties, year } } : feature;
+      const data = attributes.get(String(feature.id));
+      return data ? { ...feature, properties: { ...feature.properties, ...data } } : feature;
     });
     const apartments = JSON.parse(await readFile(join(ROOT, "apt_geo.json"), "utf8"));
     const merged = mergeRoadApartmentFootprints(current, road.features, apartments);
     console.log(`공동주택 필지 교체: ${merged.replacementCount}개 단지 / 기존 ${merged.removedCount}건 제거 / 현행 ${merged.addedCount}건 추가`);
     await writeDataset(merged.features, "road-shp", {
-      source: "VWorld GIS건물통합정보 + 도로명주소 건물",
+      source: "VWorld GIS건물통합정보 + 도로명주소 건물 + 시설물통합정보",
       sourceDate: road.sourceVersion || road.sourceDate,
     });
     return;

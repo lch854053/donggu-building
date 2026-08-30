@@ -578,6 +578,12 @@
             <span class="fg-toggle-track" aria-hidden="true"><span></span></span>
             <span><b>건축물 연령 구분</b><small>사용승인연도 기준 · 10년 간격</small></span>
           </label>
+          <label class="fg-age-toggle fg-purpose-toggle" for="fgPurposeToggle">
+            <input type="checkbox" id="fgPurposeToggle" onchange="setFigureGroundPurposeMode(this.checked)">
+            <span class="fg-toggle-track" aria-hidden="true"><span></span></span>
+            <span><b>건축물 용도 구분</b><small>주요 5종 기준 · 나머지는 기타</small></span>
+          </label>
+          <div class="fg-mode-note">색상 방식은 한 가지만 선택됩니다.</div>
           <fieldset class="fg-shape-picker">
             <legend>배경 형태</legend>
             <label><input type="radio" name="fgShape" value="circle" checked onchange="setFigureGroundShape(this.value)"><span>원형</span></label>
@@ -594,7 +600,7 @@
             <div id="figureGroundMap" class="fg-map"></div>
             <div id="fgStatus" class="fg-status">데이터 준비 중…</div>
           </div>
-          <div class="fg-age-legend" id="fgAgeLegend" hidden></div>
+          <div class="fg-legend" id="fgLegend" hidden></div>
         </div>
       </div>
     </div><!-- /map-sub-figure -->
@@ -5076,7 +5082,7 @@ let FG_MANIFEST = null;
 let FG_RENDERER = null;
 let FG_MOVE_TIMER = null;
 let FG_LOAD_ID = 0;
-let FG_AGE_MODE = false;
+let FG_COLOR_MODE = "plain";
 const FG_CELL_DATA = new Map();
 const FG_CELL_LAYERS = new Map();
 const FG_AGE_BUCKETS = [
@@ -5089,6 +5095,14 @@ const FG_AGE_BUCKETS = [
   { max:Infinity, label:"60년 이상", color:"#a33848" },
 ];
 const FG_UNKNOWN_COLOR = "#aaa7a1";
+const FG_PURPOSE_BUCKETS = [
+  { label:"단독주택", color:"#c26b55" },
+  { label:"제1종 근린생활시설", color:"#7b9366" },
+  { label:"제2종 근린생활시설", color:"#c29a4a" },
+  { label:"공동주택", color:"#6c82b7" },
+  { label:"숙박시설", color:"#a274a7" },
+  { label:"기타", color:FG_UNKNOWN_COLOR },
+];
 
 function fgAgeBucket(year){
   const value = Number(year);
@@ -5097,30 +5111,60 @@ function fgAgeBucket(year){
   return FG_AGE_BUCKETS.find(bucket => age <= bucket.max) || FG_AGE_BUCKETS.at(-1);
 }
 
-function fgFeatureStyle(feature){
-  const bucket = FG_AGE_MODE ? fgAgeBucket(feature?.properties?.year) : null;
-  const color = FG_AGE_MODE ? (bucket?.color || FG_UNKNOWN_COLOR) : "#35383a";
-  return { color, weight:0, fillColor:color, fillOpacity:FG_AGE_MODE ? 0.9 : 0.96, interactive:false };
+function fgPurposeBucket(purpose){
+  return FG_PURPOSE_BUCKETS.find(bucket => bucket.label === purpose) || FG_PURPOSE_BUCKETS.at(-1);
 }
 
-function renderFigureGroundAgeLegend(){
-  const legend = document.getElementById("fgAgeLegend");
+function fgFeatureStyle(feature){
+  const ageBucket = FG_COLOR_MODE === "age" ? fgAgeBucket(feature?.properties?.year) : null;
+  const purposeBucket = FG_COLOR_MODE === "purpose" ? fgPurposeBucket(feature?.properties?.purpose) : null;
+  const bucket = ageBucket || purposeBucket;
+  const color = bucket?.color || (FG_COLOR_MODE === "age" ? FG_UNKNOWN_COLOR : "#35383a");
+  return { color, weight:0, fillColor:color, fillOpacity:FG_COLOR_MODE === "plain" ? 0.96 : 0.9, interactive:false };
+}
+
+function renderFigureGroundLegend(){
+  const legend = document.getElementById("fgLegend");
   if(!legend) return;
+  if(FG_COLOR_MODE === "purpose"){
+    const counts = FG_MANIFEST?.purposeCounts || {};
+    legend.innerHTML = `<div class="fg-purpose-scale">${FG_PURPOSE_BUCKETS.map(bucket =>
+      `<span><i style="--purpose-color:${bucket.color}"></i><b>${bucket.label}</b><em>${Number(counts[bucket.label] || 0).toLocaleString("ko-KR")}</em></span>`).join("")}</div>
+      <p>상위 5개 용도 외 건물은 기타로 표시</p>`;
+    return;
+  }
+  if(FG_COLOR_MODE !== "age"){
+    legend.innerHTML = "";
+    return;
+  }
   const known = Number(FG_MANIFEST?.ageKnownCount || 0);
   const unknown = Number(FG_MANIFEST?.ageUnknownCount || 0);
   legend.innerHTML = `<div class="fg-age-scale">${FG_AGE_BUCKETS.map(bucket =>
     `<span><i style="--age-color:${bucket.color}"></i>${bucket.label}</span>`).join("")}
     <span><i style="--age-color:${FG_UNKNOWN_COLOR}"></i>미확인</span></div>
-    <p>승인연도 확인 ${known.toLocaleString("ko-KR")}건 · 미확인 ${unknown.toLocaleString("ko-KR")}건</p>`;
+     <p>승인연도 확인 ${known.toLocaleString("ko-KR")}건 · 미확인 ${unknown.toLocaleString("ko-KR")}건</p>`;
+}
+
+function setFigureGroundColorMode(mode){
+  FG_COLOR_MODE = ["age", "purpose"].includes(mode) ? mode : "plain";
+  const ageToggle = document.getElementById("fgAgeToggle");
+  const purposeToggle = document.getElementById("fgPurposeToggle");
+  if(ageToggle) ageToggle.checked = FG_COLOR_MODE === "age";
+  if(purposeToggle) purposeToggle.checked = FG_COLOR_MODE === "purpose";
+  const legend = document.getElementById("fgLegend");
+  if(legend){
+    legend.hidden = FG_COLOR_MODE === "plain";
+    renderFigureGroundLegend();
+  }
+  for(const layer of FG_CELL_LAYERS.values()) layer.setStyle(fgFeatureStyle);
 }
 
 function setFigureGroundAgeMode(enabled){
-  FG_AGE_MODE = Boolean(enabled);
-  const toggle = document.getElementById("fgAgeToggle");
-  if(toggle && toggle.checked !== FG_AGE_MODE) toggle.checked = FG_AGE_MODE;
-  const legend = document.getElementById("fgAgeLegend");
-  if(legend){ legend.hidden = !FG_AGE_MODE; if(FG_AGE_MODE) renderFigureGroundAgeLegend(); }
-  for(const layer of FG_CELL_LAYERS.values()) layer.setStyle(fgFeatureStyle);
+  setFigureGroundColorMode(enabled ? "age" : (FG_COLOR_MODE === "age" ? "plain" : FG_COLOR_MODE));
+}
+
+function setFigureGroundPurposeMode(enabled){
+  setFigureGroundColorMode(enabled ? "purpose" : (FG_COLOR_MODE === "purpose" ? "plain" : FG_COLOR_MODE));
 }
 
 function setFigureGroundShape(shape){
@@ -5171,7 +5215,7 @@ async function initFigureGroundMap(){
     const manifest = await response.json();
     if(!manifest?.cells?.length) throw new Error("건물 데이터가 비어 있습니다.");
     FG_MANIFEST = manifest;
-    renderFigureGroundAgeLegend();
+    renderFigureGroundLegend();
     const sourceEl = document.getElementById("fgSource");
     if(sourceEl) sourceEl.textContent = [manifest.source, manifest.sourceDate && `기준일 ${manifest.sourceDate}`].filter(Boolean).join(" · ");
     await loadFigureGroundViewport();
