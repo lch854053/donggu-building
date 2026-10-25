@@ -60,6 +60,8 @@ export function requireEnv(res, name) {
 // catch 공통: AbortError → 504, 그 외 → 502. (JSON 응답)
 export function failJson(res, e, tag) {
   const aborted = e?.name === "AbortError";
-  console.error(`[${tag}]`, aborted ? "timeout" : e?.message || e);
+  // Upstream errors may contain URLs with authentication query parameters.
+  // Log categories only; never serialize the exception or upstream body.
+  console.error(`[${tag}]`, { kind:aborted ? 'timeout' : 'upstream', status:Number.isInteger(e?.status) ? e.status : null });
   return res.status(aborted ? 504 : 502).json({ error: "서버 오류" });
 }

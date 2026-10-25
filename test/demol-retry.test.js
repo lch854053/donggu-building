@@ -61,9 +61,8 @@ test("demolition scan retries, counts failed pages and never fakes an empty resu
 
   // 실패를 무음 처리하지 않는다: 재시도 → error 전달 → 실패 집계 → 안내
   assert.match(scan, /apiRetry\("archpms"/);
-  assert.match(scan, /failedPages\+\+/);
-  assert.match(scan, /일부 조회 실패/);
-  // 1페이지가 비면 잔여 페이지를 만들지 않는다(pageSize=1 헛요청 폭주 방지)
-  assert.match(scan, /const pageSize = r\.items\.length;/);
+  assert.match(scan, /startQuery\('demol'/);
+  assert.match(scan, /session\.ledger\.collect/);
+  assert.match(scan, /showQueryStatus\(session\)/);
   assert.doesNotMatch(scan, /Math\.max\(r\.items\.length, 1\)/);
 });

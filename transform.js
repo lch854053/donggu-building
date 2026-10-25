@@ -301,7 +301,7 @@ function hdongOf(p, HJ){
   return (HJ.jibun2hdong || {})[key] || "";
 }
 
-function fmt(n){ return n==null ? "-" : Number(n).toLocaleString("ko-KR"); }
+function fmt(n){ return n==null || String(n).trim()==='' || !Number.isFinite(Number(n)) ? "-" : Number(n).toLocaleString("ko-KR"); }
 
 function esc(s){ return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 

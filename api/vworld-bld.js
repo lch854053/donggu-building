@@ -34,11 +34,12 @@ async function fetchBldProps(pnu, key) {
     pnu,
   });
   const r = await fetchWithTimeout(`${VWORLD_NED}?${params}`);
-  if (!r.ok) return null;
+  if (!r.ok) throw Object.assign(new Error('GIS upstream HTTP failure'), {status:r.status});
   let data;
   try { data = await r.json(); }
-  catch { return null; }
-  const features = data?.features || [];
+  catch { throw new Error('invalid GIS response'); }
+  if (!Array.isArray(data?.features)) throw new Error('invalid GIS response');
+  const features = data.features;
   if (!features.length) return null;
   return features.map(f => f.properties || {});
 }
@@ -117,10 +118,13 @@ export default async function handler(req, res) {
       : [pnu, pnu.startsWith(SIGUNGU_VW) ? SIGUNGU_OLD + pnu.slice(5) : null].filter(Boolean);
 
     let propsList = null;
+    let lookupError = null;
     for (const cand of candidates) {
-      propsList = await fetchBldProps(cand, key);
+      try { propsList = await fetchBldProps(cand, key); }
+      catch(e) { lookupError = e; continue; }
       if (propsList) break;
     }
+    if (!propsList && lookupError) throw lookupError;
 
     setSecurity(res);
     res.setHeader("Cache-Control", "s-maxage=86400, stale-while-revalidate=3600");
@@ -129,7 +133,7 @@ export default async function handler(req, res) {
     // 대표 건축물이 정상이어도 같은 필지 내 다른 건축물이 위반일 수 있어
     // 필지 전체 기준 위반 여부(violtAny)도 함께 반환한다.
     const violtAny = propsList.some(p => String(p.violt_bild || "").trim() === "Y");
-    return res.status(200).json({ found: true, properties: pickMainProps(propsList), violtAny });
+    return res.status(200).json({ found: true, scope:'parcel', match:'unverified', count:propsList.length, properties: pickMainProps(propsList), violtAny });
   } catch (e) {
     return failJson(res, e, "vworld-bld");
   }
