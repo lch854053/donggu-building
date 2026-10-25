@@ -1,0 +1,58 @@
+{
+  "mode": "Real local Chromium; mocked API responses, real stored vacant/mapping data; no live API scan",
+  "reports": [
+    {
+      "width": 360,
+      "mode": "Chromium touch emulation, not physical phone",
+      "checks": [
+        "collapsed advanced fields preserve values; presets compose/toggle; year reset preserves unknown toggle; committed numeric values normalize and match chips/URL/internal Set",
+        "editing does not query or relabel old rows; result Excel uses captured filters; history/reload restore editor versus last-query relation; return to original removes warning and restores retry eligibility; pagination is not a filter edit",
+        "clear-all affects only current filters, not foreign menu or old results; v1 restore/reload aligns chips and advanced count; disclosure/chip reset does not add history",
+        "map editing sources does not reinterpret old result counts, layers or provenance as new-source results",
+        "housing apartment/300-household presets compose and release only owned fields; five calendar years includes this year and toggles unknown dates independently",
+        "actual local vacant grades support 3-only preset and result Excel provenance after edit; no viewport overflow"
+      ],
+      "errors": []
+    },
+    {
+      "width": 390,
+      "mode": "Chromium touch emulation, not physical phone",
+      "checks": [
+        "collapsed advanced fields preserve values; presets compose/toggle; year reset preserves unknown toggle; committed numeric values normalize and match chips/URL/internal Set",
+        "editing does not query or relabel old rows; result Excel uses captured filters; history/reload restore editor versus last-query relation; return to original removes warning and restores retry eligibility; pagination is not a filter edit",
+        "clear-all affects only current filters, not foreign menu or old results; v1 restore/reload aligns chips and advanced count; disclosure/chip reset does not add history",
+        "map editing sources does not reinterpret old result counts, layers or provenance as new-source results",
+        "housing apartment/300-household presets compose and release only owned fields; five calendar years includes this year and toggles unknown dates independently",
+        "actual local vacant grades support 3-only preset and result Excel provenance after edit; no viewport overflow"
+      ],
+      "errors": []
+    },
+    {
+      "width": 430,
+      "mode": "Chromium touch emulation, not physical phone",
+      "checks": [
+        "collapsed advanced fields preserve values; presets compose/toggle; year reset preserves unknown toggle; committed numeric values normalize and match chips/URL/internal Set",
+        "editing does not query or relabel old rows; result Excel uses captured filters; history/reload restore editor versus last-query relation; return to original removes warning and restores retry eligibility; pagination is not a filter edit",
+        "clear-all affects only current filters, not foreign menu or old results; v1 restore/reload aligns chips and advanced count; disclosure/chip reset does not add history",
+        "map editing sources does not reinterpret old result counts, layers or provenance as new-source results",
+        "housing apartment/300-household presets compose and release only owned fields; five calendar years includes this year and toggles unknown dates independently",
+        "actual local vacant grades support 3-only preset and result Excel provenance after edit; no viewport overflow"
+      ],
+      "errors": []
+    },
+    {
+      "width": 1366,
+      "mode": "Chromium desktop",
+      "checks": [
+        "collapsed advanced fields preserve values; presets compose/toggle; year reset preserves unknown toggle; committed numeric values normalize and match chips/URL/internal Set",
+        "editing does not query or relabel old rows; result Excel uses captured filters; history/reload restore editor versus last-query relation; return to original removes warning and restores retry eligibility; pagination is not a filter edit",
+        "clear-all affects only current filters, not foreign menu or old results; v1 restore/reload aligns chips and advanced count; disclosure/chip reset does not add history",
+        "map editing sources does not reinterpret old result counts, layers or provenance as new-source results",
+        "housing apartment/300-household presets compose and release only owned fields; five calendar years includes this year and toggles unknown dates independently",
+        "late page completion retains captured conditions, not edited filters; partial retry is disabled while changed, reenabled on exact return, and fetches only failed scope",
+        "actual local vacant grades support 3-only preset and result Excel provenance after edit; no viewport overflow"
+      ],
+      "errors": []
+    }
+  ]
+}

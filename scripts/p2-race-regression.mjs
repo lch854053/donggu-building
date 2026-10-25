@@ -41,6 +41,7 @@ async function setup(){
     fetchHspmsComplex=async()=>null;
     switchTab('housing');
   });
+  if(await page.locator('#advanced-housing').count())await page.locator('#advanced-housing>summary').click();
 }
 
 await setup();

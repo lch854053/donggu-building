@@ -242,7 +242,7 @@
             <select id="h-hdong"><option value="">불러오는 중…</option></select>
           </div>
           <div class="field">
-            <label>단지종류 <span class="sel-hint">(미선택 = 전체)</span></label>
+            <label>주택 종류 <span class="sel-hint">(미선택 = 전체)</span></label>
             <div class="ms" id="h-ms-kind"></div>
           </div>
           <div class="field">
@@ -495,7 +495,7 @@
       <!-- 사이드 패널: 소스 선택 + 조건 필터 + 결과목록 -->
       <aside class="map-side" id="mapSide">
         <div class="ms-section">
-          <div class="ms-label">데이터 소스</div>
+          <div class="ms-label">표시할 자료</div>
           <div class="map-source-grid" id="mapSourceGrid">
             <label class="ms-chk"><input type="checkbox" value="vacant" checked><span class="ms-dot ms-dot-vacant"></span>빈집현황</label>
             <label class="ms-chk"><input type="checkbox" value="apt" checked><span class="ms-dot ms-dot-apt"></span>공동주택</label>
@@ -639,6 +639,7 @@
 <script src="stats-metadata.js"></script>
 <script src="search-state.js"></script>
 <script src="ui-labels.js"></script>
+<script src="filter-model.js"></script>
 <script>
 /* ============================================================
    1. 앱 로직 (순수 변환은 transform.js, API 데이터 레이어는 app-api.js)
@@ -687,10 +688,12 @@ function startQuery(kind, hintId, rootId, fetchPage, field, normalize){
   session.sameConditions = ()=>session.revision === (QUERY_REVISIONS.get(kind) || 0) && queryConditions(rootId) === conditions;
   session.ledger.active = session.current;
   QUERY_SESSIONS.set(kind, session);
+  if(typeof FilterUI!=='undefined'){session.filterRun=FilterUI.begin(kind,session);session.sameConditions=()=>FilterUI.matches(session.filterRun);}
   return session;
 }
 function showQueryStatus(session){
   if(!session.current()) return;
+  if(typeof FilterUI!=='undefined')FilterUI.status(session);
   let el = document.getElementById(session.statusId);
   if(!el){
     el = document.createElement('div'); el.id = session.statusId; el.className = 'd-panel-hint';
@@ -737,7 +740,7 @@ function showQueryStatus(session){
   el.append(ranges);
 }
 function appendQueryInfo(wb, kind){
-  const session = QUERY_SESSIONS.get(kind);
+  const session = (typeof FilterUI!=='undefined'?FilterUI.resultSession(kind):null)||QUERY_SESSIONS.get(kind);
   if(session) XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(session.ledger.info()), '조회정보');
 }
 
@@ -1214,10 +1217,12 @@ function buildMultiselect(hostId, opts, addEtc){
       btn.classList.toggle("has", n>0);
     });
   });
-  return {
+  const control={
     selected:()=>[...sel],
+    set:(values,{notify=true}={})=>{sel.clear();panel.querySelectorAll('input').forEach(c=>{c.checked=values.includes(c.value);if(c.checked)sel.add(c.value);});btn.textContent=sel.size===0?'전체':sel.size===1?[...sel][0]:`${sel.size}개 선택`;btn.classList.toggle('has',sel.size>0);if(notify)host.dispatchEvent(new CustomEvent('filtercommit',{bubbles:true}));},
     reset:()=>{ sel.clear(); panel.querySelectorAll("input").forEach(c=>c.checked=false); btn.textContent="전체"; btn.classList.remove("has"); }
   };
+  host.filterControl=control;return control;
 }
 
 // 멀티셀렉트 드롭다운: 다른 영역 클릭 시 열린 패널 모두 닫기
@@ -1229,7 +1234,7 @@ document.addEventListener("click", (e)=>{
 // 듀얼 슬라이더
 function buildDual(hostId, readoutId){
   const host = document.getElementById(hostId);
-  const min=+host.dataset.min, max=+host.dataset.max, step=+host.dataset.step, unit=host.dataset.unit;
+  const min=+host.dataset.min, max=+host.dataset.max, step=+host.dataset.step, unit=host.dataset.unit || (hostId.includes('year')?'년':'');
   const group = host.dataset.group !== "0";   // data-group="0" → 천단위 쉼표 없음(연도용)
   const ro = document.getElementById(readoutId);
   const title=host.closest('.field')?.querySelector('label')?.textContent.trim() || hostId;
@@ -1241,7 +1246,7 @@ function buildDual(hostId, readoutId){
      <input aria-label="${esc(title)} 최대 슬라이더" type="range" class="hi" min="${min}" max="${max}" step="${precision}" value="${max}">
      <div class="dual-numbers"><label for="${hostId}-min">최소 ${esc(unit)}<input id="${hostId}-min" aria-label="${esc(title)} 최소값" type="number" min="${min}" max="${max}" step="${precision}" value="${min}"></label>
      <label for="${hostId}-max">최대 ${esc(unit)}<input id="${hostId}-max" aria-label="${esc(title)} 최대값" type="number" min="${min}" max="${max}" step="${precision}" value="${max}"></label></div>
-     <small class="range-note">${unlimited?`최대 ${max}${esc(unit)} 선택은 상한 무제한`:'빈 입력은 전체 경계값으로 복원'} · 역전 입력은 작은 값부터 정렬</small>`;
+      <details class="range-help"><summary>범위 입력 안내</summary><small class="range-note">${unlimited?`최대 ${max}${esc(unit)} 선택은 상한 무제한. `:''}빈 값은 경계값, 범위 역전은 작은 값부터 정렬, 경계 밖 값은 경계로 보정합니다. 적용값은 위 입력과 요약에 표시됩니다.</small></details>${unlimited?`<small class="range-cap">최대 ${max}${esc(unit)} = 상한 무제한</small>`:''}`;
   const lo=host.querySelector(".lo"), hi=host.querySelector(".hi"), fill=host.querySelector(".fill");
   const numberLow=host.querySelector(`#${hostId}-min`),numberHigh=host.querySelector(`#${hostId}-max`);
   ro.setAttribute('aria-live','polite');
@@ -1252,7 +1257,7 @@ function buildDual(hostId, readoutId){
     const pa=(a-min)/(max-min)*100, pb=(b-min)/(max-min)*100;
     fill.style.left=pa+"%"; fill.style.width=(pb-pa)+"%";
     const hiTxt=(b>=max)?`${fmtv(max)}${unit}+`:`${fmtv(b)}${unit}`;
-    ro.textContent=(a<=min&&b>=max)?"전체":`${fmtv(a)}${unit} ~ ${hiTxt}`;
+    ro.textContent=typeof FilterModel!=='undefined'?FilterModel.rangeText(hostId,[a,b],[min,max]):(a<=min&&b>=max)?"전체":`${fmtv(a)}${unit} ~ ${hiTxt}`;
   }
   lo.addEventListener("input",update); hi.addEventListener("input",update); update();
   for(const input of [numberLow,numberHigh]){
@@ -1262,12 +1267,14 @@ function buildDual(hostId, readoutId){
     });
     input.addEventListener('keydown',event=>{if(event.key==='Enter'){input.dispatchEvent(new Event('change'));input.blur();}});
   }
-  return {
+  const control={
     values:()=>{ let a=+lo.value,b=+hi.value; return a<=b?[a,b]:[b,a]; },
+    set:(values,{notify=true}={})=>{const [a,b]=normalizeRangePair(values[0],values[1],min,max,precision);lo.value=a;hi.value=b;update();if(notify)host.dispatchEvent(new CustomEvent('filtercommit',{bubbles:true}));},
     atCap:()=>Math.max(+lo.value,+hi.value)>=max,
     isFull:()=>{ const a=Math.min(+lo.value,+hi.value), b=Math.max(+lo.value,+hi.value); return a<=min && b>=max; },
     reset:()=>{ lo.value=min; hi.value=max; update(); }
   };
+  host.filterControl=control;return control;
 }
 
 function initFilters(){
@@ -1568,6 +1575,7 @@ function exportConditionExcel(){
   XLSX.utils.book_append_sheet(wb, ws, "조건검색");
   appendQueryInfo(wb, 'condition');
   const today = new Date().toISOString().slice(0,10);
+  if(typeof FilterUI!=='undefined')FilterUI.appendExcel(wb,'cond');
   XLSX.writeFile(wb, `건축물_조건검색_${today}.xlsx`);
 }
 
@@ -3438,6 +3446,8 @@ function renderHousingPager(total, pages, offset, shown){
 }
 
 function exportHousingExcel(){
+  const exportQuery=(typeof FilterUI!=='undefined'?FilterUI.resultSession('housing'):null)||H_LAST_QUERY;
+  const exportStatus=(typeof FilterUI!=='undefined'?FilterUI.models.get('housing')?.published?.phase:null)||H_PROGRESS_STATE;
   const nowY = new Date().getFullYear();
   const rows = HRESULTS.map((d)=>{
     const yr = extractYear(d.useAprDay);
@@ -3464,21 +3474,22 @@ function exportHousingExcel(){
       "관리사무소 팩스번호": d.officeFax || "",
       "건물구조": d.strct || "",
       "승강기": d.elevator != null ? d.elevator : "-"
-      ,"보강상태":d.enrichmentState || H_PROGRESS_STATE
+      ,"보강상태":d.enrichmentState || exportStatus
     };
   });
   const ws = XLSX.utils.json_to_sheet(rows);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "공동주택관리");
-  if(H_LAST_QUERY){
-    const info=H_LAST_QUERY.ledger.info();info[0]=['조회 상태',H_PROGRESS_STATE];
-    if(H_PROGRESS_STATE!=='전체 조회 완료')info[5]=['완전성','미완료·실패·취소 정보가 있어 전체 결과의 완전성을 보장할 수 없습니다.'];
-    info.push(['표제부 보강 실패 수',H_LAST_QUERY.enrichmentFailures?.length || 0],['표제부 보강 실패 범위(PNU)',(H_LAST_QUERY.enrichmentFailures || []).join(', ')]);
-    info.push(['보강 목록 조회 실패', [...(H_LAST_QUERY.sourceFailures || [])].join(', ')]);
-    if(H_PROGRESS_STATE!=='전체 조회 완료')info.push(['주의','보강 중·실패·취소 결과는 필터 판정과 집계가 바뀔 수 있으며 완전성을 보장할 수 없습니다.']);
+  if(exportQuery){
+    const info=exportQuery.ledger.info();info[0]=['조회 상태',exportStatus];
+    if(exportStatus!=='전체 조회 완료')info[5]=['완전성','미완료·실패·취소 정보가 있어 전체 결과의 완전성을 보장할 수 없습니다.'];
+    info.push(['표제부 보강 실패 수',exportQuery.enrichmentFailures?.length || 0],['표제부 보강 실패 범위(PNU)',(exportQuery.enrichmentFailures || []).join(', ')]);
+    info.push(['보강 목록 조회 실패', [...(exportQuery.sourceFailures || [])].join(', ')]);
+    if(exportStatus!=='전체 조회 완료')info.push(['주의','보강 중·실패·취소 결과는 필터 판정과 집계가 바뀔 수 있으며 완전성을 보장할 수 없습니다.']);
     XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(info),'조회정보');
   }
   const today = new Date().toISOString().slice(0,10);
+  if(typeof FilterUI!=='undefined')FilterUI.appendExcel(wb,'housing');
   XLSX.writeFile(wb, `공동주택관리_${today}.xlsx`);
 }
 
@@ -3605,6 +3616,7 @@ function mUpdate(done,total){
 
 function initDemolFilters(){
   if(M_FILTERS_READY) return;
+  document.getElementById('mdual-year').dataset.max=String(new Date().getFullYear());
   M_GB = buildMultiselect("mms-gb", M_GB_OPTS, false);
   M_DUAL_year = buildDual("mdual-year","mro-year");
   // 행정동 드롭다운은 loadHaengjeong 완료 후 채워짐. 폼 컨트롤 재사용용 초기화 진입점.
@@ -3793,6 +3805,7 @@ function exportDemolExcel(){
   XLSX.utils.book_append_sheet(wb, ws, "철거멸실대장");
   appendQueryInfo(wb, 'demol');
   const dongLabel = document.getElementById("mResDong").textContent || "전체";
+  if(typeof FilterUI!=='undefined')FilterUI.appendExcel(wb,'demol');
   XLSX.writeFile(wb, `철거멸실대장_${dongLabel}_${new Date().toISOString().slice(0,10)}.xlsx`);
 }
 
@@ -4081,6 +4094,7 @@ async function runVacantSearch(){
   const [yearMin, yearMax] = V_DUAL_YEAR.values();
   const yearActive = !V_DUAL_YEAR.isFull();
   const incUnknown = document.getElementById("v-yearunknown").checked;
+  if(typeof FilterUI!=='undefined')FilterUI.begin('vacant');
 
   V_RESULTS_RAW = V_DATA.filter(d => {
     const targetDong = d.hdong || d.dong || "";
@@ -4244,6 +4258,7 @@ function exportVacantExcel(){
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "빈집현황");
   const dongLabel = document.getElementById("vResDong").textContent || "전체";
+  if(typeof FilterUI!=='undefined')FilterUI.appendExcel(wb,'vacant');
   XLSX.writeFile(wb, `빈집현황_${dongLabel}_${new Date().toISOString().slice(0,10)}.xlsx`);
 }
 
@@ -4675,6 +4690,9 @@ function mapSelectedSources(){
   return [...document.querySelectorAll('#mapSourceGrid input:checked')].map(c => c.value);
 }
 
+// Results retain query sources rather than newly edited checkboxes.
+function mapResultSources(){return (typeof FilterUI!=='undefined'?FilterUI.resultSources():null)||mapSelectedSources();}
+
 // 소스 체크박스 변경 시 섹션 토글 (이벤트 위임)
 document.addEventListener("change", (e)=>{
   if(e.target.closest('#mapSourceGrid')){
@@ -4730,7 +4748,7 @@ function initMapLeaflet(){
   map.on("moveend", ()=>{
     clearTimeout(M_MOVE_TIMER);
     M_MOVE_TIMER = setTimeout(()=>{
-      if(mapSelectedSources().includes("cond") && M_RESULTS.cond.length){
+      if(mapResultSources().includes("cond") && M_RESULTS.cond.length){
         refreshCondViewport();
       }
     }, 350);
@@ -4783,6 +4801,7 @@ async function runMapSearch(){
     }
     const hdong = document.getElementById("map-hdong").value;
     const isAll = hdong === "__ALL__";
+    if(typeof FilterUI!=='undefined')FilterUI.begin('map');
     document.getElementById("mapHint").textContent = "";
 
     // 선택 해제된 소스의 이전 결과를 초기화 (체크해제해도 잔류하지 않도록)
@@ -5064,7 +5083,7 @@ async function renderAllMapLayers(){
   }
   // 조건검색은 redrawCondViewport 에서 처리(뷰포트 기반)
   M_LAYER.cond.clearLayers();
-  if(mapSelectedSources().includes("cond") && M_RESULTS.cond.length){
+  if(mapResultSources().includes("cond") && M_RESULTS.cond.length){
     await refreshCondViewport();
   }
 }
@@ -5121,7 +5140,7 @@ function highlightMapPolygon(layer, source){
 function renderMapResults(){
   const wrap = document.getElementById("mapResultsWrap");
   const list = document.getElementById("mapResultsList");
-  const sources = mapSelectedSources();
+  const sources = mapResultSources();
   const all = [];
   if(sources.includes("vacant")) for(const d of M_RESULTS.vacant) all.push({ src:"vacant", d });
   if(sources.includes("apt"))    for(const d of M_RESULTS.apt)    all.push({ src:"apt", d });
@@ -5315,7 +5334,7 @@ function renderCondCard(d){
 // ── 범례 ──
 function renderMapLegend(){
   const el = document.getElementById("mapLegend");
-  const sources = mapSelectedSources();
+  const sources = mapResultSources();
   const items = [];
   if(sources.includes("vacant")){
     items.push(`<div class="ml-group"><b>빈집 등급</b></div>`);
@@ -5339,7 +5358,7 @@ function renderMapLegend(){
 // 결과 전체 영역으로 줌 맞춤
 function fitMapToResults(){
   if(!M_MAP) return;
-  const sources = mapSelectedSources();
+  const sources = mapResultSources();
   const geoms = [];
   if(sources.includes("vacant")) for(const d of M_RESULTS.vacant) if(d.geometry) geoms.push(d.geometry);
   if(sources.includes("apt"))    for(const d of M_RESULTS.apt)    if(d.geometry) geoms.push(d.geometry);
@@ -5757,6 +5776,7 @@ renderLastUpdated();
 
 </script>
 <script src="ui-enhancements.js"></script>
+<script src="filter-ui.js"></script>
 <script src="search-navigation.js"></script>
 </body>
 </html>

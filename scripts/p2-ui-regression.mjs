@@ -31,10 +31,12 @@ for(const width of [360,390,430,1366]){
     assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`overflow menu ${i} at ${width}`);
   }
   await page.evaluate(async()=>{switchTab('housing');await loadHousing();});
+  if(await page.locator('#advanced-housing').count())await page.locator('#advanced-housing>summary').click();
   await page.fill('#h-dual-hhld-min','154');await page.locator('#h-dual-hhld-min').press('Tab');
   await page.fill('#h-dual-hhld-max','999');await page.locator('#h-dual-hhld-max').press('Tab');
   assert.deepEqual(await page.evaluate(()=>H_DUAL.hhld.values()),[154,999]);
   await page.evaluate(async()=>{switchTab('building');switchBuildingSubtab('cond');await loadHaengjeong();});
+  if(await page.locator('#advanced-cond').count())await page.locator('#advanced-cond>summary').click();
   await page.selectOption('#c-hdong','계림2동');
   await page.fill('#dual-flr-min','9');await page.locator('#dual-flr-min').press('Tab');
   await page.fill('#dual-flr-max','2');await page.locator('#dual-flr-max').press('Tab');

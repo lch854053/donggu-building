@@ -1,0 +1,22 @@
+[
+  {
+    "width": 360,
+    "mode": "Chromium touch/mobile emulation, not physical phone",
+    "errors": []
+  },
+  {
+    "width": 390,
+    "mode": "Chromium touch/mobile emulation, not physical phone",
+    "errors": []
+  },
+  {
+    "width": 430,
+    "mode": "Chromium touch/mobile emulation, not physical phone",
+    "errors": []
+  },
+  {
+    "width": 1366,
+    "mode": "Chromium desktop",
+    "errors": []
+  }
+]
