@@ -23,6 +23,7 @@ class QueryLedger {
   }
   key(t){ return JSON.stringify([t.bjd, t.type || 'page', t.pg || 1, t.bun, t.ji]); }
   async collect(tasks){
+    this.collecting=true;
     const queue = tasks.slice();
     const worker = async()=>{
       while(queue.length && (!this.active || this.active())){
@@ -57,9 +58,11 @@ class QueryLedger {
           }
           if(pages > 100) this.requests.set(key+':limit', { task:{...task, pg:'101+'}, ok:false, error:'조회 상한 초과', rows:[], limit:true });
         }
+        if(this.onProgress)this.onProgress();
       }
     };
-    await Promise.all([worker(), worker()]);
+    try { await Promise.all([worker(), worker()]); }
+    finally {this.collecting=false;}
     this.time = new Date().toISOString();
     return this.rows();
   }
@@ -74,6 +77,7 @@ class QueryLedger {
   }
   failed(){ return [...this.requests.values()].filter(r=>!r.ok); }
   status(){
+    if(this.collecting)return '조회 중 · 잠정 결과';
     const success = [...this.requests.values()].filter(r=>r.ok).length;
     return this.failed().length ? (success ? '부분 조회' : '전체 실패') : (this.rows().length ? '전체 성공' : '정상 0건');
   }
@@ -88,7 +92,7 @@ class QueryLedger {
     return [
       ['조회 상태',this.status()], ['조회시각',this.time], ['검색 조건',this.description || this.conditions],
       ['성공 요청 수',records.filter(r=>r.ok).length], ['실패 요청 수',this.failed().length],
-      ['완전성',this.failed().length ? '일부 범위 미조회: 전체 건수 및 결과 완전성을 보장할 수 없습니다.' : '요청한 범위의 페이지 조회 완료. 원본 데이터 정확성을 보증하지 않습니다.'],
+      ['완전성',this.collecting || this.failed().length ? '일부 범위 미조회: 전체 건수 및 결과 완전성을 보장할 수 없습니다.' : '요청한 범위의 페이지 조회 완료. 원본 데이터 정확성을 보증하지 않습니다.'],
       ['범위','페이지','성공 여부'],
       ...records.map(r=>[`${r.task.bjd}${r.task.type==='parcel' ? ` ${r.task.bun}-${r.task.ji}` : ''}`,r.task.pg || 1,r.ok ? '성공' : '실패'])
     ];

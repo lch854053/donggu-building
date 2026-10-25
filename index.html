@@ -627,12 +627,13 @@
       &ensp;· 공공데이터포털·동구 : 공동주택·빈집 현황 (월간 갱신)<br>
       &ensp;· KOSIS·SGIS : 주택·거처 통계 (월간 갱신)<br>
       &ensp;· 카카오 로컬 : 공동주택명·행정동 보정 (실시간)<br>
-    - 마지막 업데이트 : <span id="lastUpdated">확인 중…</span><br>
+    - 서비스 문서 수정일(서버 제공, 자료 기준일·수집일과 별개 / 실제 배포일 미확인) : <span id="lastUpdated">확인 중…</span><br>
     - 오류 제보 및 기능 추가 문의 : ch4834@korea.kr
   </div>
 </div>
 
 <script src="transform.js"></script>
+<script src="vacant-model.js"></script>
 <script src="app-api.js"></script>
 <script src="reliability.js"></script>
 <script>
@@ -645,12 +646,14 @@
    ============================================================ */
 /* ── 일괄조회(Bulk) 상태 ── */
 let   B_RESULTS  = [];   // 일괄조회 결과 행
+const B_GATE=requestGate();
 const CONCURRENCY = 5;   // 동시 조회 개수 (너무 높이면 API 차단 위험)
 
 const QUERY_SESSIONS = new Map();
 const QUERY_REVISIONS = new Map();
 const QUERY_STARTS = new Map();
 document.addEventListener('input', event=>{
+  if(event.target.id?.endsWith('Sort'))return;
   for(const session of QUERY_SESSIONS.values()){
     if(document.getElementById(session.rootId).contains(event.target)){
       QUERY_REVISIONS.set(session.kind, (QUERY_REVISIONS.get(session.kind) || 0)+1);
@@ -660,7 +663,7 @@ document.addEventListener('input', event=>{
 });
 function queryConditions(rootId){
   const root = document.getElementById(rootId);
-  return JSON.stringify([...root.querySelectorAll('input, select')].map(el=>({
+  return JSON.stringify([...root.querySelectorAll('input, select')].filter(el=>!el.id?.endsWith('Sort')).map(el=>({
     field:el.id || `${el.closest('[id]')?.id || el.name}:${el.className}`, value:el.value, checked:el.type==='checkbox' ? el.checked : undefined
   })));
 }
@@ -688,10 +691,11 @@ function showQueryStatus(session){
   let el = document.getElementById(session.statusId);
   if(!el){
     el = document.createElement('div'); el.id = session.statusId; el.className = 'd-panel-hint';
+    el.setAttribute('role','status');el.setAttribute('aria-live','polite');
     document.getElementById(session.hintId).parentElement.after(el);
   }
   const failed = session.ledger.failed();
-  el.textContent = `${session.ledger.status()} · 성공 ${session.ledger.requests.size-failed.length} / 실패 ${failed.length} 요청`;
+  el.textContent = `${session.kind==='housing'?H_PROGRESS_STATE:session.ledger.status()} · 성공 ${session.ledger.requests.size-failed.length} / 실패 ${failed.length} 요청${session.kind==='housing'?' (주택유형 보충 API)':''}`;
   if(!session.sameConditions()){
     el.append(document.createTextNode(' · 조건 변경 전 조회 결과입니다. 새로 조회해 주세요.'));
     return;
@@ -716,8 +720,12 @@ function showQueryStatus(session){
     finally { session.retrying = false; }
     if(!session.current()) return;
     if(!session.sameConditions()){ showQueryStatus(session); return; }
+    session.applyingRetry=true;session.retrying=true;
+    try {await session.apply(pending);}finally{session.applyingRetry=false;session.retrying=false;}
+    if(!session.current())return;
+    if(!session.sameConditions()){showQueryStatus(session);return;}
     session.ledger = pending;
-    session.apply(); showQueryStatus(session);
+    showQueryStatus(session);
     if(session.afterRetry) await session.afterRetry();
   };
   el.append(button);
@@ -730,8 +738,40 @@ function appendQueryInfo(wb, kind){
   if(session) XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(session.ledger.info()), '조회정보');
 }
 
+function progressiveQuery(session){
+  session.loading=true;
+  session.ledger.onProgress=()=>{
+    if(session.progressTimer)return;
+    session.progressTimer=setTimeout(()=>{
+      session.progressTimer=null;
+      if(session.current() && session.loading){session.apply();document.getElementById(session.hintId).textContent='조회 중 · 잠정 결과입니다. 전체 건수·집계는 바뀔 수 있습니다.';}
+    },40);
+  };
+}
+
+let H_LAST_QUERY=null,H_PROGRESS_STATE='미조회';
+function cancelSearch(kind){
+  if(kind==='bulk'){B_GATE.invalidate();document.getElementById('runBtn').disabled=false;document.getElementById('progWrap').classList.remove('on');document.getElementById('resultArea').style.display='none';document.getElementById('progText').textContent='조회 취소됨';return;}
+  if(kind==='vacant'){V_GATE.invalidate();document.getElementById('vHint').textContent='조회 취소됨';return;}
+  if(kind==='detail'){
+    D_GATE.invalidate();D_TAB_GATE.invalidate();if(D_BLDGIS?.state==='loading')D_BLDGIS={state:'cancelled'};if(D_LDA?.state==='loading')D_LDA={state:'cancelled'};D_SUPPLEMENT_RETRY={};
+    document.getElementById('dRunBtn').disabled=false;
+    dStatus('조회 취소됨 · 표시된 기본 결과는 유지하며 보강정보는 미완료입니다.');refreshDetailSupplements();return;
+  }
+  invalidateQuery(kind);
+  const config={condition:['c','cRunBtn'],demol:['m','mRunBtn'],housing:['h','hRunBtn'],map:['map','mapRunBtn']}[kind];
+  if(!config)return;
+  const [prefix,button]=config;
+  document.getElementById(button).disabled=false;
+  document.getElementById(prefix+'ProgWrap')?.classList.remove('on');
+  document.getElementById(prefix+'Hint').textContent='조회 취소됨 · 미완료 결과이며 전체 건수를 보장할 수 없습니다.';
+  if(kind==='housing')H_PROGRESS_STATE='취소됨 · 잠정 결과';
+  else {const result=document.getElementById(prefix+'ResultArea');if(result)result.style.display='none';}
+  if(kind==='map'){MAP_RUN_GATE.invalidate();++M_COND_SEARCH_ID;showMapLoading(false);document.getElementById('mapResultsWrap').style.display='none';}
+}
+
 // 순서를 유지하면서 동시에 N건씩 처리하는 풀
-async function runPool(items, worker, concurrency, onProgress){
+async function runPool(items, worker, concurrency, onProgress, active = ()=>true){
   // 빈 입력: runner가 만들어지지 않아 onProgress가 한 번도 호출되지 않는다.
   // 호출자가 "진행 중" 상태에 멈추지 않도록 즉시 (0,0)을 보고하고 빈 배열을 반환.
   if(!items.length){
@@ -741,7 +781,7 @@ async function runPool(items, worker, concurrency, onProgress){
   const results = new Array(items.length);
   let next = 0, done = 0;
   async function runner(){
-    while(next < items.length){
+    while(next < items.length && active()){
       const i = next++;
       try { results[i] = await worker(items[i]); }
       catch(e){ results[i] = {input:items[i], status:"err", reason:String(e?.message||e)}; }
@@ -755,6 +795,7 @@ async function runPool(items, worker, concurrency, onProgress){
 }
 
 async function runLookup(){
+  const generation=B_GATE.invalidate(),current=()=>B_GATE.current(generation);
   const lines = document.getElementById("input").value
     .split("\n").map(s=>s.trim()).filter(Boolean);
   if(!lines.length){ alert("주소를 한 줄 이상 입력하세요."); return; }
@@ -767,11 +808,14 @@ async function runLookup(){
   document.getElementById("stats").style.display="none";
   updateProgress(0, lines.length);
 
-  B_RESULTS = await runPool(lines, processOne, CONCURRENCY, (done,total)=>{
-    updateProgress(done, total);
-  });
+  const results = await runPool(lines, processOne, CONCURRENCY, (done,total)=>{
+    if(current())updateProgress(done, total);
+  },current);
+  if(!current())return;
+  B_RESULTS=results;
 
   setTimeout(()=>{
+    if(!current())return;
     document.getElementById("progWrap").classList.remove("on");
     runBtn.disabled = false;
     renderResults();
@@ -1107,7 +1151,7 @@ function useAprCell(useAprDay){
   if(yr===null) return '<span class="badge mute">연도미확인</span>';
   const age = new Date().getFullYear() - yr;
   const cls = age>=40 ? " veryold" : age>=30 ? " old" : "";
-  const ageTxt = age>=0 ? `<span class="age${cls}">${age}년</span>` : "";
+  const ageTxt = age>=0 ? `<span class="age${cls}"> · 경과 ${age}년</span>` : "";
   return `<span class="code">${esc(fmtUseApr(useAprDay))}</span>${ageTxt}`;
 }
 
@@ -1118,6 +1162,7 @@ function useAprDaySortKey(useAprDay){
   return null;
 }
 function clearAll(){
+  B_GATE.invalidate();document.getElementById('runBtn').disabled=false;document.getElementById('progWrap').classList.remove('on');
   document.getElementById("input").value="";
   document.getElementById("resultArea").style.display="none";
   document.getElementById("stats").style.display="none";
@@ -1184,20 +1229,36 @@ function buildDual(hostId, readoutId){
   const min=+host.dataset.min, max=+host.dataset.max, step=+host.dataset.step, unit=host.dataset.unit;
   const group = host.dataset.group !== "0";   // data-group="0" → 천단위 쉼표 없음(연도용)
   const ro = document.getElementById(readoutId);
+  const title=host.closest('.field')?.querySelector('label')?.textContent.trim() || hostId;
+  const precision=unit==='㎡'?0.01:1;
+  const unlimited=['dual-flr','dual-uflr','dual-area','h-dual-hhld','h-dual-area','h-dual-year'].includes(hostId);
   host.innerHTML =
     `<div class="track"></div><div class="fill"></div>
-     <input type="range" class="lo" min="${min}" max="${max}" step="${step}" value="${min}">
-     <input type="range" class="hi" min="${min}" max="${max}" step="${step}" value="${max}">`;
+     <input aria-label="${esc(title)} 최소 슬라이더" type="range" class="lo" min="${min}" max="${max}" step="${precision}" value="${min}">
+     <input aria-label="${esc(title)} 최대 슬라이더" type="range" class="hi" min="${min}" max="${max}" step="${precision}" value="${max}">
+     <div class="dual-numbers"><label for="${hostId}-min">최소 ${esc(unit)}<input id="${hostId}-min" aria-label="${esc(title)} 최소값" type="number" min="${min}" max="${max}" step="${precision}" value="${min}"></label>
+     <label for="${hostId}-max">최대 ${esc(unit)}<input id="${hostId}-max" aria-label="${esc(title)} 최대값" type="number" min="${min}" max="${max}" step="${precision}" value="${max}"></label></div>
+     <small class="range-note">${unlimited?`최대 ${max}${esc(unit)} 선택은 상한 무제한`:'빈 입력은 전체 경계값으로 복원'} · 역전 입력은 작은 값부터 정렬</small>`;
   const lo=host.querySelector(".lo"), hi=host.querySelector(".hi"), fill=host.querySelector(".fill");
+  const numberLow=host.querySelector(`#${hostId}-min`),numberHigh=host.querySelector(`#${hostId}-max`);
+  ro.setAttribute('aria-live','polite');
   const fmtv=v=>group?Number(v).toLocaleString("ko-KR"):String(v);
   function update(){
-    let a=+lo.value,b=+hi.value; if(a>b)[a,b]=[b,a];
+    const [a,b]=normalizeRangePair(lo.value,hi.value,min,max,precision);
+    lo.value=a;hi.value=b;numberLow.value=a;numberHigh.value=b;
     const pa=(a-min)/(max-min)*100, pb=(b-min)/(max-min)*100;
     fill.style.left=pa+"%"; fill.style.width=(pb-pa)+"%";
     const hiTxt=(b>=max)?`${fmtv(max)}${unit}+`:`${fmtv(b)}${unit}`;
     ro.textContent=(a<=min&&b>=max)?"전체":`${fmtv(a)}${unit} ~ ${hiTxt}`;
   }
   lo.addEventListener("input",update); hi.addEventListener("input",update); update();
+  for(const input of [numberLow,numberHigh]){
+    input.addEventListener('change',()=>{
+      const [a,b]=normalizeRangePair(numberLow.value,numberHigh.value,min,max,precision);
+      lo.value=a;hi.value=b;update();host.dispatchEvent(new Event('input',{bubbles:true}));
+    });
+    input.addEventListener('keydown',event=>{if(event.key==='Enter'){input.dispatchEvent(new Event('change'));input.blur();}});
+  }
   return {
     values:()=>{ let a=+lo.value,b=+hi.value; return a<=b?[a,b]:[b,a]; },
     atCap:()=>Math.max(+lo.value,+hi.value)>=max,
@@ -1271,7 +1332,7 @@ async function loadHaengjeong(){
 async function fetchDongPage(bjd, pageNo){
   const key = `${SIGUNGU}:${bjd}:${pageNo}`;
   const cached = BUILDING_PAGE_CACHE.get(key);
-  if(cached) return cached;
+  if(cached && cached.expires>Date.now()) return cached;
 
   // 조건이 바뀌어도 같은 동·페이지 원본은 다시 API를 호출할 필요가 없다.
   // 단, 실패 응답은 캐시하지 않아 다음 조회에서 재시도한다.
@@ -1291,16 +1352,19 @@ async function fetchDongPage(bjd, pageNo){
       error:data?.error || (!Array.isArray(data?.titles) || data?.totalCount == null ? '응답 형식 오류' : null)
     };
   })();
+  pending.expires=Infinity;
   BUILDING_PAGE_CACHE.set(key, pending);
+  if(BUILDING_PAGE_CACHE.size>250)BUILDING_PAGE_CACHE.delete(BUILDING_PAGE_CACHE.keys().next().value);
   const result = await pending;
-  if(result.error) BUILDING_PAGE_CACHE.delete(key);
+  if(result.error && BUILDING_PAGE_CACHE.get(key)===pending) BUILDING_PAGE_CACHE.delete(key);
+  else pending.expires=Date.now()+120000;
   return result;
 }
 
 // 번지 단건 조회 (프록시) — 한 필지의 표제부만. 반환 { titles:[], error }
 // 동단위 페이지와 같은 큐에서 돌기 때문에 같은 한도·지연 오류를 맞는다 → 동일하게 재시도·전달.
 async function fetchParcel(bjd, bun, ji){
-  const { ok, status, data, error } = await apiRetry("building", { sigunguCd:SIGUNGU, bjdongCd:bjd, bun, ji });
+  const { ok, status, data, error } = await apiSharedRetry("building", { sigunguCd:SIGUNGU, bjdongCd:bjd, bun, ji });
   if(!ok) return { titles:[], error: status ? `서버 오류 ${status}` : (error || "건축물 API 조회 실패") };
   return { titles: Array.isArray(data?.titles) ? data.titles : [], error: data?.error || (!Array.isArray(data?.titles) ? '응답 형식 오류' : null) };
 }
@@ -1362,10 +1426,8 @@ async function runConditionSearch(){
   session.ledger.description = JSON.stringify({행정동:hdong,용도:selPurps.length?selPurps:'전체',구조:selStrct.length?selStrct:'전체',
     지상층수:[flrMin,Number.isFinite(flrMax)?flrMax:'무제한'],지하층수:[uflrMin,Number.isFinite(uflrMax)?uflrMax:'무제한'],
     연면적:[areaMin,Number.isFinite(areaMax)?areaMax:'무제한'],사용승인연도:yearActive?[yearMin,yearMax]:'전체',승인연도미확인포함:incUnknown});
-  await session.ledger.collect(pageBjds.map(bjd=>({bjd,pg:1})).concat(parcelTasks.map(t=>({type:'parcel',...t}))));
-  if(!session.current()) return;
-  session.apply = ()=>{
-  const all = session.ledger.rows();
+  session.apply = (ledger=session.ledger)=>{
+  const all = ledger.rows();
   // 4) 행정동 필터 + 조건 필터
   const scanned = all.length;
   const matched = [];
@@ -1395,14 +1457,19 @@ async function runConditionSearch(){
 
   CRESULTS = matched;
   {
-    document.getElementById("cProgWrap").classList.remove("on");
+    if(!session.loading)document.getElementById("cProgWrap").classList.remove("on");
     // 재시도까지 실패한 조회가 있으면 결과가 불완전하다는 사실을 반드시 알린다.
     // (조용히 0건으로 보이던 기존 동작이 "여러 번 눌러야 나온다"의 원인이었다)
     document.getElementById("cHint").textContent = '';
-    cRunBtn.disabled = false;
-    renderConditionResults(scanned, isAll?"전체":hdong);
+    cRunBtn.disabled = !!session.loading;
+    renderConditionResults(scanned, isAll?"전체":hdong,session.published);
+    session.published=true;
   }
   };
+  progressiveQuery(session);
+  await session.ledger.collect(pageBjds.map(bjd=>({bjd,pg:1})).concat(parcelTasks.map(t=>({type:'parcel',...t}))));
+  clearTimeout(session.progressTimer);session.loading=false;
+  if(!session.current())return;
   session.apply(); showQueryStatus(session);
 }
 
@@ -1418,8 +1485,8 @@ function cUpdate(done,total){
    따라서 현재 페이지 구간만 잘라 그려서 대량 결과의 렌더 부하를 분산한다.
    (페이징 상태 C_PAGE / C_PAGE_SIZE 는 조건검색 상태 블록에 선언) */
 
-function renderConditionResults(scanned, dongLabel){
-  C_PAGE = 1;
+function renderConditionResults(scanned, dongLabel, preserve = false){
+  if(!preserve)C_PAGE = 1;
   document.getElementById("cs-match").textContent = CRESULTS.length.toLocaleString("ko-KR");
   document.getElementById("cs-scan").textContent  = scanned.toLocaleString("ko-KR");
   document.getElementById("cResDong").textContent = dongLabel;
@@ -1529,6 +1596,8 @@ const D_GATE = requestGate(), D_TAB_GATE = requestGate();
 let D_DONGS = [];
 let D_MAP   = null;    // Leaflet 지도 인스턴스
 let D_BLDGIS = null;
+let D_SELECTED_TITLE = null;
+let D_SUPPLEMENT_RETRY = {};
 let D_LDA = null;      // 대지권등록정보(NED buldSnList) — 대표지번 1건 캐시. 등록 호실 수/건물명 폴(fallback)/대지권 서브탭 공용.   // GIS건물통합정보(WFS) 속성 — 대표지번 1건 캐시. 위반건축물/높이/건물명 보조값.
 
 const D_OPS = {
@@ -1663,17 +1732,23 @@ async function runDetail(){
     }
 
     D_CAND = usedParams; D_TITLES = titles; dStatus("");
-    // GIS건물통합정보(WFS) — 대표지번 1건 prefetch. 위반건축물·높이·건물명은
-    // 건축물대장에 없는 값이라 카드 본문 보강에 쓴다. 다동도 지번 공통이라 1회로 충분.
-    // 실패(0건/에러)해도 카드는 대장만으로 정상 렌더링(아래 ?. 안전망).
-    const gis = await loadBldgis(toPNU(usedParams)).catch(()=>({state:'error'}));
-    if(!current()) return;
-    D_BLDGIS = gis;
-    // 대지권(NED buldSnList) — 등록 호실 수·건물명 폴(fallback)·서브탭이 공용으로 쓴다.
-    const lda = await loadLdaData(toPNU(usedParams)).catch(()=>null);
-    if(!current()) return;
-    D_LDA = lda;
+    D_BLDGIS={state:'loading'};D_LDA={state:'loading'};
     renderDetail(wantDong);
+    btn.disabled=false;
+    const pnu=toPNU(usedParams);
+    D_SUPPLEMENT_RETRY={
+      gis:async()=>{
+        if(!current())return;D_BLDGIS={state:'loading'};refreshDetailSupplements();
+        const data=await loadBldgis(pnu).catch(()=>({state:'error'}));
+        if(current()){D_BLDGIS=data;refreshDetailSupplements();}
+      },
+      lda:async()=>{
+        if(!current())return;D_LDA={state:'loading'};refreshDetailSupplements();
+        const data=await loadLdaData(pnu).catch(()=>({state:'error'}));
+        if(current()){D_LDA=data || {state:'empty'};refreshDetailSupplements();}
+      }
+    };
+    await Promise.all([D_SUPPLEMENT_RETRY.gis(),D_SUPPLEMENT_RETRY.lda()]);
   }catch(e){
     if(current()) dStatus('<span class="badge err">불러오지 못했습니다. 다시 조회해 주세요.</span>');
   }finally{ if(current()) btn.disabled=false; }
@@ -1684,6 +1759,7 @@ function renderDetail(wantDong){
   const area = document.getElementById("dResult");
   area.style.display = "block";
   if(D_TITLES.length <= 1){
+    D_SELECTED_TITLE=D_TITLES[0];
     D_SELDONG = null;
     area.innerHTML = cardHTML(D_TITLES[0], gbLabel(D_TITLES));
     wireSubtabs(null);
@@ -1706,6 +1782,7 @@ function dongPickerHTML(dongs){
 function selectDong(i){
   D_TAB_GATE.invalidate();
   const t = D_DONGS[i]; if(!t) return;
+  D_SELECTED_TITLE=t;
   D_SELDONG = String(t.dongNm||"").trim();
   document.querySelectorAll(".d-dong").forEach((b,j)=>b.classList.toggle("active", j===i));
   document.getElementById("dDongCard").innerHTML = cardHTML(t, gbLabel(D_DONGS));
@@ -1744,11 +1821,13 @@ function cardHTML(t, kind){
   // 3분기: Y=위반 / N=정상 / 값없음=정보없음(정상 오표기 방지).
   // 대표 건축물이 N이어도 필지 내 다른 건축물이 위반이면 위반으로 표시(violtAny).
   const violBadge = () => {
+    if(D_BLDGIS?.state==='loading')return '<span class="badge mute">GIS 보강 중</span>';
+    if(D_BLDGIS?.state==='cancelled')return '<span class="badge mute">GIS 조회 취소 · 미확인</span>';
     if (_viol === "Y" || D_BLDGIS?.violtAny)
       return '<span class="badge err">필지 내 위반 정보 있음 (선택 동 판정 아님)</span>';
     if (_viol === "N")
       return '<span class="badge mute">대표건물 정상 · 선택 동 미확인</span>';
-    if(D_BLDGIS?.state === 'error') return '<span class="badge warn">GIS 불러오지 못함 · 다시 조회해 주세요</span>';
+    if(D_BLDGIS?.state === 'error') return '<span class="badge warn">GIS 불러오지 못함</span> <button onclick="D_SUPPLEMENT_RETRY.gis?.()">GIS 재시도</button>';
     return '<span class="badge mute">정보없음</span>';
   };
   const violCell = () => `<div class="k">필지 위반정보 <span class="atch sub">GIS</span></div><div class="v">${
@@ -1757,7 +1836,7 @@ function cardHTML(t, kind){
   return `
   <div class="card d-card">
     <div class="card-head">
-      <h2><span class="num-tag">건</span>${esc(title)} <span class="d-kind">${esc(kind)}</span></h2>
+      <h2><span class="num-tag">건</span><span data-building-name>${esc(title)}</span> <span class="d-kind">${esc(kind)}</span></h2>
       <span class="badge none">${esc(t.regstrKindCdNm||"표제부")}</span>
     </div>
     <div class="card-body">
@@ -1774,15 +1853,15 @@ function cardHTML(t, kind){
         <div class="k">연면적</div><div class="v">${m2(b.totArea)}</div>
         <div class="k">건폐율 / 용적률</div><div class="v">${pc(b.bcRat)} / ${pc(b.vlRat)}</div>
         <div class="k">층수</div><div class="v">지상 ${fmt(b.grndFlr)} · 지하 ${fmt(b.ugrndFlr)}</div>
-        ${heightCell()}
-        ${_ldaItems.length ? `<div class="k">등록 호실 <span class="atch sub">대지권</span></div><div class="v">${fmt(_ldaItems.length)} 호실</div>` : ""}
+        <div class="supplement-slot" data-gis-height>${heightCell()}</div>
+        <div class="supplement-slot" data-lda-count>${D_LDA?.state==='loading'?'<div class="k">대지권</div><div class="v">보강 중</div>':D_LDA?.state==='error'?'<div class="k">대지권</div><div class="v">불러오지 못함 <button onclick="D_SUPPLEMENT_RETRY.lda?.()">대지권 재시도</button></div>':_ldaItems.length ? `<div class="k">등록 호실 <span class="atch sub">대지권</span></div><div class="v">${fmt(_ldaItems.length)} 호실</div>` : ''}</div>
         <div class="k">사용승인일</div><div class="v">${useAprCell(b.useAprDay)}</div>
       </div>
 
       <div class="d-sec-title">안전</div>
       <div class="d-kv">
         <div class="k">내진설계</div><div class="v">${seismic}</div>
-        ${violCell()}
+        <div class="supplement-slot" data-gis-violation>${violCell()}</div>
       </div>
 
       <div class="d-subtabs">
@@ -1795,9 +1874,22 @@ function cardHTML(t, kind){
         <button class="d-subtab" data-tab="lda">대지권</button>
         <button class="d-subtab" data-tab="map">지도</button>
       </div>
-      <div class="d-panel" id="dPanel"><div class="d-panel-hint">위 항목을 누르면 해당 정보를 불러옵니다</div></div>
+      <div class="d-panel" id="dPanel" role="status" aria-live="polite"><div class="d-panel-hint">위 항목을 누르면 해당 정보를 불러옵니다</div></div>
     </div>
   </div>`;
+}
+
+function refreshDetailSupplements(){
+  if(!D_SELECTED_TITLE)return;
+  // Copy only supplement slots; preserve active tab, map, keyboard focus and selected building.
+  const template=document.createElement('template');
+  template.innerHTML=cardHTML(D_SELECTED_TITLE,gbLabel(D_TITLES));
+  for(const name of ['data-gis-height','data-gis-violation','data-lda-count','data-building-name']){
+    const target=document.querySelector(`#dResult [${name}]`),source=template.content.querySelector(`[${name}]`);
+    if(target&&source)target.innerHTML=source.innerHTML;
+  }
+  const state=value=>({loading:'보강 중',success:'완료',empty:'조회 자료 없음',error:'불러오지 못함',cancelled:'조회 취소 · 미확인'}[value] || '미확인');
+  dStatus(`기본 대장정보 표시 · GIS ${state(D_BLDGIS?.state)} · 대지권 ${state(D_LDA?.state)}`);
 }
 
 function wireSubtabs(dongNm){
@@ -1955,6 +2047,9 @@ function renderTmpHdcr({tmp, hdcr, errors = []}){
 // 세대별 등기 기반이라 미등록 호실은 조회되지 않으므로, 0건 = '대지권 없음'이 아님을 안내.
 async function loadLda(panel, cache = D_CACHE){
   let raw = D_LDA || cache["lda"];
+  if(raw?.state==='loading')raw=await loadLdaData(toPNU(D_CAND));
+  if(raw?.state==='error'){panel.innerHTML='<div class="d-panel-hint err">대지권 불러오지 못함 · 대지권 재시도 버튼을 눌러 주세요.</div>';return;}
+  if(raw?.state==='cancelled'){panel.innerHTML='<div class="d-panel-hint">대지권 조회 취소됨 · 새로 조회해 주세요.</div>';return;}
   if(!raw){
     panel.innerHTML = `<div class="d-panel-hint">대지권 불러오는 중…</div>`;
     const pnu = D_CAND ? toPNU(D_CAND) : "";
@@ -2158,6 +2253,7 @@ async function renderMap(panel, dongNm, current = ()=>true){
 }
 
 function clearDetail(){
+  D_SELECTED_TITLE=null;D_SUPPLEMENT_RETRY={};
   D_GATE.invalidate(); D_TAB_GATE.invalidate(); D_CACHE = {}; D_LDA = null;
   document.getElementById('dRunBtn').disabled = false;
   document.getElementById("dInput").value="";
@@ -2272,8 +2368,8 @@ async function loadHousing(){
 // 정적 파일(aptlist_donggu.json, 동구 단지 60개)을 로드해 즉시 사용.
 // 1순위: 한국부동산원 단지목록 (아파트/연립/다세대/맨션/빌라 ~340개)
 async function fetchAptIdList(){
-  const { ok, data } = await api("aptid", {});
-  if(!ok) return { complexes:[], totalCount:0 };
+  const { ok, data } = await apiShared("aptid", {}, {ttl:300000});
+  if(!ok) return { complexes:[], totalCount:null,error:'공동주택 기본 목록을 불러오지 못했습니다. 다시 조회해 주세요.' };
   return { complexes:Array.isArray(data.complexes)?data.complexes:[], totalCount:Number(data.totalCount||0) };
 }
 
@@ -2282,11 +2378,12 @@ async function fetchAptIdList(){
 async function fetchExtraAptList(){
   try{
     const r = await fetch("/aptlist_extra_donggu.json");
-    if(!r.ok) return [];
+    if(!r.ok) throw new Error('수동 추가 목록 로드 실패');
     const list = await r.json();
-    return Array.isArray(list) ? list : [];
+    if(!Array.isArray(list))throw new Error('수동 추가 목록 형식 오류');
+    return list;
   }catch(e){
-    return [];
+    throw new Error('수동 추가 목록을 불러오지 못했습니다');
   }
 }
 
@@ -2295,40 +2392,43 @@ async function fetchExtraAptList(){
 async function fetchOdcloudAptList(){
   try{
     const r = await fetch("/aptlist_odcloud_donggu.json");
-    if(!r.ok) return [];
+    if(!r.ok) throw new Error('공동주택 보충 목록 로드 실패');
     const list = await r.json();
-    return Array.isArray(list) ? list : [];
+    if(!Array.isArray(list))throw new Error('공동주택 보충 목록 형식 오류');
+    return list;
   }catch(e){
-    return [];
+    throw new Error('공동주택 보충 목록을 불러오지 못했습니다');
   }
 }
 
 // 2순위: K-apt 단지 기본정보 (PNU→kaptCode 사전 구축용)
 async function fetchAptBass(kaptCode){
-  if(H_BASS_CACHE[kaptCode] !== undefined) return H_BASS_CACHE[kaptCode];
-  const { ok, data } = await api("aptinfo", { op:"getAphusBassInfoV4", kaptCode });
+  const stored=Object.values(H_KAPT_BY_PNU).find(row=>row.kaptCode===kaptCode);
+  if(stored?.bass)return {...stored.bass};
+  const { ok, data } = await apiShared("aptinfo", { op:"getAphusBassInfoV4", kaptCode }, {ttl:300000});
   const info = (ok && data.info) ? data.info : null;
-  H_BASS_CACHE[kaptCode] = info;
+  if(info) H_BASS_CACHE[kaptCode] = info;
   return info;
 }
 
 // K-apt 단지 상세정보 1건 (lazy, 캐시)
 async function fetchAptDtl(kaptCode){
-  if(H_DTL_CACHE[kaptCode]) return H_DTL_CACHE[kaptCode];
-  const { ok, data } = await api("aptinfo", { op:"getAphusDtlInfoV4", kaptCode });
+  const stored=Object.values(H_KAPT_BY_PNU).find(row=>row.kaptCode===kaptCode);
+  if(stored?.dtl)return {...stored.dtl};
+  const { ok, data } = await apiShared("aptinfo", { op:"getAphusDtlInfoV4", kaptCode }, {ttl:300000});
   const info = (ok && data.info) ? data.info : null;
-  H_DTL_CACHE[kaptCode] = info;
+  if(info)H_DTL_CACHE[kaptCode] = info;
   return info;
 }
 
 // 3순위: 오피스텔/도시형생활주택 보충 (건축인허가 getApHsTpInfo, 행정동 단위)
 async function fetchHsTpDongPage(bjd, pageNo){
-  const { ok, data } = await api("archpms", {
+  const { ok, data, error } = await apiSharedRetry("archpms", {
     op:"getApHsTpInfo",
     sigunguCd:SIGUNGU, bjdongCd:bjd, numOfRows:"1000", pageNo:String(pageNo)
   });
-  if(!ok) return {items:[], totalCount:0};
-  return {items:Array.isArray(data.items)?data.items:[], totalCount:Number(data.totalCount||0)};
+  if(!ok) return {items:[], totalCount:null,error:error || '주택유형 보충 조회 실패'};
+  return {items:Array.isArray(data.items)?data.items:[], totalCount:data.totalCount ?? null};
 }
 
 // 특정 PNU의 건축인허가정보(getApHsTpInfo)에서 건물명(bldNm) 추출
@@ -2339,7 +2439,7 @@ async function fetchArchpmsBldNm(pnu){
   const platGbCd  = pnu.slice(10,11) === "2" ? "1" : "0";
   const bun       = pnu.slice(11,15);
   const ji        = pnu.slice(15,19);
-  const { ok, data } = await api("archpms", {
+  const { ok, data } = await apiShared("archpms", {
     op:"getApHsTpInfo",
     sigunguCd, bjdongCd, platGbCd, bun, ji
   });
@@ -2359,7 +2459,7 @@ async function fetchHspmsBldNm(pnu){
   const platGbCd  = pnu.slice(10,11) === "2" ? "1" : "0";
   const bun       = pnu.slice(11,15);
   const ji        = pnu.slice(15,19);
-  const { ok, data } = await api("hspms", {
+  const { ok, data } = await apiShared("hspms", {
     op:"getHpDongOulnInfo",
     sigunguCd, bjdongCd, platGbCd, bun, ji
   });
@@ -2380,7 +2480,7 @@ async function fetchKakaoComplexNm(pnu, doroAddr, adres){
   const query = raw.replace(/^광주광역시/, "광주").trim();
   if(!query) return null;
 
-  const { ok, data } = await api("kakao-local", { query });
+  const { ok, data } = await apiShared("kakao-local", { query });
   if(!ok || !Array.isArray(data.items) || !data.items.length) return null;
 
   // 건물/주거/업무 시설 카테고리만 사용 (1층 상점·사무소 등 제외)
@@ -2667,8 +2767,11 @@ function fillMissingFromBuilding(row, titles){
 }
 
 async function runHousingSearch(){
+  const generation=invalidateQuery('housing');
+  let owns=()=>QUERY_STARTS.get('housing')===generation;
   try{
     if(!HJ_H){ await loadHousing(); }
+    if(QUERY_STARTS.get('housing')!==generation)return;
     if(!HJ_H){ throw new Error("행정동 매핑을 불러오지 못했습니다"); }
     const hdong = document.getElementById("h-hdong").value;
     if(!hdong){ alert("행정동을 선택하세요."); return; }
@@ -2685,6 +2788,13 @@ async function runHousingSearch(){
     const yearMax = H_DUAL.year.atCap() ? Infinity : yearMaxRaw;
     const yearActive = !H_DUAL.year.isFull();
     const incUnknown = document.getElementById("h-yearunknown").checked;
+    const session=startQuery('housing','hHint','tab-housing',t=>fetchHsTpDongPage(t.bjd,t.pg || 1),'items');
+    session.ledger.description=JSON.stringify({행정동:hdong,종류:selKind,세대수:[hhldMin,hhldMaxRaw],연면적:[areaMin,areaMaxRaw],연도:[yearMin,yearMaxRaw],미확인연도포함:incUnknown,미확인연면적포함:incAreaUnknown});
+    const current=()=>session.current() && (!session.applyingRetry || session.sameConditions());
+    owns=current;
+    H_LAST_QUERY=session;H_PROGRESS_STATE='보강 중 · 잠정 결과';
+    const sourceFailures=new Set();session.sourceFailures=sourceFailures;
+    const pool=(items,worker,limit,progress)=>runPool(items,worker,2,progress,current);
 
     const hRunBtn = document.getElementById("hRunBtn");
     hRunBtn.disabled = true;
@@ -2702,14 +2812,16 @@ async function runHousingSearch(){
     // ── 1순위: 한국부동산원 단지목록 (메인)
     let hSearchDone = false;
     let hProgress = { done: 0, total: 1 };
-    const updateHProgress = () => hUpdate(hProgress.done, hProgress.total, "", hSearchDone);
+    const updateHProgress = () => {if(current())hUpdate(hProgress.done, hProgress.total, "", hSearchDone);};
     updateHProgress();
-    const { complexes } = await fetchAptIdList();
+    const { complexes, error:baseError } = await fetchAptIdList();
+    if(!current())return;
     hProgress.done++; updateHProgress();
-    if(!complexes.length){
+    if(baseError){
       document.getElementById("hProgWrap").classList.remove("on");
       hRunBtn.disabled = false;
-      document.getElementById("hHint").textContent = "단지 목록이 비어 있습니다. (API 승인/환경변수 확인 필요)";
+      H_PROGRESS_STATE=baseError?'전체 실패':'정상 0건';
+      document.getElementById("hHint").textContent = baseError || '정상 조회 · 공동주택 기본 목록 0건';
       return;
     }
 
@@ -2719,22 +2831,25 @@ async function runHousingSearch(){
     let kaptList = [];
     try{
       const r = await fetch("/aptlist_donggu.json");
-      if(r.ok) kaptList = await r.json();
-    }catch(e){}
+      if(!r.ok)throw new Error('kapt-file');
+      kaptList=await r.json();if(!Array.isArray(kaptList))throw new Error('kapt-format');
+    }catch(e){kaptList=[];sourceFailures.add('K-apt 정적 목록');}
+    if(!current())return;
     if(kaptList.length){
       hProgress.total += kaptList.length;
       updateHProgress();
       const koreaPnuSet = new Set(complexes.map(c => c.pnu));
-      const kInfos = await runPool(kaptList, async (c)=>{
+      const kInfos = await pool(kaptList, async (c)=>{
         // JSON에 사전 병합된 bass/dtl이 있으면 API 호출 생략
         let bass = c.bass;
         let dtl = c.dtl;
         if(!bass) bass = await fetchAptBass(c.kaptCode);
         if(!dtl) dtl = await fetchAptDtl(c.kaptCode);
-        if(bass) H_BASS_CACHE[c.kaptCode] = bass;
-        if(dtl) H_DTL_CACHE[c.kaptCode] = dtl;
+        if(current() && bass) H_BASS_CACHE[c.kaptCode] = bass;
+        if(current() && dtl) H_DTL_CACHE[c.kaptCode] = dtl;
         return bass ? { kaptCode:c.kaptCode, pnu:(c.pnu || pnuFromKapt(bass)), bass, dtl } : null;
       }, 5, ()=>{ hProgress.done++; updateHProgress(); });
+      if(!current())return;
       for(const k of kInfos){
         if(!k || !k.pnu) continue;
         H_KAPT_BY_PNU[k.pnu] = k;
@@ -2788,36 +2903,19 @@ async function runHousingSearch(){
     }
 
     // ── 3순위: 오피스텔/도시형생활주택 보충 (getApHsTpInfo)
+    const baseMatched=matched.slice();
+    H_RESULTS_RAW=baseMatched.slice();
+    document.getElementById('hHint').textContent='보강 중 · 잠정 결과입니다. 연면적·연도 미확인 항목은 최종 필터 판정 전이며 건수·집계가 바뀔 수 있습니다.';
+    renderHousingResults(complexes.length,isAll?'전체':hdong);
+    const bjdList=bjdScopeForHdong(hdong,HJ_H);
+    await session.ledger.collect(bjdList.map(bjd=>({bjd,pg:1})));
+    if(!current())return;
+    session.apply=async(ledger=session.ledger)=>{
+    if(!current())return;
+    matched=baseMatched.map(row=>({...row}));
     const koreaPnus = new Set(complexes.map(c=>c.pnu));
-    const bjdList = [...new Set(Object.values(HJ_H.hdong2bjd).flat())];
-    const hsAll = [];
-    const MAX_PAGES = 100;   // ~100건/페이지 → 동당 최대 1만건 (산수동 5697건 커버)
-    if(bjdList.length){
-      hProgress.total += bjdList.length;
-      updateHProgress();
-      const page1 = await runPool(bjdList, async (bjd)=>{
-        const {items,totalCount} = await fetchHsTpDongPage(bjd,1);
-        return {bjd, items, totalCount};
-      }, 5, ()=>{ hProgress.done++; updateHProgress(); });
-      const more = [];
-      page1.forEach(r=>{
-        hsAll.push(...r.items);
-        const pageSize = Math.max(r.items.length, 1);
-        if(r.totalCount > pageSize){
-          const pages = Math.min(Math.ceil(r.totalCount / pageSize), MAX_PAGES);
-          for(let pg=2; pg<=pages; pg++) more.push({bjd:r.bjd, pg});
-        }
-      });
-      if(more.length){
-        hProgress.total += more.length;
-        updateHProgress();
-        const got = await runPool(more, async (m)=>{
-          const {items} = await fetchHsTpDongPage(m.bjd, m.pg);
-          return items;
-        }, 5, ()=>{ hProgress.done++; updateHProgress(); });
-        got.forEach(ts=> hsAll.push(...ts));
-      }
-    }
+    const hsAll=ledger.rows();
+    const titleFailures=new Map();
     for(const t of hsAll){
       const hstp = String(t.hstpGbCdNm||"");
       let kind = "";
@@ -2860,27 +2958,28 @@ async function runHousingSearch(){
     if(matched.length){
       hProgress.total += matched.length;
       updateHProgress();
-      const filled = await runPool(matched, async (m)=>{
+      const filled = await pool(matched, async (m)=>{
         if(!m.pnu || m.pnu.length < 19) return m;
         const sigunguCd = m.pnu.slice(0,5);
         const bjdongCd  = m.pnu.slice(5,10);
         const platGbCd  = m.pnu.slice(10,11) === "2" ? "1" : "0";
         const bun       = m.pnu.slice(11,15);
         const ji        = m.pnu.slice(15,19);
-        const { ok, data } = await api("building", {
+        const { ok, data } = await apiShared("building", {
           sigunguCd, bjdongCd, platGbCd, bun, ji
         });
         if(ok && Array.isArray(data.titles) && data.titles.length){
           return fillMissingFromBuilding(m, data.titles);
         }
         // 조회 실패는 데이터 불확실 → 일단 유지, 대장 없음 확인 시만 제외
-        if(!ok) return m;
+        if(!ok){titleFailures.set(m.pnu,m);return {...m,enrichmentState:'error'};}
         // 표제부가 없어도 선택된 미확인 조건이 있으면 원본 공동주택 항목을
         // 유지한다. 이후 최종 필터가 각 체크 상태를 적용한다.
         const areaMissing = m.tarea == null || !Number.isFinite(Number(m.tarea)) || Number(m.tarea) <= 0;
         if((extractYear(m.useAprDay) === null && incUnknown) || (areaMissing && incAreaUnknown)) return m;
         return { ...m, _exclude: true };
       }, 5, ()=>{ hProgress.done++; updateHProgress(); });
+      if(!current())return;
       // 복제본으로 matched 내용 교체 (원본 객체 직접 수정 회피)
       matched.length = 0;
       matched.push(...filled.filter(m => !m._exclude
@@ -2892,11 +2991,12 @@ async function runHousingSearch(){
     //     건축인허가정보에서 bldNm을 추가로 조회
     const badRows = matched.filter(m => isBadComplexName(m.complexNm));
     if(badRows.length){
-      const fixed = await runPool(badRows, async (m)=>{
+      const fixed = await pool(badRows, async (m)=>{
         const bldNm = await fetchArchpmsBldNm(m.pnu);
         if(bldNm) return { ...m, complexNm: bldNm };
         return m;
       }, 5, ()=>{});
+      if(!current())return;
       const fixedMap = new Map(fixed.map(m => [m.pnu, m]));
       for(let i=0; i<matched.length; i++){
         if(fixedMap.has(matched[i].pnu)) matched[i] = fixedMap.get(matched[i].pnu);
@@ -2907,11 +3007,12 @@ async function runHousingSearch(){
     //     주택인허가정보(getHpDongOulnInfo 동별개요)에서 bldNm을 추가로 조회
     const stillBadAfterArch = matched.filter(m => isBadComplexName(m.complexNm));
     if(stillBadAfterArch.length){
-      const fixed = await runPool(stillBadAfterArch, async (m)=>{
+      const fixed = await pool(stillBadAfterArch, async (m)=>{
         const bldNm = await fetchHspmsBldNm(m.pnu);
         if(bldNm) return { ...m, complexNm: bldNm };
         return m;
       }, 5, ()=>{});
+      if(!current())return;
       const fixedMap = new Map(fixed.map(m => [m.pnu, m]));
       for(let i=0; i<matched.length; i++){
         if(fixedMap.has(matched[i].pnu)) matched[i] = fixedMap.get(matched[i].pnu);
@@ -2922,11 +3023,12 @@ async function runHousingSearch(){
     //     카카오 로컬 키워드 검색 API로 실제 상호/건물명 추가 조회
     const stillBadRows = matched.filter(m => isBadComplexName(m.complexNm));
     if(stillBadRows.length){
-      const fixed = await runPool(stillBadRows, async (m)=>{
+      const fixed = await pool(stillBadRows, async (m)=>{
         const bldNm = await fetchKakaoComplexNm(m.pnu, m.doroAddr, m.adres);
         if(bldNm) return { ...m, complexNm: bldNm };
         return m;
       }, 5, ()=>{});
+      if(!current())return;
       const fixedMap = new Map(fixed.map(m => [m.pnu, m]));
       for(let i=0; i<matched.length; i++){
         if(fixedMap.has(matched[i].pnu)) matched[i] = fixedMap.get(matched[i].pnu);
@@ -2937,7 +3039,9 @@ async function runHousingSearch(){
     matched = matched.map(fallbackDisplayName);
 
     // ── K-APT에 미등록된 수동 추가 단지 병합
-    const extraList = await fetchExtraAptList();
+    let extraList=[];
+    try{extraList=await fetchExtraAptList();sourceFailures.delete('수동 추가 목록');}catch{sourceFailures.add('수동 추가 목록');}
+    if(!current())return;
     const existingPnus = new Set(matched.map(m => m.pnu));
     for(const e of extraList){
       if(existingPnus.has(e.pnu)) continue;
@@ -2971,7 +3075,9 @@ async function runHousingSearch(){
     }
 
     // ── odcloud 공동주택현황 데이터 병합
-    const odcloudList = await fetchOdcloudAptList();
+    let odcloudList=[];
+    try{odcloudList=await fetchOdcloudAptList();sourceFailures.delete('공동주택 보충 목록');}catch{sourceFailures.add('공동주택 보충 목록');}
+    if(!current())return;
     for(const e of odcloudList){
       if(existingPnus.has(e.pnu)) continue;
       const bHdong = hdongFromPnu(e.pnu, bjd2hd);
@@ -3005,6 +3111,7 @@ async function runHousingSearch(){
     }
 
     H_RESULTS_RAW = matched.slice();
+    session.enrichmentFailures=[...titleFailures.keys()];
 
     const scanned = complexes.length;
     let diag = "";
@@ -3014,13 +3121,46 @@ async function runHousingSearch(){
 
     hSearchDone = true;
     updateHProgress();
-    setTimeout(()=>{
+    {
       document.getElementById("hProgWrap").classList.remove("on");
-      document.getElementById("hHint").textContent = diag;
+      document.getElementById("hHint").textContent = titleFailures.size ? `기본 목록 유지 · 표제부 보강 ${titleFailures.size}건 불러오지 못함 (미확인 값은 현재 미확인 필터 적용)` : diag;
       hRunBtn.disabled = false;
-      renderHousingResults(scanned, isAll?"전체":hdong);
-    }, 300);
+      renderHousingResults(scanned, isAll?"전체":hdong,true);
+      H_PROGRESS_STATE=titleFailures.size || ledger.failed().length || sourceFailures.size ? '부분 조회 · 보강 실패 있음' : '전체 조회 완료';
+      if(sourceFailures.size)document.getElementById('hHint').append(document.createTextNode(` · ${[...sourceFailures].join(', ')} 불러오지 못함. 기본 결과를 유지합니다. 새로 조회해 재시도하세요.`));
+      if(titleFailures.size){
+        const retry=document.createElement('button');retry.textContent='실패한 표제부 보강만 재시도';
+        retry.onclick=async()=>{
+          if(!current() || !session.sameConditions())return;
+          retry.disabled=true;
+          // Successful responses are shared by full request key, but retry only failed PNUs.
+          const recovered=await pool([...titleFailures.values()],async row=>{
+            const p=row.pnu;const r=await apiShared('building',{sigunguCd:p.slice(0,5),bjdongCd:p.slice(5,10),platGbCd:p[10]==='2'?'1':'0',bun:p.slice(11,15),ji:p.slice(15,19)});
+            if(!r.ok)return row;
+            titleFailures.delete(p);
+            return {...fillMissingFromBuilding(row,r.data.titles),enrichmentState:'success'};
+          },2);
+          if(!current() || !session.sameConditions())return;
+          const updates=new Map(recovered.map(row=>[row.pnu,row]));
+          for(let i=0;i<matched.length;i++)if(updates.has(matched[i].pnu))matched[i]=updates.get(matched[i].pnu);
+          // Candidates excluded while unknown can become eligible after a successful retry.
+          for(const row of recovered)if(!matched.some(m=>m.pnu===row.pnu))matched.push(row);
+          H_RESULTS_RAW=matched.filter(row=>matchesAreaFilter(row.tarea,areaMin,areaMax,areaActive,incAreaUnknown)&&matchesYearFilter(row.useAprDay,yearMin,yearMax,yearActive,incUnknown));
+          H_PROGRESS_STATE=titleFailures.size || ledger.failed().length || sourceFailures.size ? '부분 조회 · 보강 실패 있음' : '전체 조회 완료';
+          session.enrichmentFailures=[...titleFailures.keys()];
+          renderHousingResults(scanned,isAll?'전체':hdong,true);
+          document.getElementById('hHint').textContent=titleFailures.size?`표제부 보강 ${titleFailures.size}건 실패 · 다시 시도할 수 있습니다.`:'표제부 보강 완료';
+          if(sourceFailures.size)document.getElementById('hHint').append(document.createTextNode(` · ${[...sourceFailures].join(', ')} 조회 실패는 남아 있습니다. 새로 조회해 주세요.`));
+          if(titleFailures.size)document.getElementById('hHint').append(retry);
+          showQueryStatus(session);
+          retry.disabled=false;
+        };document.getElementById('hHint').append(retry);
+      }
+    }
+    };
+    await session.apply();showQueryStatus(session);
   }catch(e){
+    if(!owns())return;
     console.error("[runHousingSearch]", e);
     const hProgWrap = document.getElementById("hProgWrap");
     if(hProgWrap) hProgWrap.classList.remove("on");
@@ -3041,8 +3181,8 @@ function hUpdate(done,total,phase,isDone){
   }
 }
 
-function renderHousingResults(scanned, dongLabel){
-  H_PAGE = 1;
+function renderHousingResults(scanned, dongLabel, preserve = false){
+  if(!preserve)H_PAGE = 1;
   const totHhld = H_RESULTS_RAW.reduce((s,d)=>s+(d.hhld||0),0);
   document.getElementById("hs-match").textContent = H_RESULTS_RAW.length.toLocaleString("ko-KR");
   document.getElementById("hs-scan").textContent  = scanned.toLocaleString("ko-KR");
@@ -3051,11 +3191,11 @@ function renderHousingResults(scanned, dongLabel){
   document.getElementById("hStats").style.display = "flex";
   document.getElementById("hResultArea").style.display = "block";
   document.getElementById("hExportBtn").disabled = H_RESULTS_RAW.length === 0;
-  applyHousingSort();
+  applyHousingSort(preserve);
 }
 
 // 공동주택 관리 정렬 적용 (H_RESULTS_RAW 기준)
-function applyHousingSort(){
+function applyHousingSort(preserve = false){
   if(!H_RESULTS_RAW) return;
   const sort = document.getElementById("hSort").value;
   H_SORT = sort;
@@ -3086,8 +3226,7 @@ function applyHousingSort(){
       HRESULTS.sort((a,b)=>(b.hhld||0) - (a.hhld||0));
       break;
   }
-  H_PAGE = 1;
-  closeHousingDetail();
+  if(!preserve){H_PAGE = 1;closeHousingDetail();}
   renderHousingPage();
 }
 
@@ -3099,6 +3238,9 @@ function gotoHousingPage(p){
 }
 
 function renderHousingPage(){
+  const opened=document.querySelector('#hResultBody tr.h-detail-row');
+  const selectedKapt=opened?.previousElementSibling?.dataset.kapt;
+  if(opened)opened.remove();
   const total  = HRESULTS.length;
   const pages  = Math.max(1, Math.ceil(total / H_PAGE_SIZE));
   H_PAGE = Math.min(Math.max(H_PAGE, 1), pages);
@@ -3135,6 +3277,7 @@ function renderHousingPage(){
     frag.appendChild(tr);
   });
   body.appendChild(frag);
+  if(opened && selectedKapt){const selected=[...body.querySelectorAll('tr')].find(row=>row.dataset.kapt===selectedKapt);if(selected){selected.after(opened);selected.querySelector('.h-name')?.classList.add('active');}}
   // 공동주택명 클릭 → 같은 행 바로 아래에 인라인 상세 카드 펼치기
   body.querySelectorAll("[data-dtl]").forEach(a=>{
     a.addEventListener("click", e=>{ e.preventDefault(); openHousingDetail(a.dataset.dtl, a.dataset.pnu, a.closest("tr")); });
@@ -3315,16 +3458,27 @@ function exportHousingExcel(){
       "관리사무소 팩스번호": d.officeFax || "",
       "건물구조": d.strct || "",
       "승강기": d.elevator != null ? d.elevator : "-"
+      ,"보강상태":d.enrichmentState || H_PROGRESS_STATE
     };
   });
   const ws = XLSX.utils.json_to_sheet(rows);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "공동주택관리");
+  if(H_LAST_QUERY){
+    const info=H_LAST_QUERY.ledger.info();info[0]=['조회 상태',H_PROGRESS_STATE];
+    if(H_PROGRESS_STATE!=='전체 조회 완료')info[5]=['완전성','미완료·실패·취소 정보가 있어 전체 결과의 완전성을 보장할 수 없습니다.'];
+    info.push(['표제부 보강 실패 수',H_LAST_QUERY.enrichmentFailures?.length || 0],['표제부 보강 실패 범위(PNU)',(H_LAST_QUERY.enrichmentFailures || []).join(', ')]);
+    info.push(['보강 목록 조회 실패', [...(H_LAST_QUERY.sourceFailures || [])].join(', ')]);
+    if(H_PROGRESS_STATE!=='전체 조회 완료')info.push(['주의','보강 중·실패·취소 결과는 필터 판정과 집계가 바뀔 수 있으며 완전성을 보장할 수 없습니다.']);
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(info),'조회정보');
+  }
   const today = new Date().toISOString().slice(0,10);
   XLSX.writeFile(wb, `공동주택관리_${today}.xlsx`);
 }
 
 function clearHousing(){
+  invalidateQuery('housing');H_LAST_QUERY=null;H_PROGRESS_STATE='미조회';
+  document.getElementById('hRunBtn').disabled=false;document.getElementById('hProgWrap').classList.remove('on');
   if(H_FILTERS_READY){ H_MS.kind.reset(); H_DUAL.hhld.reset(); H_DUAL.area.reset(); H_DUAL.year.reset(); }
   const au = document.getElementById("h-areaunknown"); if(au) au.checked = true;
   const cu = document.getElementById("h-yearunknown"); if(cu) cu.checked = true;
@@ -3481,8 +3635,8 @@ async function runDemolSearch(){
   session.ledger.description = JSON.stringify({행정동:hdong,철거멸실구분:selGb.length?selGb:'전체',연도:yearActive?[yearMin,yearMax]:'전체',연도미확인포함:incUnknown});
   await session.ledger.collect(bjdList.map(bjd=>({bjd,pg:1})));
   if(!session.current()) return;
-  session.apply = ()=>{
-  const all = session.ledger.rows();
+  session.apply = (ledger=session.ledger)=>{
+  const all = ledger.rows();
   // 필터: 행정동(단건선택 시) + 구분 + 연도
   // 행정동 매핑 키 = 행정동코드(5)+본번(4)+부번(4) = 13자리 (jibun2hdong 키와 동일).
   // 매핑이 없으면 행정동 단위로 추정(hdongOfBjd).
@@ -3759,7 +3913,7 @@ function shtCardHTML(t, titles, demolRow){
         <button class="d-subtab" data-tab="wclf">오수정화시설</button>
         <button class="d-subtab" data-tab="jiji">지역지구</button>
       </div>
-      <div class="d-panel" id="mPanel"><div class="d-panel-hint">위 항목을 누르면 해당 정보를 불러옵니다</div></div>
+      <div class="d-panel" id="mPanel" role="status" aria-live="polite"><div class="d-panel-hint">위 항목을 누르면 해당 정보를 불러옵니다</div></div>
     </div>
   </div>`;
 }
@@ -3845,6 +3999,8 @@ async function fetchShtOpAll(op, p){
    ============================================================ */
 let V_DATA = [];
 let V_LOAD_STATE = 'idle';
+const V_GATE=requestGate();
+let V_GEOMETRY_STATE = 'idle';
 let V_RESULTS = [];
 let V_RESULTS_RAW = [];
 let V_SORT = "default";
@@ -3854,7 +4010,7 @@ let V_PAGE = 1;
 const V_PAGE_SIZE = 50;
 
 async function initVacantTab(){
-  if(V_DATA.length === 0) await loadVacantData();
+  if(V_DATA.length === 0 || V_GEOMETRY_STATE==='error') await loadVacantData();
   if(V_LOAD_STATE !== 'success') return;
   const hdong = document.getElementById("v-hdong");
   if(hdong.options.length <= 1){
@@ -3889,9 +4045,9 @@ async function initVacantTab(){
 
 async function loadVacantData(){
   try{
-    const r = await fetch("/vacantlist_donggu.json");
-    if(!r.ok) throw new Error(`HTTP ${r.status}`);
-    V_DATA = await r.json();
+    const dataset = await loadVacantDataset();
+    V_DATA = dataset.records;
+    V_GEOMETRY_STATE = dataset.geometryState;
     if(!Array.isArray(V_DATA)) throw new Error('invalid vacant data');
     V_LOAD_STATE = 'success';
   }catch(e){
@@ -3901,7 +4057,9 @@ async function loadVacantData(){
 }
 
 async function runVacantSearch(){
+  const generation=V_GATE.invalidate();
   await initVacantTab();
+  if(!V_GATE.current(generation))return;
   if(V_LOAD_STATE !== 'success'){
     document.getElementById('vHint').textContent = '빈집 데이터를 불러오지 못했습니다. 조회 버튼을 다시 눌러 재시도하세요.';
     return;
@@ -3939,10 +4097,12 @@ async function runVacantSearch(){
   document.getElementById("vResDong").textContent = isAll ? "전체" : hdong;
 
   document.getElementById("vResultArea").style.display = "block";
-  document.getElementById("vHint").textContent = V_RESULTS.length ? "" : "조건에 맞는 빈집이 없습니다.";
+  const counts=vacantCounts(V_RESULTS);
+  document.getElementById("vHint").textContent = `원본 레코드 ${counts.total}건 / 지도 표시 가능 ${counts.located}건 / 위치 미확인 ${counts.unknown}건 (건물 수 아님)${V_GEOMETRY_STATE==='error'?' · 위치정보 로드 실패: 조회 버튼으로 재시도하세요.':''}`;
 }
 
 function clearVacant(){
+  V_GATE.invalidate();
   document.getElementById("v-hdong").value = "__ALL__";
   if(V_MS_GRADE) V_MS_GRADE.reset();
   if(V_DUAL_YEAR) V_DUAL_YEAR.reset();
@@ -4000,11 +4160,12 @@ function renderVacantPage(){
   for(let i = 0; i < pageRows.length; i++){
     const d = pageRows[i];
     const tr = document.createElement("tr");
+    tr.dataset.recordId=d.recordId || '';
     const yearCell = (() => {
       if (!d.year) return '<span class="badge mute">연도미확인</span>';
       const age = currentYear - d.year;
       const cls = age >= 40 ? " veryold" : age >= 30 ? " old" : "";
-      return `${d.year} <span class="age${cls}">${age}년</span>`;
+      return `${d.year} <span class="age${cls}"> · 경과 ${age}년</span>`;
     })();
     tr.innerHTML = `
       <td class="num">${start + i + 1}</td>
@@ -4015,7 +4176,7 @@ function renderVacantPage(){
       <td>${esc(d.struct || "-")}</td>
       <td class="num">${fmt(d.tarea)}</td>
       <td>${esc(d.grade || "-")}</td>
-      <td>${esc(d.baseDate || "-")}</td>
+      <td>${esc(d.baseDate || "-")}<details class="vacant-provenance"><summary>출처·식별자</summary><div>${esc(d.recordId || 'ID 미확인')}</div><div>필지 ${esc(d.parcelId || '미확인')}</div><div>${esc(d.source || '동구 빈집 현황 (odcloud)')}</div><div>수집일 ${esc(d.collectedAt || '미확인 (기존 자료)')}</div><div>${d.geometry?'필지/참고 도형 확보':'위치 미확인'} · 건물 식별 아님</div></details></td>
     `;
     frag.appendChild(tr);
   }
@@ -4061,6 +4222,12 @@ function exportVacantExcel(){
     "연면적(㎡)": d.tarea,
     "등급": d.grade || "",
     "기준일자": d.baseDate || "",
+    "레코드ID":d.recordId || "",
+    "필지ID":d.parcelId || "",
+    "위치상태":d.geometry ? '필지/참고 도형 확보' : '위치 미확인',
+    "출처":d.source || '',
+    "수집일":d.collectedAt || '미확인',
+    "주소보강기준":d.addressBasis || '미확인',
   }));
   const ws = XLSX.utils.json_to_sheet(rows);
   const wb = XLSX.utils.book_new();
@@ -4363,13 +4530,14 @@ function mapColor(source, attr){
 }
 
 // ── 복수 PNU → GeoJSON FeatureCollection (api/vworld-parcel.js ?pnus=)
-async function parcelsFromPNUs(pnuArray, report = false){
+async function parcelsFromPNUs(pnuArray, report = false, current = ()=>true){
   if(!pnuArray.length) return report ? {features:[],requests:[]} : [];
   const out = [];
   const requests = [];
-  for(let i = 0; i < pnuArray.length; i += COND_CHUNK){
+  for(let i = 0; i < pnuArray.length && current(); i += COND_CHUNK){
     const chunk = pnuArray.slice(i, i + COND_CHUNK);
     const { ok, data } = await api("vworld-parcel", { pnus: chunk.join(",") });
+    if(!current())break;
     if(!ok || !Array.isArray(data?.features)) requests.push(...chunk.map(pnu=>({pnu,state:'error'})));
     else if(Array.isArray(data.requests)) requests.push(...data.requests);
     else requests.push(...chunk.filter(pnu=>!data.features.some(f=>f.properties?.pnu===pnu)).map(pnu=>({pnu,state:'unknown'})));
@@ -4403,6 +4571,7 @@ async function initMapTab(){
   }
   // 소스 체크박스 상태에 따라 조건 섹션 노출
   syncMapCondSections();
+  if(typeof syncMobileMapInteraction==='function')syncMobileMapInteraction();
   // 줌 레벨에 맞는 범례 렌더
   renderMapLegend();
   setTimeout(()=>{ try{ M_MAP && M_MAP.invalidateSize(); }catch(e){} }, 120);
@@ -4437,13 +4606,10 @@ async function loadMapHaengjeong(){
 // 정적 폴리곤 데이터 로드 (vacant_geo.json, apt_geo.json, bjd_bounds.json)
 let M_VACANT_STATE = 'idle';
 async function loadMapStaticData(){
-  if(M_DATA.vacant.length === 0){
+  if(M_DATA.vacant.length === 0 || M_VACANT_STATE==='error'){
     try{
-      const r = await fetch("/vacant_geo.json");
-      if(!r.ok) throw new Error('vacant load failure');
-      const rows = await r.json();
-      if(!Array.isArray(rows)) throw new Error('vacant format failure');
-      M_DATA.vacant = rows; M_VACANT_STATE = 'success';
+      const dataset = await loadVacantDataset();
+      M_DATA.vacant = dataset.records; M_VACANT_STATE = dataset.geometryState;
     }catch(e){ M_VACANT_STATE = 'error'; console.warn('[map]', {kind:'load',query:'vacant-static'}); }
   }
   if(M_DATA.apt.length === 0){
@@ -4458,18 +4624,10 @@ async function loadMapStaticData(){
       if(r.ok) M_BJD_BOUNDS = await r.json();
     }catch(e){ console.error("[loadMapStaticData bjd_bounds]", e); }
   }
-  if(!M_VACANT_BASE_DATE){
-    try{
-      const r = await fetch("/vacantlist_donggu.json");
-      if(r.ok){
-        const rows = await r.json();
-        const dated = Array.isArray(rows) ? rows.find(d => d?.baseDate) : null;
-        M_VACANT_BASE_DATE = String(dated?.baseDate || "").trim();
-      }
-    }catch(e){ console.error("[loadMapStaticData vacant date]", e); }
-  }
+  const dates=[...new Set(M_DATA.vacant.map(row=>row.baseDate).filter(Boolean))].sort();
+  M_VACANT_BASE_DATE=dates.length>1?`${dates[0]} ~ ${dates.at(-1)}`:dates[0] || '';
   const dateEl = document.getElementById("mapVacantDate");
-  if(dateEl) dateEl.textContent = M_VACANT_BASE_DATE ? `조회 기준일: ${M_VACANT_BASE_DATE}` : "";
+  if(dateEl) dateEl.textContent = `자료 기준일: ${M_VACANT_BASE_DATE || '미확인'} · 수집일: ${M_DATA.vacant.find(row=>row.collectedAt)?.collectedAt || '미확인 (기존 자료)'} · 배포일과 별개`;
 }
 
 // 사이드 패널 다중선택 필터 구성
@@ -4569,9 +4727,16 @@ function initMapLeaflet(){
 }
 
 // ── 검색 실행 (사이드 패널 "조회" 버튼) ──
+const MAP_RUN_GATE=requestGate();
 async function runMapSearch(){
+  const runId=MAP_RUN_GATE.invalidate(),active=()=>MAP_RUN_GATE.current(runId);
   invalidateQuery('map');
   ++M_COND_SEARCH_ID;
+  M_RESULTS={vacant:[],apt:[],cond:[]};
+  document.getElementById('mapResultsWrap').style.display='none';
+  for(const layer of Object.values(M_LAYER))layer.clearLayers();
+  closeMapCard();
+  const mapGeneration=M_COND_SEARCH_ID;
   const runBtn = document.getElementById("mapRunBtn");
   runBtn.disabled = true;
   document.getElementById("mapHint").textContent = "지도 초기화 중…";
@@ -4579,8 +4744,10 @@ async function runMapSearch(){
   try{
     // 탭 전환 직후 조회해도 레이어·행정동·정적 데이터가 준비된 뒤 검색한다.
     await initMapTab();
+    if(!active() || mapGeneration!==M_COND_SEARCH_ID)return;
     const sources = mapSelectedSources();
     if(sources.includes('vacant') && M_VACANT_STATE === 'error') await loadMapStaticData();
+    if(!active() || mapGeneration!==M_COND_SEARCH_ID)return;
     if(M_VACANT_STATE === 'success' && !M_MS.vgrade){
       const grades = [...new Set(M_DATA.vacant.map(d=>d.grade).filter(Boolean))].sort();
       if(grades.length) M_MS.vgrade = buildMultiselect('map-ms-vgrade', grades, false);
@@ -4591,7 +4758,7 @@ async function runMapSearch(){
       document.getElementById('mapHint').parentElement.after(staticStatus);
     }
     staticStatus.textContent = sources.includes('vacant') && M_VACANT_STATE !== 'success'
-      ? '빈집 지도 데이터를 불러오지 못했습니다 (0건 아님). 조회 버튼으로 재시도하세요.' : '';
+      ? '빈집 위치정보를 불러오지 못했습니다 (0건 아님). 원본 레코드는 보존됩니다. 조회 버튼으로 재시도하세요.' : '';
     if(!sources.length){
       document.getElementById("mapHint").textContent = "소스를 1개 이상 선택하세요.";
       return;
@@ -4609,17 +4776,21 @@ async function runMapSearch(){
     if(sources.includes("apt"))    filterAptForMap(isAll ? null : hdong);
     if(sources.includes("cond")){
       await runCondForMap(isAll ? null : hdong);
+      if(!QUERY_SESSIONS.get('map')?.current())return;
       if(!isAll) fitMapToBjdList(HJ?.hdong2bjd?.[hdong] || []);
     }
     await renderAllMapLayers();
+    if(!active())return;
     renderMapResults();
     renderMapLegend();
     fitMapToResults();
+    if(typeof setMapPanelOpen==='function' && window.matchMedia('(max-width:820px)').matches)setMapPanelOpen(false);
   }catch(e){
+    if(!active())return;
     console.error("[runMapSearch]", e);
     document.getElementById("mapHint").textContent = "오류: " + (e.message || e);
   }finally{
-    runBtn.disabled = false;
+    if(active())runBtn.disabled = false;
   }
 }
 
@@ -4672,6 +4843,8 @@ async function runCondForMap(hdong){
   showMapLoading(false); // 이전 조회의 지연된 뷰포트 로딩 상태 초기화
   COND_PNU_CACHE.clear();
   M_LAYER.cond.clearLayers();
+  M_RESULTS.cond=[];
+  document.getElementById('mapResultsWrap').style.display='none';
 
   if(!HJ) await loadHaengjeong();
   const bjdList = hdong ? (HJ.hdong2bjd[hdong] || []) : ALL_BJD;
@@ -4696,10 +4869,8 @@ async function runCondForMap(hdong){
 
   const session = startQuery('map', 'mapHint', 'tab-map', t=>fetchDongPage(t.bjd,t.pg || 1), 'titles');
   session.ledger.description = JSON.stringify({행정동:hdong || '전체',용도:selPurps.length?selPurps:'전체',구조:selStrct.length?selStrct:'전체'});
-  await session.ledger.collect(bjdList.map(bjd=>({bjd,pg:1})));
-  if(!session.current() || searchId !== M_COND_SEARCH_ID) return;
-  session.apply = ()=>{
-  const all = session.ledger.rows();
+  session.apply = (ledger=session.ledger)=>{
+  const all = ledger.rows();
   // 필터 + pnu 수집 (중복 pnu 제거)
   // 같은 필지에 주건축물+부속건축물 등 여러 표제부 행이 있을 수 있다(동구 전체 필지의 ~45%).
   // 응답 순서에 의존해 첫 행을 취하면 용도 공백인 부속건축물이 남을 수 있으므로
@@ -4743,6 +4914,12 @@ async function runCondForMap(hdong){
   document.getElementById("mapHint").textContent = `건축물 조건검색: ${M_RESULTS.cond.length}건`;
   };
   session.afterRetry = async()=>{ await renderAllMapLayers(); renderMapResults(); renderMapLegend(); };
+  const apply=session.apply;
+  session.apply=(ledger=session.ledger)=>{apply(ledger);renderMapResults();};
+  progressiveQuery(session);
+  await session.ledger.collect(bjdList.map(bjd=>({bjd,pg:1})));
+  clearTimeout(session.progressTimer);session.loading=false;
+  if(!session.current() || searchId!==M_COND_SEARCH_ID)return;
   session.apply(); showQueryStatus(session);
 }
 
@@ -4782,7 +4959,7 @@ async function refreshCondViewport(searchId = M_COND_SEARCH_ID){
     return;
   }
   showMapLoading(true);
-  const geometryResult = await parcelsFromPNUs(need, true);
+  const geometryResult = await parcelsFromPNUs(need, true,()=>searchId===M_COND_SEARCH_ID);
   const feats = geometryResult.features;
   if(searchId !== M_COND_SEARCH_ID) return;
   for(const f of feats){
@@ -4857,8 +5034,8 @@ function redrawCondLayer(){
 async function renderAllMapLayers(){
   // 빈집
   M_LAYER.vacant.clearLayers();
-  for(const d of M_RESULTS.vacant){
-    const p = makeMapPolygon(d.geometry, "vacant", d.pnu || (d.jibun||""), d);
+  for(const d of groupVacantGeometry(M_RESULTS.vacant)){
+    const p = makeMapPolygon(d.geometry, "vacant", d.recordId, d);
     p.addTo(M_LAYER.vacant);
   }
   // 공동주택
@@ -4933,24 +5110,30 @@ function renderMapResults(){
   if(sources.includes("cond"))   for(const d of M_RESULTS.cond)   all.push({ src:"cond", d });
 
   document.getElementById("mapResultCount").textContent = all.length.toLocaleString("ko-KR");
+  let coverage=document.getElementById('mapVacantCoverage');
+  if(!coverage){coverage=document.createElement('div');coverage.id='mapVacantCoverage';coverage.className='d-panel-hint';wrap.prepend(coverage);}
+  const counts=vacantCounts(M_RESULTS.vacant);
+  coverage.textContent=sources.includes('vacant') ? `빈집 원본 레코드 ${counts.total}건 / 지도 표시 가능 ${counts.located}건 / 위치 미확인 ${counts.unknown}건 · 도형 ${counts.shapes}개 (일부 공유, 건물 수 아님)` : '';
   if(!all.length){ wrap.style.display = "none"; return; }
   wrap.style.display = "";
   // 너무 많으면 일부만 렌더
-  const MAX_SHOW = 300;
+  const MAX_SHOW = Math.max(300,M_RESULTS.vacant.length);
   const shown = all.slice(0, MAX_SHOW);
   const frag = document.createDocumentFragment();
   for(const { src, d } of shown){
     const row = document.createElement("div");
     row.className = "map-result-row";
+    row.tabIndex=0;row.setAttribute('role','button');
     const color = mapColor(src, src === "vacant" ? d.grade : (src === "apt" ? d.kind : null));
     let label = "";
     let sub = "";
-    if(src === "vacant"){ label = `빈집 ${d.grade||""} · ${d.kind||""}`; sub = formatJibun(d.jibun) || d.doro || ""; }
+    if(src === "vacant"){ label = `빈집 ${d.grade||""} · ${d.kind||""}${d.geometry?'':' · 위치 미확인'}`; sub = formatJibun(d.jibun) || d.doro || ""; }
     else if(src === "apt"){ label = d.complexNm || "공동주택"; sub = `${d.kind||""} · ${shortAddr(d.addr || d.adres || d.doroAddr) || stripJibunLandSuffix(d.jibun) || ""}`; }
     else { label = d.bldNm || "건축물"; sub = `${d.mainPurps||""} · ${d.dongNm||""}`; }
     row.innerHTML = `<span class="mr-dot" style="background:${color}"></span>
       <span class="mr-text"><b>${esc(label)}</b><span>${esc(sub)}</span></span>`;
     row.onclick = ()=>{ focusMapResult(src, d); };
+    row.onkeydown=event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();focusMapResult(src,d);}};
     frag.appendChild(row);
   }
   list.innerHTML = "";
@@ -4958,13 +5141,17 @@ function renderMapResults(){
   if(all.length > MAX_SHOW){
     const more = document.createElement("div");
     more.className = "map-result-more";
-    more.textContent = `외 ${all.length - MAX_SHOW}건 (지도에서 확인)`;
+    more.textContent = `외 ${all.length - MAX_SHOW}건 · 조건을 좁혀 목록에서 확인하세요.`;
     list.appendChild(more);
   }
 }
 
 // 결과목록 클릭 → 해당 폴리곤으로 이동 + 상세카드
 function focusMapResult(src, d){
+  if(src==='vacant' && d.geometry){
+    const group=groupVacantGeometry(M_RESULTS.vacant).find(g=>vacantGeometryKey(g)===vacantGeometryKey(d));
+    if(group)d={...group,selectedRecordId:d.recordId};
+  }
   let geom = d.geometry;
   if(src === "cond"){ geom = COND_PNU_CACHE.get(d.pnu); }
   if(geom && M_MAP){
@@ -4977,10 +5164,12 @@ function focusMapResult(src, d){
 }
 
 // ── 상세카드 ──
+let M_CARD_RETURN_FOCUS=null;
 function showMapDetailCard(source, data){
   const card = document.getElementById("mapCard");
+  if(!card.contains(document.activeElement))M_CARD_RETURN_FOCUS=document.activeElement;
   let html = `<div class="mc-head"><span class="mc-src mc-src-${source}">${sourceLabel(source)}</span>
-    <button class="mc-close" onclick="closeMapCard()">✕</button></div>`;
+    <button class="mc-close" aria-label="지도 상세 닫기" onclick="closeMapCard()">✕</button></div>`;
   if(source === "vacant"){
     html += renderVacantCard(data);
   }else if(source === "apt"){
@@ -4990,8 +5179,10 @@ function showMapDetailCard(source, data){
   }
   card.innerHTML = html;
   card.style.display = "";
+  card.setAttribute('role','dialog');card.setAttribute('aria-label','지도 조회 항목 상세');
+  card.querySelector('.mc-close')?.focus();
 }
-function closeMapCard(){ document.getElementById("mapCard").style.display = "none"; }
+function closeMapCard(){ document.getElementById("mapCard").style.display = "none";if(M_CARD_RETURN_FOCUS?.isConnected)M_CARD_RETURN_FOCUS.focus({preventScroll:true}); }
 
 // ESC 키 → 상세카드 닫기 (한 번만 등록)
 let M_ESC_BOUND = false;
@@ -5007,6 +5198,10 @@ function bindMapCardEsc(){
 function sourceLabel(s){ return s === "vacant" ? "빈집현황" : s === "apt" ? "공동주택" : "건축물"; }
 
 function renderVacantCard(d){
+  if(d.members){
+    return `<div class="mc-note">같은 필지/참고 도형을 공유하는 원본 레코드 ${d.members.length}건 · 동일 건물 여부 미확인</div>`
+      + d.members.map(row=>`<details ${d.members.length===1 || d.selectedRecordId===row.recordId?'open':''}><summary>${esc(formatJibun(row.jibun))} · ${esc(row.grade || '등급 미확인')}</summary>${renderVacantCard(row)}</details>`).join('');
+  }
   const yr = d.year ? `${d.year}년 (경과 ${new Date().getFullYear() - d.year}년)` : "미확인";
   return `<div class="mc-title">${esc(d.grade||"빈집")} · ${esc(d.kind||"")}</div>
     <div class="mc-addr">${esc(formatJibun(d.jibun) || "—")}</div>
@@ -5017,6 +5212,12 @@ function renderVacantCard(d){
       <tr><th>주구조</th><td>${esc(d.struct || "—")}</td></tr>
       <tr><th>연면적</th><td>${d.tarea ? Number(d.tarea).toLocaleString("ko-KR") + "㎡" : "—"}</td></tr>
       <tr><th>기준일자</th><td>${esc(d.baseDate || "—")}</td></tr>
+      <tr><th>수집일</th><td>${esc(d.collectedAt || '미확인 (기존 자료)')}</td></tr>
+      <tr><th>출처</th><td>${esc(d.source || '동구 빈집 현황 (odcloud)')}</td></tr>
+      <tr><th>주소 기준</th><td>${esc(d.addressBasis || '기존 주소 보강 자료 · 건물 매칭 미확인')}</td></tr>
+      <tr><th>레코드 ID</th><td>${esc(d.recordId || '미확인')}</td></tr>
+      <tr><th>필지 ID</th><td>${esc(d.parcelId || '미확인')}</td></tr>
+      <tr><th>위치 범위</th><td>${esc(d.locationNote || (d.geometry ? '필지/참고 도형 · 건물 식별 아님' : '위치 미확인'))}</td></tr>
     </table>`;
 }
 
@@ -5152,6 +5353,8 @@ function showMapLoading(on){
 }
 
 function clearMapSelection(){
+  MAP_RUN_GATE.invalidate();document.getElementById('mapRunBtn').disabled=false;
+  invalidateQuery('map');++M_COND_SEARCH_ID;showMapLoading(false);
   // 결과 초기화 + 레이어 비움
   M_RESULTS = { vacant:[], apt:[], cond:[] };
   COND_PNU_CACHE.clear();
@@ -5537,5 +5740,6 @@ renderLastUpdated();
 
 
 </script>
+<script src="ui-enhancements.js"></script>
 </body>
 </html>

@@ -1,0 +1,271 @@
+{
+  "mode": "controlled browser; API latency 80ms; three cold contexts and three warm repetitions; map data path only",
+  "reports": [
+    {
+      "scenario": "detail",
+      "trial": 1,
+      "cache": "cold",
+      "firstMs": 173,
+      "completeMs": 256,
+      "apiRequests": 4,
+      "maxConcurrency": 2,
+      "elapsedMs": 612
+    },
+    {
+      "scenario": "detail",
+      "trial": 1,
+      "cache": "warm",
+      "firstMs": 90,
+      "completeMs": 91,
+      "apiRequests": 1,
+      "maxConcurrency": 1,
+      "elapsedMs": 445
+    },
+    {
+      "scenario": "detail",
+      "trial": 2,
+      "cache": "cold",
+      "firstMs": 173,
+      "completeMs": 258,
+      "apiRequests": 4,
+      "maxConcurrency": 2,
+      "elapsedMs": 613
+    },
+    {
+      "scenario": "detail",
+      "trial": 2,
+      "cache": "warm",
+      "firstMs": 89,
+      "completeMs": 90,
+      "apiRequests": 1,
+      "maxConcurrency": 1,
+      "elapsedMs": 446
+    },
+    {
+      "scenario": "detail",
+      "trial": 3,
+      "cache": "cold",
+      "firstMs": 174,
+      "completeMs": 258,
+      "apiRequests": 4,
+      "maxConcurrency": 2,
+      "elapsedMs": 614
+    },
+    {
+      "scenario": "detail",
+      "trial": 3,
+      "cache": "warm",
+      "firstMs": 88,
+      "completeMs": 89,
+      "apiRequests": 1,
+      "maxConcurrency": 1,
+      "elapsedMs": 444
+    },
+    {
+      "scenario": "housing",
+      "trial": 1,
+      "cache": "cold",
+      "firstMs": 99,
+      "completeMs": 453,
+      "apiRequests": 9,
+      "maxConcurrency": 2,
+      "elapsedMs": 808
+    },
+    {
+      "scenario": "housing",
+      "trial": 1,
+      "cache": "warm",
+      "firstMs": 19,
+      "completeMs": 33,
+      "apiRequests": 0,
+      "maxConcurrency": 0,
+      "elapsedMs": 386
+    },
+    {
+      "scenario": "housing",
+      "trial": 2,
+      "cache": "cold",
+      "firstMs": 98,
+      "completeMs": 453,
+      "apiRequests": 9,
+      "maxConcurrency": 2,
+      "elapsedMs": 808
+    },
+    {
+      "scenario": "housing",
+      "trial": 2,
+      "cache": "warm",
+      "firstMs": 19,
+      "completeMs": 32,
+      "apiRequests": 0,
+      "maxConcurrency": 0,
+      "elapsedMs": 385
+    },
+    {
+      "scenario": "housing",
+      "trial": 3,
+      "cache": "cold",
+      "firstMs": 97,
+      "completeMs": 459,
+      "apiRequests": 9,
+      "maxConcurrency": 2,
+      "elapsedMs": 816
+    },
+    {
+      "scenario": "housing",
+      "trial": 3,
+      "cache": "warm",
+      "firstMs": 20,
+      "completeMs": 33,
+      "apiRequests": 0,
+      "maxConcurrency": 0,
+      "elapsedMs": 388
+    },
+    {
+      "scenario": "condition",
+      "trial": 1,
+      "cache": "cold",
+      "firstMs": 136,
+      "completeMs": 607,
+      "apiRequests": 14,
+      "maxConcurrency": 2,
+      "elapsedMs": 964
+    },
+    {
+      "scenario": "condition",
+      "trial": 1,
+      "cache": "warm",
+      "firstMs": 15,
+      "completeMs": 15,
+      "apiRequests": 0,
+      "maxConcurrency": 0,
+      "elapsedMs": 368
+    },
+    {
+      "scenario": "condition",
+      "trial": 2,
+      "cache": "cold",
+      "firstMs": 134,
+      "completeMs": 610,
+      "apiRequests": 14,
+      "maxConcurrency": 2,
+      "elapsedMs": 964
+    },
+    {
+      "scenario": "condition",
+      "trial": 2,
+      "cache": "warm",
+      "firstMs": 15,
+      "completeMs": 15,
+      "apiRequests": 0,
+      "maxConcurrency": 0,
+      "elapsedMs": 369
+    },
+    {
+      "scenario": "condition",
+      "trial": 3,
+      "cache": "cold",
+      "firstMs": 137,
+      "completeMs": 615,
+      "apiRequests": 14,
+      "maxConcurrency": 2,
+      "elapsedMs": 970
+    },
+    {
+      "scenario": "condition",
+      "trial": 3,
+      "cache": "warm",
+      "firstMs": 15,
+      "completeMs": 15,
+      "apiRequests": 0,
+      "maxConcurrency": 0,
+      "elapsedMs": 369
+    },
+    {
+      "scenario": "map",
+      "trial": 1,
+      "cache": "cold",
+      "firstMs": 128,
+      "completeMs": 170,
+      "apiRequests": 3,
+      "maxConcurrency": 2,
+      "elapsedMs": 526
+    },
+    {
+      "scenario": "map",
+      "trial": 1,
+      "cache": "warm",
+      "firstMs": 1,
+      "completeMs": 2,
+      "apiRequests": 0,
+      "maxConcurrency": 0,
+      "elapsedMs": 358
+    },
+    {
+      "scenario": "map",
+      "trial": 2,
+      "cache": "cold",
+      "firstMs": 130,
+      "completeMs": 171,
+      "apiRequests": 3,
+      "maxConcurrency": 2,
+      "elapsedMs": 526
+    },
+    {
+      "scenario": "map",
+      "trial": 2,
+      "cache": "warm",
+      "firstMs": 1,
+      "completeMs": 1,
+      "apiRequests": 0,
+      "maxConcurrency": 0,
+      "elapsedMs": 356
+    },
+    {
+      "scenario": "map",
+      "trial": 3,
+      "cache": "cold",
+      "firstMs": 131,
+      "completeMs": 173,
+      "apiRequests": 3,
+      "maxConcurrency": 2,
+      "elapsedMs": 529
+    },
+    {
+      "scenario": "map",
+      "trial": 3,
+      "cache": "warm",
+      "firstMs": 1,
+      "completeMs": 1,
+      "apiRequests": 0,
+      "maxConcurrency": 0,
+      "elapsedMs": 357
+    }
+  ],
+  "layouts": [
+    {
+      "width": 360,
+      "documentWidth": 360,
+      "menuWidth": 519,
+      "numberInputs": 8
+    },
+    {
+      "width": 390,
+      "documentWidth": 390,
+      "menuWidth": 519,
+      "numberInputs": 8
+    },
+    {
+      "width": 430,
+      "documentWidth": 430,
+      "menuWidth": 519,
+      "numberInputs": 8
+    },
+    {
+      "width": 1366,
+      "documentWidth": 1366,
+      "menuWidth": 1132,
+      "numberInputs": 8
+    }
+  ]
+}

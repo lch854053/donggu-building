@@ -303,6 +303,22 @@ function hdongOf(p, HJ){
 
 function fmt(n){ return n==null || String(n).trim()==='' || !Number.isFinite(Number(n)) ? "-" : Number(n).toLocaleString("ko-KR"); }
 
+function normalizeRangePair(low,high,min,max,precision=1){
+  const clean=(value,fallback)=>{
+    const n=value==null || String(value).trim()==='' ? fallback : Number(value);
+    return Math.min(max,Math.max(min,Number((Math.round((Number.isFinite(n)?n:fallback)/precision)*precision).toFixed(8))));
+  };
+  const a=clean(low,min),b=clean(high,max);
+  return a<=b?[a,b]:[b,a];
+}
+
+function bjdScopeForHdong(hdong,mapping){
+  const all=!hdong || hdong==='__ALL__';
+  const declared=all?Object.values(mapping?.hdong2bjd || {}).flat():(mapping?.hdong2bjd?.[hdong] || []);
+  const parcels=Object.entries(mapping?.jibun2hdong || {}).filter(([key,name])=>all || name===hdong).map(([key])=>key.slice(0,5));
+  return [...new Set([...declared,...parcels])];
+}
+
 function esc(s){ return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 
 function formatJibun(addr){

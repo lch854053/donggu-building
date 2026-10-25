@@ -3,6 +3,41 @@
 // Static PNU data keeps the legacy code. HUB proxies normalize it before upstream calls.
 const SIGUNGU = "29110";
 const SIGUNGU_NEW = "12210";
+// Successful JSON responses only. Full path + sorted parameters form the key.
+// Live API TTL: 2 minutes; normal empty response TTL: 30 seconds. In-flight requests coalesce.
+const SHARED_API_CACHE = new Map();
+async function apiShared(path, params={}, {ttl=120000}={}){
+  const key=JSON.stringify([path,Object.entries(params).sort(([a],[b])=>a.localeCompare(b))]);
+  let entry=SHARED_API_CACHE.get(key);
+  if(!entry || entry.expires<=Date.now()){
+    entry={expires:Infinity};
+    entry.pending=api(path,params).then(result=>{
+      if(!result.ok){if(SHARED_API_CACHE.get(key)===entry)SHARED_API_CACHE.delete(key);return result;}
+      const arrays=Object.values(result.data || {}).filter(Array.isArray);
+      const empty=result.data?.found===false || (Object.hasOwn(result.data || {},'info') && result.data.info==null) || (arrays.length && arrays.every(a=>!a.length));
+      entry.expires=Date.now()+(empty ? Math.min(ttl,30000) : ttl);
+      return result;
+    }).catch(()=>{if(SHARED_API_CACHE.get(key)===entry)SHARED_API_CACHE.delete(key);return {ok:false,status:0,data:null,kind:'network',cancelled:false,error:'불러오지 못했습니다. 다시 조회해 주세요.'};});
+    SHARED_API_CACHE.set(key,entry);
+    if(SHARED_API_CACHE.size>250)SHARED_API_CACHE.delete(SHARED_API_CACHE.keys().next().value);
+  }
+  return JSON.parse(JSON.stringify(await entry.pending)); // caller mutations cannot contaminate cache
+}
+let VACANT_DATASET_CACHE=null;
+async function loadVacantDataset(){
+  if(VACANT_DATASET_CACHE && VACANT_DATASET_CACHE.expires>Date.now())return VACANT_DATASET_CACHE.pending;
+  const entry={expires:Date.now()+600000};
+  entry.pending=(async()=>{
+    const listResponse=await fetch('/vacantlist_donggu.json');
+    if(!listResponse.ok)throw new Error('빈집 원본 로드 실패');
+    const rows=await listResponse.json();
+    let geometry=[],geometryState='success';
+    try{const r=await fetch('/vacant_geo.json');if(!r.ok)throw new Error('geometry');geometry=await r.json();if(!Array.isArray(geometry))throw new Error('geometry');}
+    catch{geometryState='error';if(VACANT_DATASET_CACHE===entry)VACANT_DATASET_CACHE=null;}
+    return {records:createVacantDataset(rows,geometry),geometryState};
+  })().catch(error=>{if(VACANT_DATASET_CACHE===entry)VACANT_DATASET_CACHE=null;throw error;});
+  VACANT_DATASET_CACHE=entry;return entry.pending;
+}
 function isDonggu(p){ return p && (p.sigunguCd === SIGUNGU || p.sigunguCd === SIGUNGU_NEW); }
 
 async function api(path, params){
@@ -19,7 +54,7 @@ async function api(path, params){
       console.warn('[api]', {kind:'format',status:r.status,query:path});
       return {ok:false,status:r.status,data:null,kind:'format',cancelled:false,error:'불러오지 못했습니다. 다시 조회해 주세요.'};
     }
-    const field = {juso:'juso',building:'titles',archpms:'items'}[path];
+    const field = {juso:'juso',building:'titles',archpms:'items',aptid:'complexes'}[path];
     if(data?.error || !data || (field && !Array.isArray(data[field]))){
       const kind = data?.error ? 'upstream' : 'format';
       console.warn('[api]', { kind, status:r.status, query:path, op:params?.op || 'default' });
@@ -54,6 +89,22 @@ async function apiRetry(path, params, { retries = 3, baseDelay = 400 } = {}){
   return last;
 }
 
+// Coalesced parcel requests still use the same transient-only retry policy.
+const PARCEL_REQUEST_CACHE=new Map();
+async function apiSharedRetry(path,params){
+  const key=JSON.stringify([path,Object.entries(params).sort(([a],[b])=>a.localeCompare(b))]);
+  let entry=PARCEL_REQUEST_CACHE.get(key);
+  if(!entry || entry.expires<=Date.now()){
+    entry={expires:Infinity};entry.pending=apiRetry(path,params).then(result=>{
+      if(!result.ok && PARCEL_REQUEST_CACHE.get(key)===entry)PARCEL_REQUEST_CACHE.delete(key);
+      else {const arrays=Object.values(result.data || {}).filter(Array.isArray);entry.expires=Date.now()+(arrays.length && arrays.every(a=>!a.length)?30000:120000);}
+      return result;
+    });PARCEL_REQUEST_CACHE.set(key,entry);
+    if(PARCEL_REQUEST_CACHE.size>250)PARCEL_REQUEST_CACHE.delete(PARCEL_REQUEST_CACHE.keys().next().value);
+  }
+  return JSON.parse(JSON.stringify(await entry.pending));
+}
+
 async function searchJuso(keyword){
   const { ok, data } = await api("juso", { keyword });
   if(!ok) throw new Error('주소를 불러오지 못했습니다. 다시 조회해 주세요.');
@@ -61,7 +112,7 @@ async function searchJuso(keyword){
 }
 
 async function fetchBuilding(p){
-  const { ok, status, data, error } = await api("building", {
+  const { ok, status, data, error } = await apiShared("building", {
     sigunguCd:p.sigunguCd, bjdongCd:p.bjdongCd,
     platGbCd:p.platGbCd, bun:p.bun, ji:p.ji
   });
@@ -123,7 +174,7 @@ async function parcelGeomFromPNU(pnu){
 }
 
 async function bldgisFromPNU(pnu){
-  const { ok, data } = await api("vworld-bld", { pnu });
+  const { ok, data } = await apiShared("vworld-bld", { pnu });
   if(!ok) return { state:'error' };
   if(!data.found) return { state:'empty' };
   return { state:'success', properties: data.properties || {}, violtAny: data.violtAny === true, scope:'parcel' };
@@ -136,8 +187,8 @@ async function loadBldgis(pnu){
 
 async function loadLdaData(pnu){
   if(!/^\d{19}$/.test(pnu||"")) return null;
-  const { ok, data } = await api("vworld-bld", { pnu, op: "lda" });
-  return ok && data.found ? data : null;
+  const { ok, data } = await apiShared("vworld-bld", { pnu, op: "lda" });
+  return ok ? {...data,state:data.found?'success':'empty'} : {state:'error'};
 }
 
 async function paramsViaVworld(address){
