@@ -1,0 +1,19 @@
+{
+  "environment": "Local actual Chromium, API fixtures (not production latency or live scans); real stored statistical/vacant JSON",
+  "checks": [
+    "new tab / reload restore Korean conditions, exact ranges and unknown toggles without API scans",
+    "detail auto query and stable title/tab restoration; back/forward add no history entries",
+    "copy success and Clipboard-unavailable manual selection; shared URL works in a separate tab",
+    "missing stable ID is not called deleted; missing selection in partial results is identified separately",
+    "menu navigation cancels unfinished URL restoration; late supplement cannot overwrite current screen or URL",
+    "explicit user detail-tab choice during auto restoration wins over pending replay and delayed supplement",
+    "vacant local-data search back navigation restores sort and a bounded result page",
+    "housing shared filters/sort and stable K-apt selection restore after manual search in a new tab",
+    "demolition filters plus map sources/filter/center/zoom/stable vacant selection and Figure-Ground theme/shape restore",
+    "overlong bulk URL rejected; JSON export/import preserves 500 lines; no automatic bulk recent storage",
+    "blocked localStorage and Clipboard do not prevent lookup or manual link copying",
+    "invalid recent JSON ignored; opening recent restores only conditions and individual delete works",
+    "360/390/430/1366px sharing and expandable metadata; units/reference/collection/official links, SGIS uncertainty, price won conversion and accessible tables"
+  ],
+  "errors": []
+}

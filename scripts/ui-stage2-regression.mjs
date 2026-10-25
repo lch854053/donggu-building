@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import assert from 'node:assert/strict';
 import XLSX from 'xlsx';
 const {chromium}=await import(process.env.PLAYWRIGHT_MODULE||'playwright');
-const root=new URL('../',import.meta.url),output=new URL('docs/ui-stage2-evidence/',root),base=process.env.BASE_URL||'http://localhost:3000';await fs.mkdir(output,{recursive:true});
+const tag=process.env.EVIDENCE_TAG||'ui-stage2',root=new URL('../',import.meta.url),output=new URL(`docs/${tag}-evidence/`,root),base=process.env.BASE_URL||'http://localhost:3000';await fs.mkdir(output,{recursive:true});
 const hj=JSON.parse(await fs.readFile(new URL('haengjeong.json',root))),key=Object.keys(hj.jibun2hdong).find(k=>hj.jibun2hdong[k]==='계림2동');
 const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/Applications/Brave Browser.app/Contents/MacOS/Brave Browser',headless:true}),reports=[];
 for(const width of [360,390,430,1366]){
@@ -49,4 +49,4 @@ for(const width of [360,390,430,1366]){
   }
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));assert.deepEqual(errors,[]);checks.push('actual local vacant grades support 3-only preset and result Excel provenance after edit; no viewport overflow');reports.push({width,mode:width<500?'Chromium touch emulation, not physical phone':'Chromium desktop',checks,errors});await ctx.close();
 }
-await fs.writeFile(new URL('docs/ui-stage2-browser-results.json',root),JSON.stringify({mode:'Real local Chromium; mocked API responses, real stored vacant/mapping data; no live API scan',reports},null,2)+'\n');console.log(JSON.stringify(reports,null,2));await browser.close();
+await fs.writeFile(new URL(`docs/${tag}-browser-results.json`,root),JSON.stringify({mode:'Real local Chromium; mocked API responses, real stored vacant/mapping data; no live API scan',reports},null,2)+'\n');console.log(JSON.stringify(reports,null,2));await browser.close();

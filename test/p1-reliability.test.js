@@ -21,7 +21,7 @@ function app(){
     createElement:()=>node(Math.random()), createTextNode:s=>s, createDocumentFragment:()=>({appendChild(){}})};
   const context = vm.createContext({ document, URLSearchParams, setTimeout, clearTimeout, console:{warn(){},error(){}},
     fetch:async()=>{throw Error('not mocked');}, XLSX, alert(){}, location:{}, window:{} });
-  for(const file of ['transform.js','vacant-model.js','app-api.js','reliability.js']) vm.runInContext(readFileSync(new URL('../'+file,import.meta.url),'utf8'),context);
+  for(const file of ['transform.js','vacant-model.js','app-api.js','reliability.js','result-format.js']) vm.runInContext(readFileSync(new URL('../'+file,import.meta.url),'utf8'),context);
   vm.runInContext(page.match(/<script>\s*([\s\S]*?)<\/script>/)[1],context);
   return {c:context,node,run:s=>vm.runInContext(s,context)};
 }
@@ -221,7 +221,7 @@ test('map building completeness warning survives geometry rendering and retry us
   run("M_MAP={getBounds:()=>({})}; M_RESULTS.cond=[];");
   c.redrawCondLayer=()=>{};
   await c.refreshCondViewport();
-  assert.match(node('query-status-map').textContent,/부분 조회/);
+  assert.match(node('query-status-map').textContent,/일부 자료를 불러오지 못했습니다/);
   failing=false; session.afterRetry=async()=>{};
   await node('query-status-map').children.find(x=>x?.textContent==='실패 요청만 재시도').onclick();
   assert.deepEqual(calls,[1,2,2]); assert.equal(run('M_RESULTS.cond.length'),2);

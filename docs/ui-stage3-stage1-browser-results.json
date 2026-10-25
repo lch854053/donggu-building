@@ -1,0 +1,12 @@
+{
+  "mode": "Actual local Chromium, controlled API responses including selected fields captured from live Seonam-ro 1 response; not physical phones",
+  "checks": [
+    "first visit detail; omitted-tab v1 bulk links retain addresses across reload",
+    "real-response fixture selects main; explicit dong, shared pick and history-selected auxiliary override default; aria/title follow navigation",
+    "cancel visible only during live search/supplements, hidden after completion/failure/cancel/reset",
+    "bulk, demolition and vacant lifecycle cancellation buttons also hide after cancellation; housing/condition/map covered by P2 race suite",
+    "copy success expires and clears on navigation; old timer cannot erase import failure/manual copy; late clipboard completion ignored",
+    "legacy recent storage has Korean source-aware labels and full accessible titles; restore is manual and preserves records; collapsed keyboard-accessible file controls still export/import"
+  ],
+  "errors": []
+}

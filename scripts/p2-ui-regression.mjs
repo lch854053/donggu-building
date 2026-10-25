@@ -86,7 +86,7 @@ for(const width of [360,390,430,1366]){
   assert.deepEqual(await page.evaluate(()=>M_RESULTS.vacant.map(r=>r.recordId).sort()),await page.evaluate(()=>V_DATA.map(r=>r.recordId).sort()));
   assert.match(await page.locator('#mapVacantCoverage').textContent(),/위치 미확인 10건/);
   await page.locator('#mapResultsList .map-result-row').filter({hasText:'241-15'}).click();
-  assert.match(await page.locator('#mapCard').textContent(),/2025-07-16/);
+  assert.match(await page.locator('#mapCard').textContent(),/2025[.-]07[.-]16/);
   assert.match(await page.locator('#mapCard').textContent(),/vacant:derived:/);
   await page.waitForTimeout(400); // Wait for the existing row entrance animation before evidence capture.
   const touch=await page.locator('.mc-close').boundingBox();assert.ok(touch.width>=44 && touch.height>=44);
@@ -94,8 +94,8 @@ for(const width of [360,390,430,1366]){
   await page.locator('.mc-close').click();assert.equal(await page.locator('#mapCard').isVisible(),false);
   await page.locator('#mapResultsList .map-result-row').filter({hasText:'322-9'}).first().click();
   assert.match(await page.locator('#mapCard').textContent(),/원본 레코드 2건/);
-  assert.equal(await page.locator('#mapCard details').count(),2);
-  await page.locator('#mapCard details summary').nth(1).click();
+  assert.equal(await page.locator('#mapCard>details').count(),2);
+  await page.locator('#mapCard>details>summary').nth(1).click();
   await page.locator('.mc-close').click();
   await page.locator('#mapResultsList .map-result-row').filter({hasText:'위치 미확인'}).first().click();
   assert.match(await page.locator('#mapCard').textContent(),/위치 미확인/);await page.locator('.mc-close').click();

@@ -1,0 +1,62 @@
+{
+  "mode": "Actual local Chromium, mocked API delay/failure and real static data; no production-wide API scan",
+  "reports": [
+    {
+      "width": 360,
+      "mode": "Real Chromium touch emulation; not physical phone",
+      "checks": [
+        "column selection is display-only, mandatory identity columns remain, sort/page/conditions preserved; keyboard opens inline detail and close returns focus; inline location does not navigate or reset menu",
+        "explicit new-tab detail uses versioned single-address URL; closing it retains original filters/sort/page/data/scroll without menu invalidation",
+        "vacant counts distinguish original records and shared shapes; provenance remains accessible after column changes; mobile row expansion remains",
+        "real shared vacant shape exposes every original member and returns keyboard focus to its exact stable-ID map-list row; no arbitrary record merge",
+        "raw area precision and zero preserved; display rounds only; edits do not query/relabel old conditions; Excel includes all original values and query provenance",
+        "complete, partial retry, real empty, total failure and cancellation are distinguishable; technical details folded without hiding incomplete warning",
+        "detail summary/provenance collapsed independently; parcel warnings stay visible; dong/tab/supplement updates retain reading context and focus; money representative and original evidence separated"
+      ],
+      "errors": []
+    },
+    {
+      "width": 390,
+      "mode": "Real Chromium touch emulation; not physical phone",
+      "checks": [
+        "column selection is display-only, mandatory identity columns remain, sort/page/conditions preserved; keyboard opens inline detail and close returns focus; inline location does not navigate or reset menu",
+        "explicit new-tab detail uses versioned single-address URL; closing it retains original filters/sort/page/data/scroll without menu invalidation",
+        "vacant counts distinguish original records and shared shapes; provenance remains accessible after column changes; mobile row expansion remains",
+        "real shared vacant shape exposes every original member and returns keyboard focus to its exact stable-ID map-list row; no arbitrary record merge",
+        "raw area precision and zero preserved; display rounds only; edits do not query/relabel old conditions; Excel includes all original values and query provenance",
+        "complete, partial retry, real empty, total failure and cancellation are distinguishable; technical details folded without hiding incomplete warning",
+        "detail summary/provenance collapsed independently; parcel warnings stay visible; dong/tab/supplement updates retain reading context and focus; money representative and original evidence separated"
+      ],
+      "errors": []
+    },
+    {
+      "width": 430,
+      "mode": "Real Chromium touch emulation; not physical phone",
+      "checks": [
+        "column selection is display-only, mandatory identity columns remain, sort/page/conditions preserved; keyboard opens inline detail and close returns focus; inline location does not navigate or reset menu",
+        "explicit new-tab detail uses versioned single-address URL; closing it retains original filters/sort/page/data/scroll without menu invalidation",
+        "vacant counts distinguish original records and shared shapes; provenance remains accessible after column changes; mobile row expansion remains",
+        "real shared vacant shape exposes every original member and returns keyboard focus to its exact stable-ID map-list row; no arbitrary record merge",
+        "raw area precision and zero preserved; display rounds only; edits do not query/relabel old conditions; Excel includes all original values and query provenance",
+        "complete, partial retry, real empty, total failure and cancellation are distinguishable; technical details folded without hiding incomplete warning",
+        "detail summary/provenance collapsed independently; parcel warnings stay visible; dong/tab/supplement updates retain reading context and focus; money representative and original evidence separated"
+      ],
+      "errors": []
+    },
+    {
+      "width": 1366,
+      "mode": "Real desktop Chromium",
+      "checks": [
+        "column selection is display-only, mandatory identity columns remain, sort/page/conditions preserved; keyboard opens inline detail and close returns focus; inline location does not navigate or reset menu",
+        "explicit new-tab detail uses versioned single-address URL; closing it retains original filters/sort/page/data/scroll without menu invalidation",
+        "controlled delayed complex response does not force scroll after the reader has moved away (reproduced baseline 0→4324px; fixed 0→0px)",
+        "vacant counts distinguish original records and shared shapes; provenance remains accessible after column changes; mobile row expansion remains",
+        "real shared vacant shape exposes every original member and returns keyboard focus to its exact stable-ID map-list row; no arbitrary record merge",
+        "raw area precision and zero preserved; display rounds only; edits do not query/relabel old conditions; Excel includes all original values and query provenance",
+        "complete, partial retry, real empty, total failure and cancellation are distinguishable; technical details folded without hiding incomplete warning",
+        "detail summary/provenance collapsed independently; parcel warnings stay visible; dong/tab/supplement updates retain reading context and focus; money representative and original evidence separated"
+      ],
+      "errors": []
+    }
+  ]
+}

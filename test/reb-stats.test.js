@@ -5,13 +5,14 @@ import { readFileSync } from "node:fs";
 const stats = JSON.parse(readFileSync(new URL("../reb_stats_donggu.json", import.meta.url), "utf8"));
 const page = readFileSync(new URL("../index.html", import.meta.url), "utf8");
 const normalizedPage = page.replace(/\r\n/g, "\n");
+const scope={};new Function('globalThis',readFileSync(new URL('../result-format.js',import.meta.url),'utf8'))(scope);
 const rebStart = normalizedPage.indexOf("function rebFmt(v, unit){");
 const rebEnd = normalizedPage.indexOf("\nfunction renderStats", rebStart);
 assert.ok(rebStart >= 0 && rebEnd > rebStart, "REB renderer source not found");
 const renderRebStats = new Function(
-  "stFmt", "esc",
+  "stFmt", "esc", "ResultFormat",
   `${normalizedPage.slice(rebStart, rebEnd)}\nreturn renderRebStats;`
-)(value => Number(value).toLocaleString("ko-KR"), value => String(value));
+)(value => Number(value).toLocaleString("ko-KR"), value => String(value),scope.ResultFormat);
 
 test("REB 동구 통계는 시장동향 지표와 시계열을 포함한다", () => {
   const ids = new Set(stats.indicators.map(indicator => indicator.id));

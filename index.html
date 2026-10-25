@@ -72,7 +72,7 @@
   <!-- STATS -->
   <div class="stats" id="stats" style="display:none">
     <div class="stat total"><div class="k">총 건수</div><div class="v" id="s-total">0</div></div>
-    <div class="stat ok"><div class="k">정상</div><div class="v" id="s-ok">0</div></div>
+    <div class="stat ok"><div class="k">조회 완료</div><div class="v" id="s-ok">0</div></div>
     <div class="stat warn"><div class="k">확인 필요</div><div class="v" id="s-warn">0</div></div>
     <div class="stat none"><div class="k">대장 없음</div><div class="v" id="s-none">0</div></div>
     <div class="stat err"><div class="k">실패·제외</div><div class="v" id="s-err">0</div></div>
@@ -82,7 +82,7 @@
   <div id="resultArea" style="display:none">
     <div class="result-head">
       <div class="legend">
-        <span><i class="chip ok"></i>정상</span>
+        <span><i class="chip ok"></i>조회 완료 (적법성 판정 아님)</span>
         <span><i class="chip warn"></i>후보 모호 — 확인 필요</span>
         <span><i class="chip none"></i>대장 없음 (나대지·미등록)</span>
         <span><i class="chip err"></i>조회 실패</span>
@@ -640,6 +640,7 @@
 <script src="search-state.js"></script>
 <script src="ui-labels.js"></script>
 <script src="filter-model.js"></script>
+<script src="result-format.js"></script>
 <script>
 /* ============================================================
    1. 앱 로직 (순수 변환은 transform.js, API 데이터 레이어는 app-api.js)
@@ -701,7 +702,12 @@ function showQueryStatus(session){
     document.getElementById(session.hintId).parentElement.after(el);
   }
   const failed = session.ledger.failed();
-  el.textContent = `${session.kind==='housing'?H_PROGRESS_STATE:session.ledger.status()} · 성공 ${session.ledger.requests.size-failed.length} / 실패 ${failed.length} 요청${session.kind==='housing'?' (주택유형 보충 API)':''}`;
+  const rawState=session.kind==='housing'?H_PROGRESS_STATE:session.ledger.status();
+  const presentation=ResultFormat.state(rawState,{busy:session.ledger.busy});
+  el.textContent=presentation.label+' · '+presentation.warning+' ';
+  const technical=document.createElement('details');technical.className='query-technical';
+  const technicalTitle=document.createElement('summary');technicalTitle.textContent='조회 내역 자세히';technical.append(technicalTitle);
+  const technicalText=document.createElement('p');technicalText.textContent=`${rawState} · 성공 ${session.ledger.requests.size-failed.length} / 실패 ${failed.length} 요청${session.kind==='housing'?' (주택유형 보충 API)':''}`;technical.append(technicalText);el.append(technical);
   if(!session.sameConditions()){
     el.append(document.createTextNode(' · 조건 변경 전 조회 결과입니다. 새로 조회해 주세요.'));
     return;
@@ -737,7 +743,7 @@ function showQueryStatus(session){
   el.append(button);
   const ranges = document.createElement('div');
   ranges.textContent = failed.map(r=>`${r.task.bjd}${r.task.bun ? ` ${r.task.bun}-${r.task.ji}` : ''}: ${r.task.pg || 1}페이지 실패`).join(' · ');
-  el.append(ranges);
+  technical.append(ranges);
 }
 function appendQueryInfo(wb, kind){
   const session = (typeof FilterUI!=='undefined'?FilterUI.resultSession(kind):null)||QUERY_SESSIONS.get(kind);
@@ -1039,10 +1045,10 @@ function renderResults(){
         <td class="num">${d.vlRat!=null?d.vlRat+"%":"-"}</td>
         <td class="num">${d.grndFlr ?? "-"}</td>
         <td class="num">${d.ugrndFlr ?? "-"}</td>
-        <td class="num">${pkAll>0?fmt(pkAll):"-"}</td>
+        <td class="num">${fmt(pkAll)}</td>
         <td class="code">${esc(d.useAprDay)}</td>
         <td>${r.status==="ok"
-            ? '<span class="badge ok">정상</span>'
+            ? '<span class="badge ok">조회 완료</span>'
             : '<span class="badge warn">확인 필요</span>'}</td>`;
       body.appendChild(tr);
 
@@ -1118,7 +1124,7 @@ function exportExcel(){
           "건폐율(%)":d.bcRat??"","용적률(%)":d.vlRat??"",
           "지상층수":d.grndFlr??"","지하층수":d.ugrndFlr??"","총주차":d.totPkng||0,"사용승인일":d.useAprDay||"",
           "시군구코드":p.sigunguCd||"","행정동코드":p.bjdongCd||"","번":p.bun||"","지":p.ji||"","산여부":p.platGbCd||"",
-          "상태":({ok:"정상",warn:"확인필요"})[r.status]||"","비고":r.reason||""
+          "상태":({ok:"조회 완료 (적법성 판정 아님)",warn:"확인필요"})[r.status]||"","비고":r.reason||""
         });
       });
     } else {
@@ -1153,12 +1159,8 @@ document.getElementById("resultBody").addEventListener("click", e=>{
 
 // 사용승인일 셀: 연도 있으면 날짜+경과연수, 없으면 '연도미확인' 배지
 function useAprCell(useAprDay){
-  const yr = extractYear(useAprDay);
-  if(yr===null) return '<span class="badge mute">연도미확인</span>';
-  const age = new Date().getFullYear() - yr;
-  const cls = age>=40 ? " veryold" : age>=30 ? " old" : "";
-  const ageTxt = age>=0 ? `<span class="age${cls}"> · 경과 ${age}년</span>` : "";
-  return `<span class="code">${esc(fmtUseApr(useAprDay))}</span>${ageTxt}`;
+  const d=ResultFormat.age(useAprDay);
+  return `<span class="code">${esc(d.label)}</span>${d.age==null?'':`<span class="age"> · ${d.approximate?'연도 차이':'경과'} ${d.age}년</span>`}`;
 }
 
 // 사용승인일 정렬용 숫자 키(YYYYMMDD). 미확인은 null
@@ -1462,6 +1464,9 @@ async function runConditionSearch(){
     }
     const m = mergeBuilding(t);
     m.hdong = bHdong;
+    // Carry source identifiers for exact detail/location links; do not alter filtering or source rows.
+    m.pnu = toPNU({sigunguCd:SIGUNGU,bjdongCd:t.bjdongCd,platGbCd:t.platGbCd||'0',bun:t.bun,ji:t.ji});
+    m.registryId = typeof t.mgmBldrgstPk==='string'||Number.isSafeInteger(t.mgmBldrgstPk)?String(t.mgmBldrgstPk):null;
     matched.push(m);
   }
 
@@ -1567,7 +1572,7 @@ function exportConditionExcel(){
       "순번":i+1,"행정동":d.hdong||"","지번주소":d.platPlc||"","도로명주소":d.newPlatPlc||"",
       "건물명":d.bldNm||"","동":d.dongNm||"","주용도":d.mainPurps||"","주구조":d.strct||"",
       "연면적":d.totArea??"","지상층수":d.grndFlr??"","지하층수":d.ugrndFlr??"","총주차":d.totPkng||0,
-      "사용승인일":d.useAprDay||"","경과연수":yr===null?"미확인":(nowY-yr)
+      "사용승인일":d.useAprDay||"","경과연수":yr===null?"미확인":(nowY-yr),"레코드ID":d.registryId||"","필지ID":d.pnu||""
     };
   });
   const ws = XLSX.utils.json_to_sheet(rows);
@@ -1802,8 +1807,8 @@ function selectDong(i){
 
 function cardHTML(t, kind){
   const b = mergeBuilding(t);
-  const m2 = v => v==null ? "-" : fmt(v)+" ㎡";
-  const pc = v => v==null ? "-" : fmt(v)+"%";
+  const m2 = v => ResultFormat.scalar(v)==='미확인'?'미확인':ResultFormat.scalar(v)+" ㎡";
+  const pc = v => ResultFormat.scalar(v,'ratio')==='미확인'?'미확인':ResultFormat.scalar(v,'ratio')+"%";
   const addr = b.newPlatPlc!=="-" ? b.newPlatPlc : b.platPlc;
   // 대지권(LDA) 보조값 — 등록 호실 수와 건물명 폴(fallback)에 사용. 말소 건 제외.
   const _ldaItems = (D_LDA && Array.isArray(D_LDA.items)) ? D_LDA.items.filter(x=>!x.closed) : [];
@@ -1961,7 +1966,7 @@ function renderSubtab(key, items){
       {h:"층", f:r=>esc(`${r.flrGbCdNm||""} ${r.flrNoNm||""}`.trim()||"-")},
       {h:"구조", f:r=>esc(r.strctCdNm||"-")},
       {h:"용도", f:r=>esc(r.etcPurps||r.mainPurpsCdNm||"-")},
-      {h:"면적(㎡)", num:true, f:r=>fmt(r.area)}
+      {h:"면적(㎡)", num:true, f:r=>ResultFormat.scalar(r.area,'area')}
     );
     return miniTable(cols, rows);
   }
@@ -1993,7 +1998,7 @@ function renderParking(dongNm){
   const lab = r => bldLabel(r);
   const labels = [...new Set(rows.map(lab))];
   const multi = labels.length > 1;                 // 동이 여럿이면 동/건물 열 표시
-  const cnt = v => { const n = Number(v||0); return n>0 ? fmt(n) : "-"; };
+  const cnt = v => ResultFormat.scalar(v,'count');
   const cols = [];
   if(multi) cols.push({h:"동/건물", f:r=>esc(lab(r))});
   cols.push(
@@ -3329,6 +3334,7 @@ async function openHousingDetail(kaptCode, pnu, row){
   detailRow.className = "h-detail-row";
   detailRow.innerHTML = `<td colspan="13"><div class="h-detail-loading">단지 상세정보 불러오는 중…</div></td>`;
   row.after(detailRow);
+  detailRow.scrollIntoView({block:'nearest'});
 
   // 기본정보 + 상세정보 + 주택인허가 보강 동시 조회
   const [bass, dtl, hsp] = await Promise.all([
@@ -3337,13 +3343,13 @@ async function openHousingDetail(kaptCode, pnu, row){
     fetchHspmsComplex(pnu),     // 2단계: K-APT 빈값 보강
   ]);
   const cell = detailRow.querySelector("td");
-  if(!bass && !hsp){ cell.innerHTML = '<div class="d-empty">상세정보를 불러오지 못했습니다.</div>'; detailRow.scrollIntoView({ block:"nearest", behavior:"smooth" }); return; }
+  if(!bass && !hsp){ cell.innerHTML = '<div class="d-empty">상세정보를 불러오지 못했습니다.</div>'; return; }
   cell.innerHTML = housingDetailHTML(bass, dtl, hsp);
-  detailRow.scrollIntoView({ block:"nearest", behavior:"smooth" });
 }
 
 function housingDetailHTML(b, d, h){
-  const cnt = v => { const n = Number(v||0); return n>0 ? fmt(n) : "-"; };
+  const cnt = v => ResultFormat.scalar(v,'count');
+  const prefer=(...values)=>values.find(v=>v!=null&&String(v).trim()!==''&&v!=='-');
   const plain = v => { const s = String(v||"").trim(); return s ? esc(s) : "-"; };
   // 빈값 우선 선택: 첫 인자(비어있으면) 두 번째 인자 사용. K-APT 우선, 빈값 시 HsPms 보강.
   const pick = (kap, hp) => { const s = String(kap ?? "").trim(); return s && s!=="-" && s!=="0" ? esc(s) : plain(hp); };
@@ -3382,10 +3388,10 @@ function housingDetailHTML(b, d, h){
 
       <div class="d-sec-title">규모 · 시공</div>
       <div class="d-kv">
-        <div class="k">세대수</div><div class="v">${fmt(b?.hoCnt||b?.kaptdaCnt||mgm?.hhldCnt)} 세대</div>
-        <div class="k">동수</div><div class="v">${fmt(b?.kaptDongCnt||mgm?.mainBldCnt)} 동</div>
+        <div class="k">세대수</div><div class="v">${cnt(prefer(b?.hoCnt,b?.kaptdaCnt,mgm?.hhldCnt))} 세대</div>
+        <div class="k">동수</div><div class="v">${cnt(prefer(b?.kaptDongCnt,mgm?.mainBldCnt))} 동</div>
         <div class="k">층수</div><div class="v">${flr}</div>
-        <div class="k">연면적</div><div class="v">${fmt(b?.kaptTarea||mgm?.totArea)} ㎡</div>
+        <div class="k">연면적</div><div class="v">${ResultFormat.scalar(prefer(b?.kaptTarea,mgm?.totArea),'area')} ㎡</div>
         <div class="k">난방방식</div><div class="v">${heat}</div>
         <div class="k">분양형태</div><div class="v">${plain(b?.codeSaleNm)}</div>
         <div class="k">시공사</div><div class="v">${builder}</div>
@@ -3405,7 +3411,7 @@ function housingDetailHTML(b, d, h){
       ${(d || pk) ? `
       <div class="d-sec-title">주차 · 안전 · 설비</div>
       ${miniTable([
-        {h:"총 주차대수", num:true, width:"12%", f:r=>{ const n=Number(r.ptot); return n>0?fmt(n):"-"; }},
+        {h:"총 주차대수", num:true, width:"12%", f:r=>cnt(r.ptot)},
         {h:"주차(지상)", num:true, width:"12%", f:r=>cnt(r.pgrnd)},
         {h:"주차(지하)", num:true, width:"12%", f:r=>cnt(r.pund)},
         {h:"건물구조", width:"28%", f:r=>plain(r.strct)},
@@ -3463,7 +3469,7 @@ function exportHousingExcel(){
       "지상 층": d.grndFlr != null ? d.grndFlr : "-",
       "사용승인일": d.useAprDay || "",
       "총 주차대수": d.parking != null ? d.parking : "-",
-      "연면적(㎡)": d.tarea != null ? Math.round(d.tarea) : "-",
+      "연면적(㎡)": d.tarea ?? "-",
       "경과연수": yr === null ? "미확인" : (nowY - yr),
       "난방방식": d.heat || "",
       "분양형태": d.saleType || "",
@@ -4337,9 +4343,8 @@ function stLineChart(series, tall=false){
 }
 
 function rebFmt(v, unit){
-  if(v === null || v === undefined) return "-";
-  const won=unit==='천원'?Number(v)*1000:null;
-  return `${stFmt(Number(v))}${unit || ""}${won==null?'':` (약 ${stFmt(won/10000)}만원 · ${won.toLocaleString('ko-KR',{maximumFractionDigits:3})}원)`}`;
+  if(['천원','원'].includes(unit))return ResultFormat.price(v,unit);
+  return ResultFormat.scalar(v,unit==='%'?'ratio':/^(건|호|세대)$/.test(unit)?'count':'index')+(v==null?'':esc(unit||''));
 }
 
 function rebShortLabel(row){
@@ -4397,9 +4402,10 @@ function renderRebCard(title, indicators, maxPoints=36, dataset={}){
   }).join("");
   return `<div class="st-card reb-card">
     <div class="st-head"><div class="st-name">${esc(title)}</div><em class="reb-period">${esc(latestLabel)}</em></div>
-    <div class="st-sec">단위: ${esc([...new Set(usable.map(ind=>ind.unit))].join(' / '))} · 도표 기간: ${esc(usable[0].series.slice(-maxPoints)[0]?.label||'')} ~ ${esc(latestLabel)}</div>
+    <div class="st-sec">도표·원본 단위: ${esc([...new Set(usable.map(ind=>ind.unit))].join(' / '))}${usable.some(ind=>['천원','원'].includes(ind.unit))?' · 요약 금액은 원화 대표 표기':''} · 도표 기간: ${esc(usable[0].series.slice(-maxPoints)[0]?.label||'')} ~ ${esc(latestLabel)}</div>
     ${rebLineChart(usable, maxPoints)}
     <div class="reb-legend">${legends}</div>
+    <details class="result-evidence"><summary>자료 근거 · 원본 값과 단위</summary>${usable.map(ind=>`<p>${esc(ind.name)}: ${esc(ind.series.at(-1)?.value??'미확인')} ${esc(ind.unit||'단위 미확인')}${ind.unit==='천원'?' · 1천원 = 1,000원, 대표 표기는 만원 단위 반올림':''}</p>`).join('')}</details>
     ${typeof StatsMetadata==='undefined'?'':usable.map(ind=>StatsMetadata.details('reb',ind,dataset)+StatsMetadata.table(ind.name,ind.unit,ind.series)).join('')}
   </div>`;
 }
@@ -5160,6 +5166,7 @@ function renderMapResults(){
   for(const { src, d } of shown){
     const row = document.createElement("div");
     row.className = "map-result-row";
+    row.dataset.id=String(d.recordId||d.kaptCode||d.pnu||'');row.dataset.source=src;
     row.tabIndex=0;row.setAttribute('role','button');
     const color = mapColor(src, src === "vacant" ? d.grade : (src === "apt" ? d.kind : null));
     let label = "";
@@ -5264,12 +5271,12 @@ function renderAptCard(d){
     <table class="mc-tbl">
       <tr><th>종류</th><td>${esc(d.kind || "—")}</td></tr>
       <tr><th>세대수</th><td>${d.hhld != null ? Number(d.hhld).toLocaleString("ko-KR") + "세대" : "—"}</td></tr>
-      ${d.dongCnt ? `<tr><th>동수</th><td>${d.dongCnt}동</td></tr>` : ""}
-      ${d.grndFlr ? `<tr><th>층수</th><td>지하 ${d.ugrndFlr||0} / 지상 ${d.grndFlr}</td></tr>` : ""}
-      <tr><th>사용승인일</th><td>${esc(formatDate(d.useAprDay))}</td></tr>
+      ${d.dongCnt!=null ? `<tr><th>동수</th><td>${ResultFormat.scalar(d.dongCnt,'count')}동</td></tr>` : ""}
+      ${d.grndFlr!=null ? `<tr><th>층수</th><td>지하 ${ResultFormat.scalar(d.ugrndFlr,'floor')} / 지상 ${ResultFormat.scalar(d.grndFlr,'floor')}</td></tr>` : ""}
+      <tr><th>사용승인일</th><td>${esc(ResultFormat.date(d.useAprDay))}</td></tr>
       ${d.strct ? `<tr><th>구조</th><td>${esc(d.strct)}</td></tr>` : ""}
-      ${d.tarea ? `<tr><th>연면적</th><td>${Number(d.tarea).toLocaleString("ko-KR")}㎡</td></tr>` : ""}
-      ${d.parking ? `<tr><th>주차</th><td>${d.parking}대</td></tr>` : ""}
+      ${d.tarea!=null ? `<tr><th>연면적</th><td>${ResultFormat.scalar(d.tarea,'area')}㎡</td></tr>` : ""}
+      ${d.parking!=null ? `<tr><th>주차</th><td>${ResultFormat.scalar(d.parking,'count')}대</td></tr>` : ""}
       ${d.officeTel ? `<tr><th>관리사무소</th><td>${esc(d.officeTel)}</td></tr>` : ""}
     </table>`;
   // K-apt 상세는 카드 DOM에 들어간 후 lazy 로드. kaptCode가 있는 단지(source=kapt)만
@@ -5326,8 +5333,8 @@ function renderCondCard(d){
     <table class="mc-tbl">
       <tr><th>용도</th><td>${esc(d.mainPurps || "—")}</td></tr>
       <tr><th>구조</th><td>${esc(d.strct || "—")}</td></tr>
-      <tr><th>층수</th><td>지하 ${d.ugrndFlr||0} / 지상 ${d.grndFlr||0}</td></tr>
-      <tr><th>사용승인일</th><td>${esc(formatDate(d.useAprDay))}</td></tr>
+      <tr><th>층수</th><td>지하 ${ResultFormat.scalar(d.ugrndFlr,'floor')} / 지상 ${ResultFormat.scalar(d.grndFlr,'floor')}</td></tr>
+      <tr><th>사용승인일</th><td>${esc(ResultFormat.date(d.useAprDay))}</td></tr>
     </table>`;
 }
 
@@ -5777,6 +5784,7 @@ renderLastUpdated();
 </script>
 <script src="ui-enhancements.js"></script>
 <script src="filter-ui.js"></script>
+<script src="result-ui.js"></script>
 <script src="search-navigation.js"></script>
 </body>
 </html>
