@@ -683,3 +683,13 @@ button:focus-visible,a:focus-visible,summary:focus-visible,input:focus-visible,s
   .fg-layout{min-width:0}.fg-side,.fg-stage,.fg-disc{min-width:0;max-width:100%}.fg-legend{flex-wrap:wrap;max-width:100%;overflow-wrap:anywhere}
   .map-result-row{min-height:44px}.mr-text{min-width:0}.mr-text b,.mr-text>span{white-space:normal;overflow-wrap:anywhere}
 }
+/* P3: compact sharing and provenance, no replacement of existing result tables. */
+.share-tools{margin:12px 0;padding:12px;background:var(--card,#fff);border:1px solid #d7dee2;border-radius:8px;max-width:100%;overflow-wrap:anywhere}
+.share-actions{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px}
+.share-tools button,.condition-import{min-height:44px;padding:8px 12px;border:1px solid #bac8d0;border-radius:6px;background:#fff;color:#234;cursor:pointer;font:inherit}
+.condition-import{display:inline-flex;align-items:center;gap:6px;max-width:100%;box-sizing:border-box}.condition-import input{max-width:190px}
+#shareStatus{font-size:13px;margin:6px 0;color:#345}#shareFallback{width:100%;box-sizing:border-box;padding:10px}
+#recentRows>div{display:flex;gap:6px;margin:6px 0}#recentRows>div>button:first-child{text-align:left;flex:1;overflow-wrap:anywhere;min-width:0}
+.stat-meta,.stat-values{margin:10px 0;font-size:13px;line-height:1.65}.stat-meta summary,.stat-values summary,#recentSearches summary{cursor:pointer;padding:8px 0;min-height:28px}
+.stat-meta dl{display:grid;grid-template-columns:100px minmax(0,1fr);gap:4px 8px}.stat-meta dt{font-weight:600}.stat-meta dd{margin:0;overflow-wrap:anywhere}.stat-values table{min-width:0;width:100%}.stat-values caption{text-align:left}.vacant-explanation{padding:8px 12px;background:#edf5f8;border-radius:6px}.reb-legend-row{flex-wrap:wrap}.reb-legend-row b{overflow-wrap:anywhere}
+@media(max-width:600px){.share-tools{margin:8px 0}.share-actions>button{flex:1}.stat-meta dl{grid-template-columns:80px minmax(0,1fr)}.condition-import{flex-wrap:wrap}}
