@@ -1,0 +1,435 @@
+{
+  "unit": "source-record; not confirmed building count",
+  "counts": {
+    "total": 648,
+    "located": 638,
+    "unknown": 10,
+    "shapes": 632
+  },
+  "legacyGeometryRows": 634,
+  "normalizedAddresses": 634,
+  "sourceIdRows": 0,
+  "rawCoordinateRows": 648,
+  "duplicateSourceFieldGroups": [
+    [
+      "vacant:derived:0c8bb53536d113a9:1",
+      "vacant:derived:0c8bb53536d113a9:2"
+    ]
+  ],
+  "sameAddressGroups": [
+    {
+      "address": "광주광역시동구계림동322-9",
+      "recordIds": [
+        "vacant:derived:0e3b208d7a15941d:1",
+        "vacant:derived:2facc4b653a944a0:1"
+      ],
+      "years": [
+        1966,
+        1966
+      ],
+      "coordinates": [
+        [
+          192602.5371,
+          183945.0587
+        ],
+        [
+          192608.4585,
+          183940.5337
+        ]
+      ],
+      "conclusion": "동일 건물 여부 미확인; 원본 행 모두 보존"
+    },
+    {
+      "address": "광주광역시동구계림동439-3",
+      "recordIds": [
+        "vacant:derived:e0da9a9350a302fe:1",
+        "vacant:derived:ddc31c8d8170a8e0:1"
+      ],
+      "years": [
+        1969,
+        1974
+      ],
+      "coordinates": [
+        [
+          192430.1286,
+          184012.312
+        ],
+        [
+          192323.873,
+          184934.0517
+        ]
+      ],
+      "conclusion": "동일 건물 여부 미확인; 원본 행 모두 보존"
+    },
+    {
+      "address": "광주광역시동구계림동534-38",
+      "recordIds": [
+        "vacant:derived:719b4450a387ca8b:1",
+        "vacant:derived:af24dedc2e52480a:1",
+        "vacant:derived:c513f3654c366969:1"
+      ],
+      "years": [
+        1971,
+        1971,
+        1971
+      ],
+      "coordinates": [
+        [
+          192256.487,
+          184549.7682
+        ],
+        [
+          192252.783,
+          184557.4822
+        ],
+        [
+          192247.4455,
+          184552.6732
+        ]
+      ],
+      "conclusion": "동일 건물 여부 미확인; 원본 행 모두 보존"
+    },
+    {
+      "address": "광주광역시동구산수동423-16",
+      "recordIds": [
+        "vacant:derived:242c5a1d20456ae7:1",
+        "vacant:derived:baf39ea4727a9124:1"
+      ],
+      "years": [
+        1966,
+        1971
+      ],
+      "coordinates": [
+        [
+          193326.1788,
+          184150.2407
+        ],
+        [
+          192860.5221,
+          184013.1177
+        ]
+      ],
+      "conclusion": "동일 건물 여부 미확인; 원본 행 모두 보존"
+    },
+    {
+      "address": "광주광역시동구산수동425-17",
+      "recordIds": [
+        "vacant:derived:b7805f61c897f6b9:1",
+        "vacant:derived:c9de2d700cedebc7:1"
+      ],
+      "years": [
+        1965,
+        1972
+      ],
+      "coordinates": [
+        [
+          193291.957,
+          184161.2232
+        ],
+        [
+          193506.8895,
+          184517.1692
+        ]
+      ],
+      "conclusion": "동일 건물 여부 미확인; 원본 행 모두 보존"
+    },
+    {
+      "address": "광주광역시동구산수동487-5",
+      "recordIds": [
+        "vacant:derived:f3507dd95feb9bdd:1",
+        "vacant:derived:c28afaf8719ed01c:1"
+      ],
+      "years": [
+        1961,
+        1971
+      ],
+      "coordinates": [
+        [
+          192849.9729,
+          184009.9602
+        ],
+        [
+          193632.328,
+          183972.7032
+        ]
+      ],
+      "conclusion": "동일 건물 여부 미확인; 원본 행 모두 보존"
+    },
+    {
+      "address": "광주광역시동구산수동529-21",
+      "recordIds": [
+        "vacant:derived:b0dc7f9b1170d8b2:1",
+        "vacant:derived:6d27c0ff7a808400:1"
+      ],
+      "years": [
+        1974,
+        1973
+      ],
+      "coordinates": [
+        [
+          193945.7189,
+          184177.4472
+        ],
+        [
+          193845.9692,
+          184204.0106
+        ]
+      ],
+      "conclusion": "동일 건물 여부 미확인; 원본 행 모두 보존"
+    },
+    {
+      "address": "광주광역시동구산수동544-21",
+      "recordIds": [
+        "vacant:derived:0a24b79eb22bc7d7:1",
+        "vacant:derived:391813564a1af360:1"
+      ],
+      "years": [
+        1971,
+        1971
+      ],
+      "coordinates": [
+        [
+          193509.2221,
+          184536.8637
+        ],
+        [
+          193515.1567,
+          184514.1467
+        ]
+      ],
+      "conclusion": "동일 건물 여부 미확인; 원본 행 모두 보존"
+    },
+    {
+      "address": "광주광역시동구지산동411-3",
+      "recordIds": [
+        "vacant:derived:97016d26964a63dc:1",
+        "vacant:derived:2a0cf7d902f16429:1"
+      ],
+      "years": [
+        1964,
+        1972
+      ],
+      "coordinates": [
+        [
+          193618.8397,
+          183321.8556
+        ],
+        [
+          193459.2279,
+          183563.2217
+        ]
+      ],
+      "conclusion": "동일 건물 여부 미확인; 원본 행 모두 보존"
+    },
+    {
+      "address": "광주광역시동구지산동720-73",
+      "recordIds": [
+        "vacant:derived:37ba64d0576c8c03:1",
+        "vacant:derived:232d016e0c5c9e7c:1"
+      ],
+      "years": [
+        1972,
+        1971
+      ],
+      "coordinates": [
+        [
+          193582.2943,
+          183655.8407
+        ],
+        [
+          193419.1235,
+          183574.4137
+        ]
+      ],
+      "conclusion": "동일 건물 여부 미확인; 원본 행 모두 보존"
+    },
+    {
+      "address": "광주광역시동구소태동702-2",
+      "recordIds": [
+        "vacant:derived:6342f546e7cac2f0:1",
+        "vacant:derived:05776dfea1d986ea:1"
+      ],
+      "years": [
+        1968,
+        1968
+      ],
+      "coordinates": [
+        [
+          193962.302,
+          181074.3847
+        ],
+        [
+          193869.2115,
+          181215.6452
+        ]
+      ],
+      "conclusion": "동일 건물 여부 미확인; 원본 행 모두 보존"
+    },
+    {
+      "address": "광주광역시동구소태동715-10",
+      "recordIds": [
+        "vacant:derived:3c9ed6f01b6637fd:1",
+        "vacant:derived:2632d96cae4d2f43:1"
+      ],
+      "years": [
+        1967,
+        1969
+      ],
+      "coordinates": [
+        [
+          193906.795,
+          181223.2302
+        ],
+        [
+          193864.6568,
+          181203.2037
+        ]
+      ],
+      "conclusion": "동일 건물 여부 미확인; 원본 행 모두 보존"
+    },
+    {
+      "address": "광주광역시동구학동621-2(대장다시보기)",
+      "recordIds": [
+        "vacant:derived:0c8bb53536d113a9:1",
+        "vacant:derived:0c8bb53536d113a9:2"
+      ],
+      "years": [
+        2005,
+        2005
+      ],
+      "coordinates": [
+        [
+          193312.9233,
+          181958.1842
+        ],
+        [
+          193312.9233,
+          181958.1842
+        ]
+      ],
+      "conclusion": "동일 건물 여부 미확인; 원본 행 모두 보존"
+    }
+  ],
+  "sharedGeometryGroups": [
+    {
+      "parcelId": "1221010900103220009",
+      "recordIds": [
+        "vacant:derived:0e3b208d7a15941d:1",
+        "vacant:derived:2facc4b653a944a0:1"
+      ]
+    },
+    {
+      "parcelId": "1221010900105340038",
+      "recordIds": [
+        "vacant:derived:719b4450a387ca8b:1",
+        "vacant:derived:af24dedc2e52480a:1",
+        "vacant:derived:c513f3654c366969:1"
+      ]
+    },
+    {
+      "parcelId": "1221011000105440021",
+      "recordIds": [
+        "vacant:derived:0a24b79eb22bc7d7:1",
+        "vacant:derived:391813564a1af360:1"
+      ]
+    },
+    {
+      "parcelId": "1221011900107020002",
+      "recordIds": [
+        "vacant:derived:6342f546e7cac2f0:1",
+        "vacant:derived:05776dfea1d986ea:1"
+      ]
+    },
+    {
+      "parcelId": "1221012200106210002",
+      "recordIds": [
+        "vacant:derived:0c8bb53536d113a9:1",
+        "vacant:derived:0c8bb53536d113a9:2"
+      ]
+    }
+  ],
+  "unlocated": [
+    {
+      "recordId": "vacant:derived:670c39006ffdb2af:1",
+      "address": "광주광역시 동구 동명동 90-4",
+      "rawCoordinatesAvailable": true,
+      "reason": "geometry-not-collected-or-record-unmatched",
+      "note": "위치 미확인 · 도형/레코드 대응 미확인. 원본 좌표는 개별 건물 위치로 검증되지 않았습니다."
+    },
+    {
+      "recordId": "vacant:derived:79d11dc79c19ae96:1",
+      "address": "광주광역시 동구 대인동 161-2",
+      "rawCoordinatesAvailable": true,
+      "reason": "geometry-not-collected-or-record-unmatched",
+      "note": "위치 미확인 · 도형/레코드 대응 미확인. 원본 좌표는 개별 건물 위치로 검증되지 않았습니다."
+    },
+    {
+      "recordId": "vacant:derived:ddc31c8d8170a8e0:1",
+      "address": "광주광역시 동구 계림동439-3",
+      "rawCoordinatesAvailable": true,
+      "reason": "geometry-not-collected-or-record-unmatched",
+      "note": "위치 미확인 · 도형/레코드 대응 미확인. 원본 좌표는 개별 건물 위치로 검증되지 않았습니다."
+    },
+    {
+      "recordId": "vacant:derived:baf39ea4727a9124:1",
+      "address": "광주광역시 동구 산수동423-16",
+      "rawCoordinatesAvailable": true,
+      "reason": "geometry-not-collected-or-record-unmatched",
+      "note": "위치 미확인 · 도형/레코드 대응 미확인. 원본 좌표는 개별 건물 위치로 검증되지 않았습니다."
+    },
+    {
+      "recordId": "vacant:derived:6d27c0ff7a808400:1",
+      "address": "광주광역시 동구 산수동529-21",
+      "rawCoordinatesAvailable": true,
+      "reason": "geometry-not-collected-or-record-unmatched",
+      "note": "위치 미확인 · 도형/레코드 대응 미확인. 원본 좌표는 개별 건물 위치로 검증되지 않았습니다."
+    },
+    {
+      "recordId": "vacant:derived:c9de2d700cedebc7:1",
+      "address": "광주광역시 동구 산수동425-17",
+      "rawCoordinatesAvailable": true,
+      "reason": "geometry-not-collected-or-record-unmatched",
+      "note": "위치 미확인 · 도형/레코드 대응 미확인. 원본 좌표는 개별 건물 위치로 검증되지 않았습니다."
+    },
+    {
+      "recordId": "vacant:derived:c28afaf8719ed01c:1",
+      "address": "광주광역시 동구 산수동487-5",
+      "rawCoordinatesAvailable": true,
+      "reason": "geometry-not-collected-or-record-unmatched",
+      "note": "위치 미확인 · 도형/레코드 대응 미확인. 원본 좌표는 개별 건물 위치로 검증되지 않았습니다."
+    },
+    {
+      "recordId": "vacant:derived:2a0cf7d902f16429:1",
+      "address": "광주광역시 동구 지산동411-3",
+      "rawCoordinatesAvailable": true,
+      "reason": "geometry-not-collected-or-record-unmatched",
+      "note": "위치 미확인 · 도형/레코드 대응 미확인. 원본 좌표는 개별 건물 위치로 검증되지 않았습니다."
+    },
+    {
+      "recordId": "vacant:derived:232d016e0c5c9e7c:1",
+      "address": "광주광역시 동구 지산동720-73",
+      "rawCoordinatesAvailable": true,
+      "reason": "geometry-not-collected-or-record-unmatched",
+      "note": "위치 미확인 · 도형/레코드 대응 미확인. 원본 좌표는 개별 건물 위치로 검증되지 않았습니다."
+    },
+    {
+      "recordId": "vacant:derived:2632d96cae4d2f43:1",
+      "address": "광주광역시 동구 소태동715-10",
+      "rawCoordinatesAvailable": true,
+      "reason": "geometry-not-collected-or-record-unmatched",
+      "note": "위치 미확인 · 도형/레코드 대응 미확인. 원본 좌표는 개별 건물 위치로 검증되지 않았습니다."
+    }
+  ],
+  "orphanGeometry": [
+    {
+      "pnu": "1221010800100190002",
+      "address": "광주광역시 동구 동명동19-2",
+      "note": "기준 목록에 동일 속성 레코드 없음; 별도 검토 필요"
+    },
+    {
+      "pnu": "1221010900104430000",
+      "address": "광주광역시 동구 계림동443",
+      "note": "기준 목록에 동일 속성 레코드 없음; 별도 검토 필요"
+    }
+  ]
+}

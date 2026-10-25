@@ -1,0 +1,271 @@
+{
+  "mode": "controlled browser; API latency 80ms; three cold contexts and three warm repetitions; map data path only",
+  "reports": [
+    {
+      "scenario": "detail",
+      "trial": 1,
+      "cache": "cold",
+      "firstMs": 345,
+      "completeMs": 345,
+      "apiRequests": 4,
+      "maxConcurrency": 1,
+      "elapsedMs": 700
+    },
+    {
+      "scenario": "detail",
+      "trial": 1,
+      "cache": "warm",
+      "firstMs": 348,
+      "completeMs": 348,
+      "apiRequests": 4,
+      "maxConcurrency": 1,
+      "elapsedMs": 702
+    },
+    {
+      "scenario": "detail",
+      "trial": 2,
+      "cache": "cold",
+      "firstMs": 343,
+      "completeMs": 343,
+      "apiRequests": 4,
+      "maxConcurrency": 1,
+      "elapsedMs": 700
+    },
+    {
+      "scenario": "detail",
+      "trial": 2,
+      "cache": "warm",
+      "firstMs": 341,
+      "completeMs": 341,
+      "apiRequests": 4,
+      "maxConcurrency": 1,
+      "elapsedMs": 696
+    },
+    {
+      "scenario": "detail",
+      "trial": 3,
+      "cache": "cold",
+      "firstMs": 341,
+      "completeMs": 341,
+      "apiRequests": 4,
+      "maxConcurrency": 1,
+      "elapsedMs": 696
+    },
+    {
+      "scenario": "detail",
+      "trial": 3,
+      "cache": "warm",
+      "firstMs": 348,
+      "completeMs": 348,
+      "apiRequests": 4,
+      "maxConcurrency": 1,
+      "elapsedMs": 701
+    },
+    {
+      "scenario": "housing",
+      "trial": 1,
+      "cache": "cold",
+      "firstMs": 1197,
+      "completeMs": 1197,
+      "apiRequests": 41,
+      "maxConcurrency": 5,
+      "elapsedMs": 1246
+    },
+    {
+      "scenario": "housing",
+      "trial": 1,
+      "cache": "warm",
+      "firstMs": 1202,
+      "completeMs": 1202,
+      "apiRequests": 41,
+      "maxConcurrency": 5,
+      "elapsedMs": 1251
+    },
+    {
+      "scenario": "housing",
+      "trial": 2,
+      "cache": "cold",
+      "firstMs": 1203,
+      "completeMs": 1203,
+      "apiRequests": 41,
+      "maxConcurrency": 5,
+      "elapsedMs": 1250
+    },
+    {
+      "scenario": "housing",
+      "trial": 2,
+      "cache": "warm",
+      "firstMs": 1195,
+      "completeMs": 1195,
+      "apiRequests": 41,
+      "maxConcurrency": 5,
+      "elapsedMs": 1244
+    },
+    {
+      "scenario": "housing",
+      "trial": 3,
+      "cache": "cold",
+      "firstMs": 1196,
+      "completeMs": 1196,
+      "apiRequests": 41,
+      "maxConcurrency": 5,
+      "elapsedMs": 1242
+    },
+    {
+      "scenario": "housing",
+      "trial": 3,
+      "cache": "warm",
+      "firstMs": 1215,
+      "completeMs": 1215,
+      "apiRequests": 41,
+      "maxConcurrency": 5,
+      "elapsedMs": 1263
+    },
+    {
+      "scenario": "condition",
+      "trial": 1,
+      "cache": "cold",
+      "firstMs": 608,
+      "completeMs": 608,
+      "apiRequests": 14,
+      "maxConcurrency": 2,
+      "elapsedMs": 962
+    },
+    {
+      "scenario": "condition",
+      "trial": 1,
+      "cache": "warm",
+      "firstMs": 541,
+      "completeMs": 541,
+      "apiRequests": 12,
+      "maxConcurrency": 2,
+      "elapsedMs": 893
+    },
+    {
+      "scenario": "condition",
+      "trial": 2,
+      "cache": "cold",
+      "firstMs": 611,
+      "completeMs": 611,
+      "apiRequests": 14,
+      "maxConcurrency": 2,
+      "elapsedMs": 966
+    },
+    {
+      "scenario": "condition",
+      "trial": 2,
+      "cache": "warm",
+      "firstMs": 540,
+      "completeMs": 540,
+      "apiRequests": 12,
+      "maxConcurrency": 2,
+      "elapsedMs": 893
+    },
+    {
+      "scenario": "condition",
+      "trial": 3,
+      "cache": "cold",
+      "firstMs": 607,
+      "completeMs": 607,
+      "apiRequests": 14,
+      "maxConcurrency": 2,
+      "elapsedMs": 961
+    },
+    {
+      "scenario": "condition",
+      "trial": 3,
+      "cache": "warm",
+      "firstMs": 541,
+      "completeMs": 541,
+      "apiRequests": 12,
+      "maxConcurrency": 2,
+      "elapsedMs": 894
+    },
+    {
+      "scenario": "map",
+      "trial": 1,
+      "cache": "cold",
+      "firstMs": 171,
+      "completeMs": 171,
+      "apiRequests": 3,
+      "maxConcurrency": 2,
+      "elapsedMs": 526
+    },
+    {
+      "scenario": "map",
+      "trial": 1,
+      "cache": "warm",
+      "firstMs": 2,
+      "completeMs": 2,
+      "apiRequests": 0,
+      "maxConcurrency": 0,
+      "elapsedMs": 355
+    },
+    {
+      "scenario": "map",
+      "trial": 2,
+      "cache": "cold",
+      "firstMs": 172,
+      "completeMs": 172,
+      "apiRequests": 3,
+      "maxConcurrency": 2,
+      "elapsedMs": 526
+    },
+    {
+      "scenario": "map",
+      "trial": 2,
+      "cache": "warm",
+      "firstMs": 1,
+      "completeMs": 1,
+      "apiRequests": 0,
+      "maxConcurrency": 0,
+      "elapsedMs": 354
+    },
+    {
+      "scenario": "map",
+      "trial": 3,
+      "cache": "cold",
+      "firstMs": 173,
+      "completeMs": 173,
+      "apiRequests": 3,
+      "maxConcurrency": 2,
+      "elapsedMs": 526
+    },
+    {
+      "scenario": "map",
+      "trial": 3,
+      "cache": "warm",
+      "firstMs": 1,
+      "completeMs": 1,
+      "apiRequests": 0,
+      "maxConcurrency": 0,
+      "elapsedMs": 355
+    }
+  ],
+  "layouts": [
+    {
+      "width": 360,
+      "documentWidth": 383,
+      "menuWidth": 359,
+      "numberInputs": 0
+    },
+    {
+      "width": 390,
+      "documentWidth": 390,
+      "menuWidth": 359,
+      "numberInputs": 0
+    },
+    {
+      "width": 430,
+      "documentWidth": 430,
+      "menuWidth": 382,
+      "numberInputs": 0
+    },
+    {
+      "width": 1366,
+      "documentWidth": 1366,
+      "menuWidth": 1132,
+      "numberInputs": 0
+    }
+  ]
+}

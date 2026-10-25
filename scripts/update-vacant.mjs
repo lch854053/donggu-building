@@ -18,6 +18,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import proj4 from "proj4";
 import xlsx from "xlsx";
+import {identifyVacantRows,vacantFingerprint} from './lib/vacant-model.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
@@ -36,7 +37,7 @@ const VWORLD_GEO_URL  = "https://api.vworld.kr/req/address";
 const VWORLD_DOMAIN = "https://donggu-building.vercel.app";
 const GEO_CONCURRENCY = 6;   // VWorld 지적도 호출 동시성
 
-// 좌표(POINT) → VWorld 연속지적도 필지 폴리곤. 실패/없음 → null
+// 좌표(POINT) → 필지 폴리곤. 정상 없음은 null, 실패는 안전한 상태 코드로 기록한다.
 async function parcelGeometryByCoord(lon, lat) {
   if (!VWORLD_KEY) return null;
   const params = new URLSearchParams({
@@ -48,15 +49,16 @@ async function parcelGeometryByCoord(lon, lat) {
   });
   try {
     const r = await fetchWithTimeout(`${VWORLD_DATA_URL}?${params}`, { timeout: 10000 });
-    if (!r.ok) return null;
+    if (!r.ok) return {state:'error',reason:'parcel-http'};
     const data = await r.json();
-    if (data?.response?.status !== "OK") return null;
+    if (data?.response?.status === 'NOT_FOUND') return null;
+    if (data?.response?.status !== "OK") return {state:'error',reason:'parcel-upstream'};
     const feats = data?.response?.result?.featureCollection?.features || [];
     if (!feats.length) return null;
     const p = feats[0].properties || {};
     return { pnu: String(p.pnu || ""), geometry: feats[0].geometry || null };
   } catch {
-    return null;
+    return {state:'error',reason:'parcel-network-or-format'};
   }
 }
 
@@ -72,14 +74,15 @@ async function geocodeAddress(addr, type) {
   });
   try {
     const r = await fetchWithTimeout(`${VWORLD_GEO_URL}?${params}`, { timeout: 10000 });
-    if (!r.ok) return null;
+    if (!r.ok) return {state:'error',reason:'geocode-http'};
     const data = await r.json();
-    if (data?.response?.status !== "OK") return null;
+    if (data?.response?.status === 'NOT_FOUND') return null;
+    if (data?.response?.status !== "OK") return {state:'error',reason:'geocode-upstream'};
     const pt = data?.response?.result?.point;
     if (!pt || !pt.x || !pt.y) return null;
     return { x: Number(pt.x), y: Number(pt.y) };
   } catch {
-    return null;
+    return {state:'error',reason:'geocode-network-or-format'};
   }
 }
 
@@ -87,10 +90,11 @@ async function geocodeAddress(addr, type) {
 async function geocodeJibun(jibunAddr, doroAddr) {
   // 1순위: 지번주소 (parcel)
   const p1 = await geocodeAddress(jibunAddr, "parcel");
-  if (p1) return p1;
+  if (p1?.x && p1?.y) return p1;
   // 2순위: 도로명주소 (road) — 지번이 오래되었거나 체계가 바뀐 경우 유효
-  if (doroAddr) return await geocodeAddress(doroAddr, "road");
-  return null;
+  const p2=doroAddr ? await geocodeAddress(doroAddr,'road') : null;
+  if(p2?.x && p2?.y)return p2;
+  return p1?.state==='error'?p1:p2;
 }
 
 // 폴리곤의 최대 폭(m) 계산 — 단독/다세대 빈집은 보통 수십 m 이하.
@@ -116,7 +120,7 @@ const POLYGON_MAX_DIM_LIMIT = 75;
 
 // 건물 면적(tarea, ㎡) 기반 정사각형 폴리곤 생성.
 // VWorld 지적도가 거대 폴리곤만 주는 필지(학동 621-2 등)의 최후 폴백.
-// 중심 좌표 기준 sqrt(tarea) × 여유(15%) 크기의 정사각형으로, 위치는 정확하지만 필지 모양은 근사.
+// 주소 geocoder 기준 sqrt(tarea) × 여유(15%) 크기의 참고 정사각형. 개별 건물 위치·경계를 확정하지 않는다.
 function squareGeometryFromTarea(lon, lat, tarea) {
   const area = Number(tarea) || 100;
   const sideM = Math.sqrt(area) * 1.15;             // 한 변 길이(m)
@@ -136,19 +140,21 @@ function squareGeometryFromTarea(lon, lat, tarea) {
 // odcloud 원본 좌표는 실제 필지와 수백 m 차이 나는 사례가 있어 지도 위치 폴백으로 쓸 수 없다.
 // geocoder 좌표의 필지가 너무 크면 건물 면적 기반 정사각형으로 대체한다.
 async function parcelForVacant(o) {
-  if (!o.jibun && !o.doro) return null;
+  if(o.addressBasis==='법정동 단위 주소 폴백 · 개별 주소 미확인')return {state:'unknown',reason:'legal-dong-fallback-not-a-verified-record-address'};
+  if (!o.jibun && !o.doro) return {state:'unknown',reason:'source-address-missing'};
   const pt = await geocodeJibun(o.jibun, o.doro);
-  if (!pt) return null;
+  if(pt?.state==='error')return {state:'error',reason:pt.reason};
+  if (!pt) return {state:'unknown',reason:'geocode-no-result'};
 
   const g = await parcelGeometryByCoord(pt.x, pt.y);
   if (g && g.geometry && polygonMaxDimM(g.geometry) <= POLYGON_MAX_DIM_LIMIT) {
     g._viaGeo = true;
     return g;
   }
-  if (o.tarea) {
+  if (Number(o.tarea)>0) {
     return { pnu: "", geometry: squareGeometryFromTarea(pt.x, pt.y, o.tarea), _viaSquare: true };
   }
-  return null;
+  return {state:g?.state==='error'?'error':'unknown',reason:g?.reason || 'parcel-no-usable-geometry'};
 }
 
 // odcloud "빈집 현황" 데이터 좌표계는 EPSG:5181 (Korea 2000 / Southern Belt)
@@ -234,7 +240,9 @@ function buildExcelMap(excelRows) {
   const map = new Map();
   for (const r of excelRows) {
     const key = `${r.dong}|${r.tarea}|${r.struct}|${r.grade}`;
-    if (!map.has(key)) map.set(key, { hdong: r.hdong, jibun: r.jibun, doro: r.doro });
+    const value = { hdong:r.hdong, jibun:r.jibun, doro:r.doro };
+    if(!map.has(key)) map.set(key,value);
+    else if(JSON.stringify(map.get(key)) !== JSON.stringify(value)) map.set(key,null); // ambiguous: use existing address fallback, never choose first building
   }
   return map;
 }
@@ -412,7 +420,7 @@ async function resolveVacantAddresses(rows, excelMap) {
     if (i % 100 === 0) {
       console.log(`  [1차] ${i + 1}/${rows.length} - ${hdong || "(미확인)"}`);
     }
-    return matched || { hdong: "", jibun: "", doro: "" };
+    return matched ? {...matched,addressBasis:'엑셀 속성 매칭 · 건물 식별 미확인'} : { hdong: "", jibun: "", doro: "" };
   });
 
   let stage1Ok = 0;
@@ -437,7 +445,7 @@ async function resolveVacantAddresses(rows, excelMap) {
       if (i % 100 === 0) {
         console.log(`  [2차] ${i + 1}/${rows.length} - ${result.hdong || "(미확인)"}`);
       }
-      return result;
+      return {...result,addressBasis:'원본 좌표 기반 주소 보강 · 건물 매칭 미확인'};
     } catch (e) {
       console.error(`  [${i + 1}/${rows.length}] 2차 실패: ${e.message}`);
       return { hdong: "", jibun: "", doro: "" };
@@ -469,7 +477,7 @@ async function resolveVacantAddresses(rows, excelMap) {
       if (i % 100 === 0) {
         console.log(`  [3차] ${i + 1}/${rows.length} - ${result.hdong || "(미확인)"}`);
       }
-      return result;
+      return {...result,addressBasis:'법정동 단위 주소 폴백 · 개별 주소 미확인'};
     } catch (e) {
       console.error(`  [${i + 1}/${rows.length}] 3차 실패: ${e.message}`);
       return { hdong: "", jibun: "", doro: "" };
@@ -510,6 +518,10 @@ function buildVacantOutput(rows, resolved, manualMap) {
       hdong,
       jibun,
       doro,
+      addressBasis:resolved[i].addressBasis || '주소 보강 미확인',
+      source:'동구 빈집 현황 (odcloud)',
+      sourceId:row['원천식별자'] ?? row['관리번호'] ?? null,
+      raw:{...row},
     };
   });
   return { out, mapped, finalFail };
@@ -522,12 +534,13 @@ async function collectVacantGeometry(out) {
   }
 
   console.log("\n지도 탭용 빈집 폴리곤 수집 중...");
-  const geoInput = out
-    .map((o, i) => ({ i, o }))
-    .filter(it => it.o.jibun || it.o.doro);
+  const geoInput = out.map((o,i)=>({i,o}));
   console.log(`  폴리곤 수집 대상: ${geoInput.length}건 (주소 보유)`);
+  const pending = new Map();
   const geoResults = await runPool(geoInput, async (it) => {
-    const g = await parcelForVacant(it.o);
+    const query=JSON.stringify([it.o.jibun,it.o.doro,it.o.tarea]);
+    if(!pending.has(query))pending.set(query,parcelForVacant(it.o));
+    const g = await pending.get(query);
     if (it.i % 100 === 0) console.log(`  [폴리곤] ${it.i + 1}/${out.length}`);
     return g;
   }, GEO_CONCURRENCY);
@@ -542,14 +555,11 @@ async function collectVacantGeometry(out) {
       geoOk++;
       if (g._viaSquare) bySquare++;
       else if (g._viaGeo) byGeo++;
-      geoOut.push({
-        pnu: g.pnu,
-        dong: o.dong, hdong: o.hdong, kind: o.kind,
-        year: o.year, struct: o.struct, tarea: o.tarea,
-        grade: o.grade, jibun: o.jibun, doro: o.doro,
-        geometry: g.geometry,
-      });
     }
+    geoOut.push({...o,recordFingerprint:vacantFingerprint(o),pnu:g?.pnu || null,parcelId:g?.pnu || null,geometry:g?.geometry || null,
+      geometryStatus:g?.geometry?'available':g?.__error?'error':g?.state || 'unknown',geometryScope:g?._viaSquare?'approximation':'parcel',
+      geometryReason:g?.reason || (g?.__error?'geometry-worker-failure':null),
+      geometryCollectedAt:new Date().toISOString()});
   }
   const geoPath = join(ROOT, "vacant_geo.json");
   console.log(`  빈집 폴리곤 수집: ${geoOk}건 / ${out.length}건 (geocoder ${byGeo} / 면적정사각형 ${bySquare})`);
@@ -565,8 +575,7 @@ async function collectVacantGeometry(out) {
     throw new Error(`[가드] VWorld 실제 필지 수집 급감: ${byGeo}건 (기존 ${previousPnuCount}건). vacant_geo.json을 덮어쓰지 않음.`);
   }
 
-  await writeFile(geoPath, JSON.stringify(geoOut, null, " ") + "\n", "utf8");
-  console.log(`  저장 경로: ${geoPath}`);
+  return geoOut;
 }
 
 async function main() {
@@ -601,10 +610,16 @@ async function main() {
   }
 
   const { resolved, stage1Ok, stage2Ok } = await resolveVacantAddresses(rows, excelMap);
-  const { out, mapped, finalFail } = buildVacantOutput(rows, resolved, manualMap);
+  const built = buildVacantOutput(rows, resolved, manualMap);
+  const {mapped,finalFail}=built;
+  const collectedAt=new Date().toISOString();
+  const out=identifyVacantRows(built.out.map(row=>({...row,collectedAt})));
+  // Finish geometry validation BEFORE publishing either artifact.
+  const geometry=await collectVacantGeometry(out);
 
   const outputPath = join(ROOT, "vacantlist_donggu.json");
   await writeFile(outputPath, JSON.stringify(out, null, " ") + "\n", "utf8");
+  if(geometry) await writeFile(join(ROOT,'vacant_geo.json'),JSON.stringify(geometry,null,' ')+'\n','utf8');
 
   let withJibun = 0;
   let withDoro = 0;
@@ -620,7 +635,6 @@ async function main() {
   console.log(`  지번 주소 확보: ${withJibun}건 / 도로명 주소 확보: ${withDoro}건`);
   console.log(`저장 경로: ${outputPath}`);
 
-  await collectVacantGeometry(out);
 }
 
 main().catch(e => {

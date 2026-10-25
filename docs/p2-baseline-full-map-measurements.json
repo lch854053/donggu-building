@@ -1,0 +1,66 @@
+{
+  "mode": "controlled browser; API latency 80ms; three cold contexts and three warm repetitions; map=data path, map-full=initialized Leaflet search including geometry/render (tiles excluded)",
+  "reports": [
+    {
+      "scenario": "map-full",
+      "trial": 1,
+      "cache": "cold",
+      "firstMs": 263,
+      "completeMs": 268,
+      "apiRequests": 4,
+      "maxConcurrency": 2,
+      "elapsedMs": 625
+    },
+    {
+      "scenario": "map-full",
+      "trial": 1,
+      "cache": "warm",
+      "firstMs": 95,
+      "completeMs": 97,
+      "apiRequests": 1,
+      "maxConcurrency": 1,
+      "elapsedMs": 453
+    },
+    {
+      "scenario": "map-full",
+      "trial": 2,
+      "cache": "cold",
+      "firstMs": 261,
+      "completeMs": 262,
+      "apiRequests": 4,
+      "maxConcurrency": 2,
+      "elapsedMs": 621
+    },
+    {
+      "scenario": "map-full",
+      "trial": 2,
+      "cache": "warm",
+      "firstMs": 95,
+      "completeMs": 99,
+      "apiRequests": 1,
+      "maxConcurrency": 1,
+      "elapsedMs": 453
+    },
+    {
+      "scenario": "map-full",
+      "trial": 3,
+      "cache": "cold",
+      "firstMs": 260,
+      "completeMs": 261,
+      "apiRequests": 4,
+      "maxConcurrency": 2,
+      "elapsedMs": 618
+    },
+    {
+      "scenario": "map-full",
+      "trial": 3,
+      "cache": "warm",
+      "firstMs": 94,
+      "completeMs": 98,
+      "apiRequests": 1,
+      "maxConcurrency": 1,
+      "elapsedMs": 452
+    }
+  ],
+  "layouts": []
+}

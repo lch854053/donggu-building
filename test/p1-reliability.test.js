@@ -21,7 +21,7 @@ function app(){
     createElement:()=>node(Math.random()), createTextNode:s=>s, createDocumentFragment:()=>({appendChild(){}})};
   const context = vm.createContext({ document, URLSearchParams, setTimeout, clearTimeout, console:{warn(){},error(){}},
     fetch:async()=>{throw Error('not mocked');}, XLSX, alert(){}, location:{}, window:{} });
-  for(const file of ['transform.js','app-api.js','reliability.js']) vm.runInContext(readFileSync(new URL('../'+file,import.meta.url),'utf8'),context);
+  for(const file of ['transform.js','vacant-model.js','app-api.js','reliability.js']) vm.runInContext(readFileSync(new URL('../'+file,import.meta.url),'utf8'),context);
   vm.runInContext(page.match(/<script>\s*([\s\S]*?)<\/script>/)[1],context);
   return {c:context,node,run:s=>vm.runInContext(s,context)};
 }

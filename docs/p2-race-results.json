@@ -1,0 +1,15 @@
+{
+  "environment": "Chromium desktop, controlled delayed/failing responses; no live API scan",
+  "checks": [
+    "housing provisional export, final year filtering / sort / counts / selected detail preserved; selected legal-dong scope complete",
+    "housing partial page recovery retries only the failed range",
+    "filter change during asynchronous retry enrichment does not commit recovered rows or metadata",
+    "failed supplementary catalog preserves base rows and is not reported as complete or empty",
+    "title supplement recovery retries only failed PNU, preserving successful rows",
+    "housing cancellation and subsequent search block old enrichment / cache-owner updates",
+    "detail cancellation retains base card and blocks late supplement slot writes",
+    "condition cancellation blocks late pages and provisional render timers",
+    "map new search hides old list immediately; cancelled data cannot repopulate it"
+  ],
+  "errors": []
+}
