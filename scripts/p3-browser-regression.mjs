@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import assert from 'node:assert/strict';
 const {chromium}=await import(process.env.PLAYWRIGHT_MODULE||'playwright');
 const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/Applications/Brave Browser.app/Contents/MacOS/Brave Browser',headless:true});
-const base=process.env.BASE_URL||'http://localhost:3000',out=new URL('../docs/p3-evidence/',import.meta.url);
+const tag=process.env.EVIDENCE_TAG||'p3',base=process.env.BASE_URL||'http://localhost:3000',out=new URL(`../docs/${tag}-evidence/`,import.meta.url);
 await fs.mkdir(out,{recursive:true});
 const report=[],errors=[];
 const mapping=JSON.parse(await fs.readFile(new URL('../haengjeong.json',import.meta.url))),parcel=Object.keys(mapping.jibun2hdong).find(k=>mapping.jibun2hdong[k]==='계림2동');
@@ -90,6 +90,7 @@ report.push('demolition filters plus map sources/filter/center/zoom/stable vacan
 
 await page.goto(base);await page.evaluate(()=>{switchTab('building');switchBuildingSubtab('bulk');document.getElementById('input').value=Array(500).fill('동구 서남로 1').join('\n');});
 await page.click('#shareCopy');assert.match(await page.locator('#shareStatus').textContent(),/JSON/);
+if(!await page.locator('#conditionTools').evaluate(el=>el.open))await page.locator('#conditionTools summary').click();
 const downloadEvent=page.waitForEvent('download');await page.click('#conditionExport');const download=await downloadEvent,data=await fs.readFile(await download.path());const json=JSON.parse(data);assert.equal(json.f.input.split('\n').length,500);
 await page.fill('#input','changed');await page.setInputFiles('#conditionImport',{name:'conditions.json',mimeType:'application/json',buffer:data});await page.waitForFunction(()=>document.getElementById('input').value.split('\n').length===500);
 assert.equal(await page.evaluate(()=>JSON.stringify(localStorage).includes('서남로')),false);
@@ -102,6 +103,7 @@ report.push('blocked localStorage and Clipboard do not prevent lookup or manual 
 
 await page.goto(base);await page.evaluate(()=>localStorage.setItem('donggu.recent.v1','bad-json'));await page.reload();assert.equal(await page.locator('#recentRows button').count(),0);
 await page.evaluate(()=>{switchTab('building');switchBuildingSubtab('detail');document.getElementById('dInput').value='서남로 1';});await page.click('#dRunBtn');await page.waitForSelector('#recentRows button',{state:'attached'});await page.locator('#recentSearches summary').click();const beforeRecent=count();await page.locator('#recentRows button').first().click();await page.waitForFunction(()=>document.getElementById('shareStatus').textContent.includes('조회 버튼'));assert.equal(count(),beforeRecent);
+if(!await page.locator('#recentSearches').evaluate(el=>el.open))await page.locator('#recentSearches summary').click();
 await page.locator('#recentRows button').nth(1).click();assert.equal(await page.locator('#recentRows button').count(),0);
 await page.click('#recentClear');assert.equal(await page.evaluate(()=>localStorage.getItem('donggu.recent.v1')),null);
 report.push('invalid recent JSON ignored; opening recent restores only conditions and individual delete works');
@@ -117,5 +119,5 @@ for(const width of [360,390,430,1366]){
 report.push('360/390/430/1366px sharing and expandable metadata; units/reference/collection/official links, SGIS uncertainty, price won conversion and accessible tables');
 await page.goto(link({v:99}));await page.reload();await page.waitForFunction(()=>document.getElementById('shareStatus').textContent.includes('버전'));assert.equal(await page.locator('#tab-building').isVisible(),true);
 assert.deepEqual(errors,[]);
-await fs.writeFile(new URL('../docs/p3-browser-results.json',import.meta.url),JSON.stringify({environment:'Local actual Chromium, API fixtures (not production latency or live scans); real stored statistical/vacant JSON',checks:report,errors},null,2)+'\n');
+await fs.writeFile(new URL(`../docs/${tag}-browser-results.json`,import.meta.url),JSON.stringify({environment:'Local actual Chromium, API fixtures (not production latency or live scans); real stored statistical/vacant JSON',checks:report,errors},null,2)+'\n');
 console.log(JSON.stringify({checks:report,errors},null,2));await browser.close();

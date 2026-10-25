@@ -390,6 +390,19 @@ function pickMainTitle(rows){
   return best;
 }
 
+// Detail keeps every row; main-building designation takes priority over purpose completeness.
+// Within the designated main rows reuse the existing representative policy, never area ranking.
+function pickDetailTitle(rows, wantDong){
+  if(!Array.isArray(rows)||!rows.length)return null;
+  const requested=wantDong ? rows.find(r=>dongDigits(r.dongNm)===wantDong) : null;
+  if(requested)return requested;
+  const mains=rows.filter(r=>{
+    const name=String(r.mainAtchGbCdNm||'').trim();
+    return name ? name==='주건축물' : String(r.mainAtchGbCd??'').trim()==='0';
+  });
+  return mains.length ? pickMainTitle(mains)||mains[0] : pickMainTitle(rows)||rows[0];
+}
+
 // 공백 제거
 function norm(s){ return String(s||"").replace(/\s/g,""); }
 

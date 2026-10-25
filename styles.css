@@ -693,3 +693,15 @@ button:focus-visible,a:focus-visible,summary:focus-visible,input:focus-visible,s
 .stat-meta,.stat-values{margin:10px 0;font-size:13px;line-height:1.65}.stat-meta summary,.stat-values summary,#recentSearches summary{cursor:pointer;padding:8px 0;min-height:28px}
 .stat-meta dl{display:grid;grid-template-columns:100px minmax(0,1fr);gap:4px 8px}.stat-meta dt{font-weight:600}.stat-meta dd{margin:0;overflow-wrap:anywhere}.stat-values table{min-width:0;width:100%}.stat-values caption{text-align:left}.vacant-explanation{padding:8px 12px;background:#edf5f8;border-radius:6px}.reb-legend-row{flex-wrap:wrap}.reb-legend-row b{overflow-wrap:anywhere}
 @media(max-width:600px){.share-tools{margin:8px 0}.share-actions>button{flex:1}.stat-meta dl{grid-template-columns:80px minmax(0,1fr)}.condition-import{flex-wrap:wrap}}
+/* UI stage 1: search first, compact progressive-disclosure tools. */
+[hidden]{display:none!important}
+.screen-heading{margin:16px 0 12px}.screen-heading h2{font-size:20px;color:var(--text,#234);margin:0 0 4px}.screen-heading p{font-size:13px;color:var(--muted,#647580);margin:0}
+.share-tools{padding:4px 0 8px;margin:0 0 14px;border:0;border-radius:0;background:transparent}
+.share-actions{align-items:flex-start;gap:8px 16px;margin:0;flex-wrap:wrap}
+.share-tools button,.share-tools summary{font-size:12px;color:#526575}.share-tools #shareCopy{min-width:58px;padding:6px 12px;background:transparent}
+.share-tools details>summary{min-height:44px;box-sizing:border-box;padding:12px 4px;cursor:pointer;list-style-position:inside}
+.share-tools details[open]{flex:1 1 260px}.condition-actions{display:flex;flex-wrap:wrap;gap:8px;padding:8px 4px;max-width:100%}.condition-actions small{flex-basis:100%;line-height:1.6}
+#recentRows>div>button.recent-open{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+#recentRows>div{max-width:100%}#recentSearches[open]{min-width:0}#shareStatus:empty{display:none}
+.share-tools #recentSearches summary{min-height:44px;padding:12px 4px}.share-tools #sharePrivacy{display:block;margin:6px 0}
+@media(max-width:600px){.share-actions>#shareCopy{flex:0 0 auto}.share-tools{margin:0 0 12px}.share-actions{gap:4px 12px}.screen-heading{margin:12px 0 10px}.screen-heading h2{font-size:19px}.d-search-row .ghost{font-size:12px}}

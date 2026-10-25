@@ -1,0 +1,54 @@
+[
+  {
+    "width": 360,
+    "phase": "before",
+    "mode": "Chromium touch/mobile emulation (not physical phone)",
+    "metrics": {
+      "viewport": 360,
+      "document": 360,
+      "tab": "bulk",
+      "searchTop": 614.46875,
+      "toolsTop": 208
+    },
+    "errors": []
+  },
+  {
+    "width": 390,
+    "phase": "before",
+    "mode": "Chromium touch/mobile emulation (not physical phone)",
+    "metrics": {
+      "viewport": 390,
+      "document": 390,
+      "tab": "bulk",
+      "searchTop": 587.671875,
+      "toolsTop": 208
+    },
+    "errors": []
+  },
+  {
+    "width": 430,
+    "phase": "before",
+    "mode": "Chromium touch/mobile emulation (not physical phone)",
+    "metrics": {
+      "viewport": 430,
+      "document": 430,
+      "tab": "bulk",
+      "searchTop": 587.671875,
+      "toolsTop": 208
+    },
+    "errors": []
+  },
+  {
+    "width": 1366,
+    "phase": "before",
+    "mode": "Chromium desktop",
+    "metrics": {
+      "viewport": 1366,
+      "document": 1366,
+      "tab": "bulk",
+      "searchTop": 506.828125,
+      "toolsTop": 214.546875
+    },
+    "errors": []
+  }
+]

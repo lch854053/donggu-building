@@ -1,0 +1,74 @@
+[
+  {
+    "width": 360,
+    "height": 900,
+    "mode": "Chromium mobile emulation, touch; not physical phone",
+    "checks": [
+      "all menus",
+      "exact numeric input / slider sync",
+      "result summary expansion",
+      "XLSX download",
+      "progressive detail / selected tab retained",
+      "vacant list/map IDs and date",
+      "map card close",
+      "mobile panel and gesture controls",
+      "Figure-Ground themes and PNG/JPG download",
+      "no document horizontal overflow"
+    ],
+    "errors": []
+  },
+  {
+    "width": 390,
+    "height": 900,
+    "mode": "Chromium mobile emulation, touch; not physical phone",
+    "checks": [
+      "all menus",
+      "exact numeric input / slider sync",
+      "result summary expansion",
+      "XLSX download",
+      "progressive detail / selected tab retained",
+      "vacant list/map IDs and date",
+      "map card close",
+      "mobile panel and gesture controls",
+      "Figure-Ground themes and PNG/JPG download",
+      "no document horizontal overflow"
+    ],
+    "errors": []
+  },
+  {
+    "width": 430,
+    "height": 900,
+    "mode": "Chromium mobile emulation, touch; not physical phone",
+    "checks": [
+      "all menus",
+      "exact numeric input / slider sync",
+      "result summary expansion",
+      "XLSX download",
+      "progressive detail / selected tab retained",
+      "vacant list/map IDs and date",
+      "map card close",
+      "mobile panel and gesture controls",
+      "Figure-Ground themes and PNG/JPG download",
+      "no document horizontal overflow"
+    ],
+    "errors": []
+  },
+  {
+    "width": 1366,
+    "height": 900,
+    "mode": "Chromium desktop",
+    "checks": [
+      "all menus",
+      "exact numeric input / slider sync",
+      "result summary expansion",
+      "XLSX download",
+      "progressive detail / selected tab retained",
+      "vacant list/map IDs and date",
+      "map card close",
+      "mobile panel and gesture controls",
+      "Figure-Ground themes and PNG/JPG download",
+      "no document horizontal overflow"
+    ],
+    "errors": []
+  }
+]

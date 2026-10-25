@@ -30,7 +30,7 @@ export function loadTransform() {
       toPNU, hdongOf, fmt, esc, extractYear, matchesYearFilter, matchesAreaFilter, fmtUseApr, norm,
       matchCat, leadNum, dongMatch, dedupeBy, bldLabel, gbLabel,
       roadMatches, geomAreaM2, geomContainsPoint,
-      stripJibunLandSuffix, shortAddr, formatJibun, pickMainTitle,
+      stripJibunLandSuffix, shortAddr, formatJibun, pickMainTitle, pickDetailTitle,
       isGenericBldNm,
     };
   `);

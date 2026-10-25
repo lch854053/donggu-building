@@ -1,4 +1,38 @@
 // Small progressive enhancements; desktop tables and existing event handlers remain authoritative.
+const UI_QUERY_ACTIVITY=new Map();
+let UI_QUERY_TICKET=0;
+function resetQueryActivity(){UI_QUERY_ACTIVITY.clear();syncQueryActivity();}
+function syncQueryActivity(){
+  for(const kind of ['bulk','detail','condition','housing','demol','vacant','map']){
+    const button=document.getElementById('cancel-'+kind);if(!button)continue;
+    const supplement=kind==='detail'&&document.getElementById('dResult').style.display==='block'&&(D_BLDGIS?.state==='loading'||D_LDA?.state==='loading');
+    button.hidden=!(UI_QUERY_ACTIVITY.has(kind)||supplement);
+    button.textContent=supplement?'보강정보 조회 취소':'조회 취소';
+  }
+}
+function syncScreenPresentation(){
+  const menu=['building','housing','demol','vacant','stats','map'].find(t=>document.getElementById('tab-btn-'+t)?.classList.contains('active'))||'building';
+  const tab=menu==='building'?B_SUBTAB:menu==='map'?MAP_SUBTAB:menu;
+  for(const button of document.querySelectorAll('.tab'))button.setAttribute('aria-current',button.id==='tab-btn-'+menu?'page':'false');
+  for(const button of document.querySelectorAll('[data-sub],[data-map-sub]')){
+    const on=button.hasAttribute('data-sub')?button.dataset.sub===B_SUBTAB:button.dataset.mapSub===MAP_SUBTAB;
+    button.classList.toggle('active',on);button.setAttribute('aria-current',on?'page':'false');button.setAttribute('aria-pressed',String(on));
+  }
+  const panel=document.getElementById(menu==='building'?'building-sub-'+tab:menu==='map'?'map-sub-'+tab:'tab-'+menu);
+  const [title,description]=UiLabels.screens[tab];
+  let heading=document.getElementById('screenHeading');
+  if(!heading){heading=document.createElement('div');heading.id='screenHeading';heading.className='screen-heading';heading.innerHTML='<h2 id="screenTitle"></h2><p id="screenDescription"></p>';}
+  panel.prepend(heading);document.getElementById('screenTitle').textContent=title;document.getElementById('screenDescription').textContent=description;document.title=title+' · 동구 건축물 정보';
+  const tools=document.querySelector('.share-tools');
+  if(tools){
+    const runId={bulk:'runBtn',detail:'dRunBtn',cond:'cRunBtn',housing:'hRunBtn',demol:'mRunBtn',vacant:'vRunBtn',general:'mapRunBtn'}[tab];
+    const run=runId&&document.getElementById(runId),card=run?.closest('.card');
+    const mapLayout=menu==='map'?panel.querySelector(tab==='general'?'.map-layout':'.fg-layout'):null;
+    if(mapLayout)mapLayout.after(tools);else if(card)card.after(tools);else if(run)run.parentElement.after(tools);else heading.after(tools);
+    document.getElementById('conditionTools').hidden=tab==='stats';
+  }
+  syncQueryActivity();
+}
 function setMapPanelOpen(open){
   const layout=document.querySelector('.map-layout'),button=document.getElementById('mapPanelToggle');
   if(!layout || !button)return;
@@ -34,14 +68,18 @@ function initUsability(){
   document.querySelector('.tabs').setAttribute('aria-label','서비스 메뉴');
   for(const tab of document.querySelectorAll('.tab')){
     tab.addEventListener('click',()=>{
-      for(const other of document.querySelectorAll('.tab'))other.setAttribute('aria-current',other.classList.contains('active')?'page':'false');
       if(matchMedia('(max-width:820px)').matches)tab.scrollIntoView({block:'nearest',inline:'nearest',behavior:'smooth'});
     });
   }
   for(const [id,kind] of [['runBtn','bulk'],['dRunBtn','detail'],['cRunBtn','condition'],['mRunBtn','demol'],['hRunBtn','housing'],['vRunBtn','vacant'],['mapRunBtn','map']]){
     const run=document.getElementById(id);if(!run)continue;
-    const cancel=document.createElement('button');cancel.type='button';cancel.className='ghost cancel-query';cancel.id=`cancel-${kind}`;cancel.textContent='조회 취소';cancel.onclick=()=>cancelSearch(kind);run.after(cancel);
+    const cancel=document.createElement('button');cancel.type='button';cancel.className='ghost cancel-query';cancel.id=`cancel-${kind}`;cancel.textContent='조회 취소';cancel.hidden=true;cancel.onclick=()=>cancelSearch(kind);run.after(cancel);
   }
+  for(const [name,kind]of Object.entries({runLookup:'bulk',runDetail:'detail',runConditionSearch:'condition',runHousingSearch:'housing',runDemolSearch:'demol',runVacantSearch:'vacant',runMapSearch:'map'})){
+    const original=window[name];window[name]=async function(...args){const ticket=++UI_QUERY_TICKET;UI_QUERY_ACTIVITY.set(kind,ticket);syncQueryActivity();try{return await original(...args);}finally{if(UI_QUERY_ACTIVITY.get(kind)===ticket)UI_QUERY_ACTIVITY.delete(kind);syncQueryActivity();}};
+  }
+  const cancelOriginal=cancelSearch;cancelSearch=function(kind){UI_QUERY_ACTIVITY.delete(kind);try{return cancelOriginal(kind);}finally{syncQueryActivity();}};
+  for(const id of ['dResult','dStatus'])new MutationObserver(syncQueryActivity).observe(document.getElementById(id),{subtree:true,childList:true});
   for(const id of ['resultBody','cResultBody','hResultBody','mResultBody','vResultBody']){
     const body=document.getElementById(id);if(!body)continue;
     enhanceResults(body);new MutationObserver(()=>enhanceResults(body)).observe(body,{childList:true});
@@ -62,5 +100,6 @@ function initUsability(){
     document.getElementById('mapGestureToggle').onclick=()=>{MOBILE_MAP_INTERACTIVE=!MOBILE_MAP_INTERACTIVE;syncMobileMapInteraction();};
     window.addEventListener('resize',()=>{syncMobileMapInteraction();if(typeof M_MAP!=='undefined')M_MAP?.invalidateSize();if(typeof FG_MAP!=='undefined')FG_MAP?.invalidateSize();});
   }
+  syncScreenPresentation();
 }
 initUsability();

@@ -6,11 +6,16 @@
   let epoch=0,depth=0,restoring=0,running=0,replaying=0,pickRevision=0,selected=null,pending=null,entryRan=false;
   const raw={},recentKey='donggu.recent.v1';
   const host=document.createElement('section');host.className='share-tools';host.setAttribute('aria-label','검색 조건 공유 및 최근 검색');
-  host.innerHTML=`<div class="share-actions"><button id="shareCopy">현재 조건 링크 복사</button><button id="conditionExport">조회 조건 JSON 내보내기</button><label class="condition-import">JSON 불러오기<input id="conditionImport" type="file" accept=".json,application/json"></label></div><small>링크·JSON에는 입력 주소가 포함됩니다. 조건을 재현하며 자료 갱신에 따라 결과는 달라질 수 있습니다.</small><div id="shareStatus" role="status" aria-live="polite"></div><input id="shareFallback" aria-label="공유 링크 — 선택 후 수동 복사" readonly hidden><details id="recentSearches"><summary>최근 검색 (이 브라우저에 최대 10개)</summary><p>일괄조회 주소는 자동 저장하지 않습니다. 열면 조건만 복원합니다.</p><div id="recentRows"></div><button id="recentClear">최근 검색 전체 삭제</button></details>`;
+  host.innerHTML=`<div class="share-actions"><button id="shareCopy" title="현재 조건 링크 복사">공유</button><details id="conditionTools"><summary>검색 조건 저장·불러오기</summary><div class="condition-actions"><button id="conditionExport">조건 파일 저장</button><button id="conditionImportButton">조건 파일 불러오기</button><input id="conditionImport" type="file" accept=".json,application/json" hidden><small>조건을 JSON 파일로 저장합니다. 입력 주소가 포함되므로 저장·전달 대상을 확인하세요.</small></div></details><details id="recentSearches"><summary>최근 검색</summary><p>이 브라우저에 최대 10개 · 열면 조건만 복원합니다. 여러 주소 입력은 자동 저장하지 않습니다.</p><div id="recentRows"></div><button id="recentClear">최근 검색 전체 삭제</button></details></div><small id="sharePrivacy" hidden>링크에는 입력 주소가 포함됩니다. 조건을 재현하며 자료 갱신에 따라 결과는 달라질 수 있습니다.</small><div id="shareStatus" role="status" aria-live="polite"></div><input id="shareFallback" aria-label="공유 링크 — 선택 후 수동 복사" readonly hidden>`;
   document.querySelector('main')?.prepend(host);
   if(!host.isConnected)document.querySelector('.tabs')?.after(host);
   if(!host.isConnected)document.body.insertBefore(host,document.body.firstChild);
-  function say(message){$('shareStatus').textContent=message;}
+  let messageTimer,messageRevision=0;
+  function say(message,{temporary=false}={}){clearTimeout(messageTimer);const revision=++messageRevision;$('shareStatus').textContent=message;if(temporary)messageTimer=setTimeout(()=>{if(revision===messageRevision){$('shareStatus').textContent='';$('sharePrivacy').hidden=true;}},4000);}
+  function clearToolFeedback(){say('');$('shareFallback').hidden=true;$('shareFallback').value='';$('sharePrivacy').hidden=true;for(const id of ['conditionTools','recentSearches'])$(id).open=false;}
+  $('conditionImportButton').onclick=()=>$('conditionImport').click();
+  for(const id of ['conditionTools','recentSearches']){const node=$(id),summary=node.querySelector('summary');summary.setAttribute('aria-expanded','false');node.addEventListener('toggle',()=>summary.setAttribute('aria-expanded',String(node.open)));}
+  syncScreenPresentation();
   function invoke(name,...args){depth++;try{return (raw[name]||window[name])(...args);}finally{depth--;}}
   function active(){const menu=['building','housing','demol','vacant','stats','map'].find(t=>$('tab-btn-'+t)?.classList.contains('active'))||'building';return {menu,tab:menu==='building'?B_SUBTAB:menu==='map'?MAP_SUBTAB:menu};}
   function defaultValue(id){const el=$(id);if(!el)return null;if(S.ranges[id])return [+el.dataset.min,+el.dataset.max];if(el.matches('textarea,input[type=text]'))return el.defaultValue||'';if(el.type==='checkbox')return el.defaultChecked;if(el.tagName==='SELECT')return '__ALL__';return [...el.querySelectorAll('input')].filter(c=>c.defaultChecked).map(c=>c.value).sort();}
@@ -40,6 +45,7 @@
   }
   function stop(hide=true){
     ++epoch;restoring=0;running=0;replaying=0;
+    clearToolFeedback();resetQueryActivity();
     B_GATE.invalidate();D_GATE.invalidate();D_TAB_GATE.invalidate();V_GATE.invalidate();MAP_RUN_GATE.invalidate();++M_COND_SEARCH_ID;M_DET_GATE.invalidate();M_DET_TAB_GATE.invalidate();
     for(const kind of ['condition','housing','demol','map'])invalidateQuery(kind);
     if(!hide){if(D_BLDGIS?.state==='loading')D_BLDGIS={state:'cancelled'};if(D_LDA?.state==='loading')D_LDA={state:'cancelled'};refreshDetailSupplements();if(H_PROGRESS_STATE.includes('보강 중'))H_PROGRESS_STATE='취소됨 · 잠정 결과';}
@@ -80,7 +86,7 @@
     if(tab==='detail'){
       if(p.id){const matches=(D_DONGS.length?D_DONGS:D_TITLES).map((r,i)=>({r,i})).filter(x=>itemId('detail',x.r)===p.id);ambiguous=matches.length>1;if(matches.length===1){if(D_DONGS.length)invoke('selectDong',matches[0].i);found=true;}}
       else found=!!D_TITLES.length;
-      if(found&&p.panel){if(['flr','park','wclf','jiji','hist','tmphdcr','lda','map'].includes(p.panel)){document.querySelectorAll('#dResult .d-subtab').forEach(b=>b.classList.toggle('active',b.dataset.tab===p.panel));await invoke('loadSubtab',p.panel,D_SELDONG);}else found=false;}
+      if(found&&p.panel){if(['flr','park','wclf','jiji','hist','tmphdcr','lda','map'].includes(p.panel)){document.querySelectorAll('#dResult .d-subtab').forEach(b=>{b.classList.toggle('active',b.dataset.tab===p.panel);b.setAttribute('aria-pressed',String(b.dataset.tab===p.panel));});await invoke('loadSubtab',p.panel,D_SELDONG);}else found=false;}
     }else if(menu==='housing'){
       const matches=HRESULTS.filter(r=>itemId('housing',r)===p.id);ambiguous=matches.length>1;
       if(matches.length===1){const r=matches[0];invoke('gotoHousingPage',Math.floor(HRESULTS.indexOf(r)/H_PAGE_SIZE)+1);const a=[...$('hResultBody').querySelectorAll('[data-dtl]')].find(a=>a.dataset.pnu===r.pnu&&a.dataset.dtl===r.kaptCode);if(a){await invoke('openHousingDetail',a.dataset.dtl,a.dataset.pnu,a.closest('tr'));found=true;}}
@@ -128,12 +134,13 @@
   }
   function storage(){try{return localStorage;}catch{return null;}}
   function recent(){return S.readRecent(storage());}
-  async function openState(s,reason){checkpoint('replace');try{history.pushState({p3:1,ran:false},'',S.encode(s,location.href));}catch{/* Long JSON conditions intentionally remain in memory, not history. */}await restore(s,{reason});}
-  function renderRecent(){const rows=recent(),body=$('recentRows');body.replaceChildren();rows.forEach((r,i)=>{const div=document.createElement('div'),open=document.createElement('button'),del=document.createElement('button');open.textContent=`${r.state.menu||'building'} / ${r.state.tab||''} · ${r.state.f?.dInput||Object.values(r.state.f||{}).find(v=>typeof v==='string')||'저장 조건'} · ${r.at.slice(0,10)}`;open.onclick=()=>openState(r.state,'recent');del.textContent='삭제';del.setAttribute('aria-label',`${i+1}번 최근 검색 삭제`);del.onclick=()=>{rows.splice(i,1);if(!S.saveRecent(storage(),rows))say('최근 검색 삭제를 저장하지 못했습니다.');renderRecent();};div.append(open,del);body.append(div);});}
+  async function openState(s,reason){checkpoint('replace');try{history.pushState({p3:1,ran:false},'',S.encode(s,location.href));}catch{/* Long JSON conditions intentionally remain in memory, not history. */}const job=restore(s,{reason}),owner=epoch;await job;if(owner===epoch){const {tab}=active(),id={detail:'dInput',bulk:'input',cond:'c-hdong',housing:'h-hdong',demol:'m-hdong',vacant:'v-hdong',general:'map-hdong'}[tab];(id?$(id):$('shareCopy'))?.focus({preventScroll:true});}}
+  function renderRecent(){const rows=recent(),body=$('recentRows');body.replaceChildren();rows.forEach((r,i)=>{const div=document.createElement('div'),open=document.createElement('button'),del=document.createElement('button'),label=UiLabels.recent(r.state);open.className='recent-open';open.textContent=label+' · '+r.at.slice(0,10);open.title=open.textContent;open.setAttribute('aria-label',open.textContent);open.onclick=()=>openState(r.state,'recent');del.textContent='삭제';del.setAttribute('aria-label',`${i+1}번 최근 검색 삭제`);del.onclick=()=>{rows.splice(i,1);if(!S.saveRecent(storage(),rows))say('최근 검색 삭제를 저장하지 못했습니다.');renderRecent();};div.append(open,del);body.append(div);});}
   function remember(s){if(s.f?.input||(!s.menu&&!s.tab))return;const rows=recent().filter(r=>JSON.stringify(r.state)!==JSON.stringify(s));rows.unshift({state:s,at:new Date().toISOString()});if(!S.saveRecent(storage(),rows))say('브라우저 저장소를 사용할 수 없어 최근 검색을 저장하지 않았습니다.');renderRecent();}
   $('recentClear').onclick=()=>{try{const store=storage();if(!store)throw Error();store.removeItem(recentKey);}catch{say('최근 검색 삭제를 저장하지 못했습니다.');}renderRecent();};
   $('shareCopy').onclick=async()=>{
-    try{const url=S.encode(capture(),location.href);checkpoint('replace');$('shareFallback').hidden=true;try{if(!navigator.clipboard?.writeText)throw Error();await navigator.clipboard.writeText(url);say('현재 조건 링크를 복사했습니다. 주소가 포함되므로 공유 대상을 확인하세요.');}catch{$('shareFallback').hidden=false;$('shareFallback').value=url;$('shareFallback').focus();$('shareFallback').select();say('자동 복사를 사용할 수 없습니다. 선택된 링크를 직접 복사하세요.');}}
+    const owner=epoch;say('');const requestRevision=messageRevision;$('sharePrivacy').hidden=false;
+    try{const url=S.encode(capture(),location.href);checkpoint('replace');$('shareFallback').hidden=true;try{if(!navigator.clipboard?.writeText)throw Error();await navigator.clipboard.writeText(url);if(owner!==epoch||requestRevision!==messageRevision)return;say('현재 조건 링크를 복사했습니다. 주소가 포함되므로 공유 대상을 확인하세요.',{temporary:true});}catch{if(owner!==epoch||requestRevision!==messageRevision)return;$('shareFallback').hidden=false;$('shareFallback').value=url;$('shareFallback').focus();$('shareFallback').select();say('자동 복사를 사용할 수 없습니다. 선택된 링크를 직접 복사하세요.');}}
     catch(e){say(e.message);}
   };
   $('conditionExport').onclick=()=>{try{const data=JSON.stringify(capture(),null,2),blob=new Blob([data],{type:'application/json'});if(blob.size>S.MAX_FILE)throw Error('조건 파일이 너무 큽니다. 주소를 나누세요.');const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='donggu-search-conditions.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);say('조건만 내보냈습니다. 주소가 포함됩니다.');}catch(e){say(e.message);}};
@@ -168,10 +175,10 @@
     if(restoring){if(!event.isTrusted)return;if(isFilter){stop(false);pending=null;}else return;}
     if(isFilter){pending=null;selected=null;const wasRun=entryRan;entryRan=false;checkpoint(wasRun?'push':'replace',false);}else if(!running)checkpoint('replace');
   });
-  window.addEventListener('popstate',event=>{const p=S.parse(location.href);if(!p.ok){stop();say(p.error);return;}restore(p.state||{v:1},{reason:'history',ran:!!event.state?.ran,scroll:event.state?.scroll});});
+  window.addEventListener('popstate',event=>{const p=S.parse(location.href);if(!p.ok){stop();say(p.error);return;}restore(p.state||(event.state?.p3?event.state.conditions:null)||{v:1,tab:'detail'},{reason:'history',ran:!!event.state?.ran,scroll:event.state?.scroll});});
   let scrollTimer;window.addEventListener('scroll',()=>{clearTimeout(scrollTimer);scrollTimer=setTimeout(()=>{if(!restoring&&history.state?.p3)history.replaceState({...history.state,scroll:[scrollX,scrollY]},'');},120);},{passive:true});
   window.addEventListener('hashchange',()=>{if(history.state?.p3)return;const p=S.parse(location.href);if(p.ok&&p.state)restore(p.state);else if(!p.ok)say(p.error);});
   renderRecent();
-  const initial=S.parse(location.href);if(initial.ok&&initial.state)restore(initial.state);else if(!initial.ok)say(initial.error);else checkpoint('replace',false);
+  const initial=S.parse(location.href);if(initial.ok&&initial.state)restore(initial.state);else if(!initial.ok)say(initial.error);else if(history.state?.p3&&history.state.conditions)restore(history.state.conditions,{reason:'history',ran:!!history.state.ran,scroll:history.state.scroll});else{invoke('switchBuildingSubtab','detail');checkpoint('replace',false);}
   window.SearchNavigation={capture,restore,itemId,checkpoint,replaying:()=>!!(restoring||replaying)};
 })();
