@@ -627,7 +627,7 @@
       &ensp;· 공공데이터포털·동구 : 공동주택·빈집 현황 (월간 갱신)<br>
       &ensp;· KOSIS·SGIS : 주택·거처 통계 (월간 갱신)<br>
       &ensp;· 카카오 로컬 : 공동주택명·행정동 보정 (실시간)<br>
-    - 서비스 문서 수정일(서버 제공, 자료 기준일·수집일과 별개 / 실제 배포일 미확인) : <span id="lastUpdated">확인 중…</span><br>
+    - 날짜 안내 : <span id="lastUpdated">확인 중…</span><br>
     - 오류 제보 및 기능 추가 문의 : ch4834@korea.kr
   </div>
 </div>
@@ -636,6 +636,8 @@
 <script src="vacant-model.js"></script>
 <script src="app-api.js"></script>
 <script src="reliability.js"></script>
+<script src="stats-metadata.js"></script>
+<script src="search-state.js"></script>
 <script>
 /* ============================================================
    1. 앱 로직 (순수 변환은 transform.js, API 데이터 레이어는 app-api.js)
@@ -4012,6 +4014,11 @@ const V_PAGE_SIZE = 50;
 async function initVacantTab(){
   if(V_DATA.length === 0 || V_GEOMETRY_STATE==='error') await loadVacantData();
   if(V_LOAD_STATE !== 'success') return;
+  if(typeof StatsMetadata!=='undefined'){
+    let definitions=document.getElementById('vDefinitions');
+    if(!definitions){definitions=document.createElement('div');definitions.id='vDefinitions';document.getElementById('vHint').after(definitions);}
+    definitions.innerHTML=StatsMetadata.vacantDetails(V_DATA);
+  }
   const hdong = document.getElementById("v-hdong");
   if(hdong.options.length <= 1){
     try{
@@ -4312,7 +4319,8 @@ function stLineChart(series, tall=false){
 
 function rebFmt(v, unit){
   if(v === null || v === undefined) return "-";
-  return `${stFmt(Number(v))}${unit || ""}`;
+  const won=unit==='천원'?Number(v)*1000:null;
+  return `${stFmt(Number(v))}${unit || ""}${won==null?'':` (약 ${stFmt(won/10000)}만원 · ${won.toLocaleString('ko-KR',{maximumFractionDigits:3})}원)`}`;
 }
 
 function rebShortLabel(row){
@@ -4326,6 +4334,7 @@ function rebShortLabel(row){
 
 // REB 월별 자료는 최근 36개월만 그려 월별 라벨·수치가 겹치지 않게 한다.
 function rebLineChart(indicators, maxPoints=36){
+  if(new Set(indicators.map(ind=>ind.unit)).size>1) return indicators.map(ind=>rebLineChart([ind],maxPoints)).join('');
   const W=320, H=126, PL=8, PR=8, PT=10, PB=20;
   const rows = indicators.map(ind => ({
     ...ind,
@@ -4358,7 +4367,7 @@ function rebLineChart(indicators, maxPoints=36){
   return `<svg class="reb-line" viewBox="0 0 ${W} ${H}" role="img" aria-label="최근 시계열 추이">${lines}${labels}</svg>`;
 }
 
-function renderRebCard(title, indicators, maxPoints=36){
+function renderRebCard(title, indicators, maxPoints=36, dataset={}){
   const usable = indicators.filter(ind => Array.isArray(ind?.series) && ind.series.length);
   if(!usable.length) return "";
   const latestPeriod = usable.map(ind => ind.series.at(-1)?.period || "").sort().at(-1);
@@ -4369,8 +4378,10 @@ function renderRebCard(title, indicators, maxPoints=36){
   }).join("");
   return `<div class="st-card reb-card">
     <div class="st-head"><div class="st-name">${esc(title)}</div><em class="reb-period">${esc(latestLabel)}</em></div>
+    <div class="st-sec">단위: ${esc([...new Set(usable.map(ind=>ind.unit))].join(' / '))} · 도표 기간: ${esc(usable[0].series.slice(-maxPoints)[0]?.label||'')} ~ ${esc(latestLabel)}</div>
     ${rebLineChart(usable, maxPoints)}
     <div class="reb-legend">${legends}</div>
+    ${typeof StatsMetadata==='undefined'?'':usable.map(ind=>StatsMetadata.details('reb',ind,dataset)+StatsMetadata.table(ind.name,ind.unit,ind.series)).join('')}
   </div>`;
 }
 
@@ -4393,7 +4404,7 @@ function renderRebStats(d){
     <div class="st-source-note">${esc(d.classPath || "광주>동구")}${fetched ? ` · ${esc(fetched)} 수집` : ""}</div>
   </div><div class="st-grid reb-grid">`;
   for(const [title, ids, maxPoints] of groups){
-    html += renderRebCard(title, ids.map(id => byId.get(id)).filter(Boolean), maxPoints);
+    html += renderRebCard(title, ids.map(id => byId.get(id)).filter(Boolean), maxPoints, d);
   }
   html += `</div><div class="st-note reb-note">${esc(d.note || "한국부동산원 제공 자료")}</div>`;
   return html;
@@ -4401,6 +4412,7 @@ function renderRebStats(d){
 
 function renderStats(d, sgis, reb){
   let html = `<div class="d-panel-hint" style="margin-bottom:10px">출처 : ${esc(d.source||"")}</div>`;
+  if(typeof StatsMetadata!=='undefined')html+=StatsMetadata.comparison();
   html += `<div class="st-grid">`;
   for(const ind of d.indicators){
     const s = Array.isArray(ind.series) ? ind.series : [];
@@ -4429,6 +4441,7 @@ function renderStats(d, sgis, reb){
       <div class="st-sec">연도별 추이 (동구, ${esc(s[0].year)}~${esc(last.year)})</div>
       ${stLineChart(s, ind.id === "houses")}
       ${cmpHtml}
+      ${typeof StatsMetadata==='undefined'?'':StatsMetadata.details('kosis',ind,d)+StatsMetadata.table(ind.name,ind.unit,s.map(r=>({...r,value:r.donggu})))}
     </div>`;
   }
   html += `</div>`;
@@ -4443,7 +4456,7 @@ function renderSgisStats(d){
   const visibleSummary = summary.filter(row => Number(row.count) > 0 || Number(row.ratio) > 0);
   if(!visibleSummary.length) return "";
   const fetched = d.generatedAt ? String(d.generatedAt).slice(0,10) : "";
-  const summaryYear = d.summaryYear ? String(d.summaryYear) : "";
+  const summaryYear = d.summaryReferenceYear ? String(d.summaryReferenceYear) : "";
   let html = `<div class="st-source-head">
     <div class="st-source-title">인구주택총조사 통계 <span>SGIS OpenAPI</span></div>
     <div class="st-source-note">${esc(d.admNm || "동구")}${fetched ? ` · ${esc(fetched)} 수집` : ""}</div>
@@ -4462,6 +4475,7 @@ function renderSgisStats(d){
         </div>`;
       }).join("")}</div>
       <div class="st-note">${summaryYear ? `${esc(summaryYear)}년 기준 · ` : ""}거처 유형별 거주가구 기준 · SGIS API 제공값</div>
+      ${typeof StatsMetadata==='undefined'?'':StatsMetadata.details('sgis',{},d)}
     </div>`;
   }
 
@@ -5001,7 +5015,7 @@ function fitMapToBjdList(bjdList){
     if(bounds) bounds.extend(next); else bounds = next;
   }
   if(!bounds?.isValid()) return;
-  try{ M_MAP.fitBounds(bounds, { padding:[30,30], maxZoom:17 }); }catch(e){}
+  try{ M_MAP.fitBounds(bounds, { padding:[30,30], maxZoom:17, animate:!window.SearchNavigation?.replaying() }); }catch(e){}
 }
 
 // GeoJSON geometry가 Leaflet bounds와 교차하는지 (대략)
@@ -5157,7 +5171,7 @@ function focusMapResult(src, d){
   if(geom && M_MAP){
     try{
       const b = L.geoJSON(geom).getBounds();
-      if(b.isValid()) M_MAP.fitBounds(b, { padding:[40,40], maxZoom:18 });
+      if(b.isValid()) M_MAP.fitBounds(b, { padding:[40,40], maxZoom:18, animate:!window.SearchNavigation?.replaying() });
     }catch(e){}
   }
   showMapDetailCard(src, d);
@@ -5341,9 +5355,9 @@ function fitMapToResults(){
     const targetZoom = M_MAP.getBoundsZoom(b, false, [30,30]);
     if(targetZoom < MAP_SEARCH_ZOOM_FLOOR){
       const c = b.getCenter();
-      M_MAP.setView(c, MAP_SEARCH_ZOOM_FLOOR);
+      M_MAP.setView(c, MAP_SEARCH_ZOOM_FLOOR, {animate:!window.SearchNavigation?.replaying()});
     }else{
-      M_MAP.fitBounds(b, { padding:[30,30], maxZoom:19 });
+      M_MAP.fitBounds(b, { padding:[30,30], maxZoom:19, animate:!window.SearchNavigation?.replaying() });
     }
   }catch(e){}
 }
@@ -5730,10 +5744,7 @@ function formatDate(s){
 function renderLastUpdated(){
   const el = document.getElementById("lastUpdated");
   if(!el) return;
-  const modified = new Date(document.lastModified);
-  el.textContent = Number.isNaN(modified.getTime())
-    ? "확인 불가"
-    : modified.toLocaleDateString("ko-KR", { year:"numeric", month:"numeric", day:"numeric" });
+  el.textContent = "자료별 기준시점·수집일은 각 출처 설명 참조 · 서비스 배포일 미확인";
 }
 
 renderLastUpdated();
@@ -5741,5 +5752,6 @@ renderLastUpdated();
 
 </script>
 <script src="ui-enhancements.js"></script>
+<script src="search-navigation.js"></script>
 </body>
 </html>

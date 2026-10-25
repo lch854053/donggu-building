@@ -33,10 +33,11 @@ test("browser API layer loads after transforms and keeps the shared request cont
   assert.deepEqual(await context.searchJuso("동구"), [{ roadAddr: "test" }]);
 });
 
-test("footer derives the update date from the deployed document metadata", () => {
+test("footer separates data provenance from an unknown deployment date", () => {
   const page = readFileSync(new URL("../index.html", import.meta.url), "utf8");
   assert.match(page, /id="lastUpdated"/);
-  assert.match(page, /document\.lastModified/);
+  assert.doesNotMatch(page, /document\.lastModified/);
+  assert.match(page, /자료별 기준시점·수집일.*서비스 배포일 미확인/);
   assert.doesNotMatch(page, /마지막 업데이트\s*:\s*2026\.\s*7\.\s*11/);
 });
 

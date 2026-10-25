@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import assert from 'node:assert/strict';
 import XLSX from 'xlsx';
 const {chromium}=await import(process.env.PLAYWRIGHT_MODULE || 'playwright');
-const root=new URL('../',import.meta.url),output=new URL('docs/p2-evidence/',root);
+const root=new URL('../',import.meta.url),tag=process.env.EVIDENCE_TAG||'p2',output=new URL(`docs/${tag}-evidence/`,root);
 await fs.mkdir(output,{recursive:true});
 const hj=JSON.parse(await fs.readFile(new URL('haengjeong.json',root)));
 const key=Object.keys(hj.jibun2hdong).find(k=>hj.jibun2hdong[k]==='계림2동');
@@ -128,5 +128,5 @@ for(const width of [360,390,430,1366]){
   results.push({width,height:900,mode:width<500?'Chromium mobile emulation, touch; not physical phone':'Chromium desktop',checks:['all menus','exact numeric input / slider sync','result summary expansion','XLSX download','progressive detail / selected tab retained','vacant list/map IDs and date','map card close','mobile panel and gesture controls','Figure-Ground themes and PNG/JPG download','no document horizontal overflow'],errors});
   await context.close();
 }
-await fs.writeFile(new URL('docs/p2-ui-results.json',root),JSON.stringify(results,null,2)+'\n');
+await fs.writeFile(new URL(`docs/${tag}-ui-results.json`,root),JSON.stringify(results,null,2)+'\n');
 console.log(JSON.stringify(results,null,2));await browser.close();
