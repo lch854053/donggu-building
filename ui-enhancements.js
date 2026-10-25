@@ -32,6 +32,7 @@ function syncScreenPresentation(){
     document.getElementById('conditionTools').hidden=tab==='stats';
   }
   syncQueryActivity();
+  if(typeof FilterUI!=='undefined')FilterUI.refresh(tab);
 }
 function setMapPanelOpen(open){
   const layout=document.querySelector('.map-layout'),button=document.getElementById('mapPanelToggle');

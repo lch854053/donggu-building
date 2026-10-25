@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import assert from 'node:assert/strict';
 const {chromium}=await import(process.env.PLAYWRIGHT_MODULE||'playwright');
-const phase=process.argv[2]||'after',root=new URL('../',import.meta.url),out=new URL('docs/ui-stage1-evidence/',root);
+const phase=process.argv[2]||'after',tag=process.env.EVIDENCE_TAG||'ui-stage1',root=new URL('../',import.meta.url),out=new URL(`docs/${tag}-evidence/`,root);
 await fs.mkdir(out,{recursive:true});
 const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/Applications/Brave Browser.app/Contents/MacOS/Brave Browser',headless:true});
 const reports=[];
@@ -72,6 +72,6 @@ if(phase==='after'){
   await openTools();assert.equal(await page.locator('#conditionImport').isVisible(),false);await page.locator('#conditionTools summary').focus();assert.equal(await page.locator('#conditionTools summary').evaluate(el=>el===document.activeElement),true);
   const download=page.waitForEvent('download');await page.click('#conditionExport');const saved=await download;assert.equal(JSON.parse(await fs.readFile(await saved.path())).f.dInput,'서남로 1');await page.setInputFiles('#conditionImport',await saved.path());await settled();
   checks.push('legacy recent storage has Korean source-aware labels and full accessible titles; restore is manual and preserves records; collapsed keyboard-accessible file controls still export/import');
-  assert.deepEqual(errors,[]);await fs.writeFile(new URL('docs/ui-stage1-browser-results.json',root),JSON.stringify({mode:'Actual local Chromium, controlled API responses including selected fields captured from live Seonam-ro 1 response; not physical phones',checks,errors},null,2)+'\n');console.log(JSON.stringify({checks,errors},null,2));await ctx.close();
+  assert.deepEqual(errors,[]);await fs.writeFile(new URL(`docs/${tag}-browser-results.json`,root),JSON.stringify({mode:'Actual local Chromium, controlled API responses including selected fields captured from live Seonam-ro 1 response; not physical phones',checks,errors},null,2)+'\n');console.log(JSON.stringify({checks,errors},null,2));await ctx.close();
 }
-await fs.writeFile(new URL(`docs/ui-stage1-${phase}-layout.json`,root),JSON.stringify(reports,null,2)+'\n');console.log(JSON.stringify(reports,null,2));await browser.close();
+await fs.writeFile(new URL(`docs/${tag}-${phase}-layout.json`,root),JSON.stringify(reports,null,2)+'\n');console.log(JSON.stringify(reports,null,2));await browser.close();

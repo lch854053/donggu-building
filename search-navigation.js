@@ -6,7 +6,7 @@
   let epoch=0,depth=0,restoring=0,running=0,replaying=0,pickRevision=0,selected=null,pending=null,entryRan=false;
   const raw={},recentKey='donggu.recent.v1';
   const host=document.createElement('section');host.className='share-tools';host.setAttribute('aria-label','검색 조건 공유 및 최근 검색');
-  host.innerHTML=`<div class="share-actions"><button id="shareCopy" title="현재 조건 링크 복사">공유</button><details id="conditionTools"><summary>검색 조건 저장·불러오기</summary><div class="condition-actions"><button id="conditionExport">조건 파일 저장</button><button id="conditionImportButton">조건 파일 불러오기</button><input id="conditionImport" type="file" accept=".json,application/json" hidden><small>조건을 JSON 파일로 저장합니다. 입력 주소가 포함되므로 저장·전달 대상을 확인하세요.</small></div></details><details id="recentSearches"><summary>최근 검색</summary><p>이 브라우저에 최대 10개 · 열면 조건만 복원합니다. 여러 주소 입력은 자동 저장하지 않습니다.</p><div id="recentRows"></div><button id="recentClear">최근 검색 전체 삭제</button></details></div><small id="sharePrivacy" hidden>링크에는 입력 주소가 포함됩니다. 조건을 재현하며 자료 갱신에 따라 결과는 달라질 수 있습니다.</small><div id="shareStatus" role="status" aria-live="polite"></div><input id="shareFallback" aria-label="공유 링크 — 선택 후 수동 복사" readonly hidden>`;
+  host.innerHTML=`<div class="share-actions"><button id="shareCopy" title="현재 편집 중인 조건 링크 복사">공유</button><details id="conditionTools"><summary>검색 조건 저장·불러오기</summary><div class="condition-actions"><button id="conditionExport">조건 파일 저장</button><button id="conditionImportButton">조건 파일 불러오기</button><input id="conditionImport" type="file" accept=".json,application/json" hidden><small>현재 편집 중인 조건을 JSON 파일로 저장합니다. 결과 엑셀은 실제 조회 조건을 기록합니다. 입력 주소가 포함되므로 저장·전달 대상을 확인하세요.</small></div></details><details id="recentSearches"><summary>최근 검색</summary><p>이 브라우저에 최대 10개 · 열면 조건만 복원합니다. 여러 주소 입력은 자동 저장하지 않습니다.</p><div id="recentRows"></div><button id="recentClear">최근 검색 전체 삭제</button></details></div><small id="sharePrivacy" hidden>현재 편집 중인 조건을 공유합니다. 링크에는 입력 주소가 포함되며 자료 갱신에 따라 결과는 달라질 수 있습니다.</small><div id="shareStatus" role="status" aria-live="polite"></div><input id="shareFallback" aria-label="공유 링크 — 선택 후 수동 복사" readonly hidden>`;
   document.querySelector('main')?.prepend(host);
   if(!host.isConnected)document.querySelector('.tabs')?.after(host);
   if(!host.isConnected)document.body.insertBefore(host,document.body.firstChild);
@@ -19,7 +19,7 @@
   function invoke(name,...args){depth++;try{return (raw[name]||window[name])(...args);}finally{depth--;}}
   function active(){const menu=['building','housing','demol','vacant','stats','map'].find(t=>$('tab-btn-'+t)?.classList.contains('active'))||'building';return {menu,tab:menu==='building'?B_SUBTAB:menu==='map'?MAP_SUBTAB:menu};}
   function defaultValue(id){const el=$(id);if(!el)return null;if(S.ranges[id])return [+el.dataset.min,+el.dataset.max];if(el.matches('textarea,input[type=text]'))return el.defaultValue||'';if(el.type==='checkbox')return el.defaultChecked;if(el.tagName==='SELECT')return '__ALL__';return [...el.querySelectorAll('input')].filter(c=>c.defaultChecked).map(c=>c.value).sort();}
-  function value(id){const el=$(id);if(!el)return null;if(S.ranges[id])return $(id+'-min')&&$(id+'-max')?[+$(id+'-min').value,+$(id+'-max').value]:null;if(el.matches('textarea,input[type=text],select'))return el.value;if(el.type==='checkbox')return el.checked;return [...el.querySelectorAll('input:checked')].map(c=>c.value).sort();}
+  function value(id){const el=$(id);if(!el)return null;if(el.filterControl)return el.filterControl.values?.()||el.filterControl.selected().sort();if(S.ranges[id])return $(id+'-min')&&$(id+'-max')?[+$(id+'-min').value,+$(id+'-max').value]:null;if(el.matches('textarea,input[type=text],select'))return el.value;if(el.type==='checkbox')return el.checked;return [...el.querySelectorAll('input:checked')].map(c=>c.value).sort();}
   function capture(){
     const {menu,tab}=active(),s={v:1,menu,tab:menu==='building'||menu==='map'?tab:undefined},f={};
     if(s.tab===undefined)delete s.tab;
@@ -40,6 +40,7 @@
       const state=capture(),url=S.encode(state,location.href),previous=history.state;
       if(mode==='push')history.replaceState({...previous,scroll:[scrollX,scrollY]},'');
       const data={p3:1,conditions:state,ran,scroll:[scrollX,scrollY]};
+      if(typeof FilterUI!=='undefined'){const resultConditions=FilterUI.historyState(active().tab);if(resultConditions)data.resultConditions=resultConditions;}
       if(mode==='push'&&(location.href!==url||!!previous?.ran!==!!ran))history.pushState(data,'',url);else history.replaceState(data,'',url);
     }catch(e){say(e.message+' 현재 조건은 화면에 유지됩니다.');}
   }
@@ -52,6 +53,7 @@
     for(const id of ['runBtn','dRunBtn','cRunBtn','hRunBtn','mRunBtn','mapRunBtn'])if($(id))$(id).disabled=false;
     if(hide)for(const id of ['resultArea','dResult','cResultArea','hResultArea','mResultArea','vResultArea','mapResultsWrap','mapCard'])if($(id))$(id).style.display='none';
     for(const id of ['progWrap','cProgWrap','hProgWrap','mProgWrap'])$(id)?.classList.remove('on');
+    if(typeof FilterUI!=='undefined'){for(const kind of ['condition','housing','demol','vacant','map'])FilterUI.cancel(kind);FilterUI.suspend();}
   }
   async function ready(menu,tab){
     if(menu==='building'&&tab==='cond'||menu==='demol')await loadHaengjeong();
@@ -64,12 +66,13 @@
     const warnings=[];
     for(const id of S.fields[tab]){
       const el=$(id);if(!el){warnings.push(id);continue;}const v=Object.hasOwn(s.f||{},id)?s.f[id]:defaultValue(id);
-      if(S.ranges[id]){if(!$(id+'-min')||v[0]<+el.dataset.min||v[1]>+el.dataset.max){warnings.push(id);continue;}$(id+'-min').value=v[0];$(id+'-max').value=v[1];$(id+'-min').dispatchEvent(new Event('change',{bubbles:true}));}
+      if(S.ranges[id]){if(!$(id+'-min')||v[0]<+el.dataset.min||v[1]>+el.dataset.max){warnings.push(id);continue;}if(el.filterControl)el.filterControl.set(v,{notify:false});else{$(id+'-min').value=v[0];$(id+'-max').value=v[1];$(id+'-min').dispatchEvent(new Event('change',{bubbles:true}));}}
       else if(el.type==='checkbox')el.checked=v;
       else if(el.matches('textarea,input[type=text]'))el.value=v;
       else if(el.tagName==='SELECT'){if([...el.options].some(o=>o.value===v))el.value=v;else warnings.push(id);}
-      else {for(const c of el.querySelectorAll('input')){c.checked=v.includes(c.value);c.dispatchEvent(new Event('change',{bubbles:true}));}if(v.some(x=>![...el.querySelectorAll('input')].some(c=>c.value===x)))warnings.push(id);}
+      else {if(el.filterControl)el.filterControl.set(v,{notify:false});else for(const c of el.querySelectorAll('input')){c.checked=v.includes(c.value);c.dispatchEvent(new Event('change',{bubbles:true}));}if(v.some(x=>![...el.querySelectorAll('input')].some(c=>c.value===x)))warnings.push(id);}
     }
+    if(typeof FilterUI!=='undefined')FilterUI.refresh(tab);
     return warnings;
   }
   function itemId(kind,r){
@@ -110,7 +113,7 @@
     if(token!==epoch)return;
     if(s.view){const map=tab==='general'?M_MAP:FG_MAP;map?.stop().setView(s.view.slice(0,2),s.view[2],{animate:false});}
   }
-  async function restore(state,{reason='url',ran=false,scroll=null}={}){
+  async function restore(state,{reason='url',ran=false,scroll=null,resultConditions=null}={}){
     let s;try{s=S.validate(state,{file:reason==='file'});}catch(e){say(e.message);return;}
     stop();const token=epoch;restoring=token;selected=null;pending=s;entryRan=false;
     const menu=s.menu||'building',tab=s.tab||(menu==='building'?'bulk':menu==='map'?'general':menu);
@@ -125,6 +128,16 @@
       const local=!(Object.values(s.f||{}).includes('__ALL__')) && Object.keys(s.f||{}).some(k=>k.endsWith('hdong'));
       const auto=reason!=='recent'&&(tab==='detail'&&!!s.f?.dInput||reason==='history'&&ran&&(tab==='vacant'||tab==='general'&&!s.f?.mapSourceGrid?.includes('cond')||local&&['cond','housing','demol'].includes(tab)));
       const name={detail:'runDetail',cond:'runConditionSearch',housing:'runHousingSearch',demol:'runDemolSearch',vacant:'runVacantSearch',general:'runMapSearch'}[tab];
+      if(reason==='history'&&!ran&&resultConditions&&typeof FilterUI!=='undefined'&&FilterModel.configs[tab]){
+        try{
+          const previous=S.validate(resultConditions),previousMenu=previous.menu||'building',previousTab=previous.tab||(previousMenu==='map'?'general':previousMenu==='building'?'bulk':previousMenu);
+          if(previousTab===tab){
+            const pf=previous.f||{},safe=tab==='vacant'||tab==='general'&&!(pf.mapSourceGrid||[]).includes('cond')||Object.entries(pf).some(([k,v])=>k.endsWith('hdong')&&v!=='__ALL__');
+            if(safe&&name){const failed=setFields(previous,tab);if(!failed.length){await invoke(name);if(token!==epoch)return;await afterSearch(previous,token);if(token!==epoch)return;setFields(s,tab);pending=null;entryRan=false;say('편집 중인 조건과 이전 조회 조건을 구분해 복원했습니다. 결과는 현재 자료로 다시 조회했습니다.');return;}}
+            FilterUI.reference(tab,previous);
+          }
+        }catch{/* Invalid optional history metadata must not prevent restoring the explicit URL. */}
+      }
       if(auto&&name){await invoke(name);if(token!==epoch)return;entryRan=true;await afterSearch(s,token);pending=null;}
       else say(menu==='stats'?'통계 화면을 복원했습니다.':'조건을 복원했습니다. 조회 버튼을 누르면 검색하며, 선택 항목·정렬·페이지는 데이터 로딩 뒤 적용합니다.');
       if(token!==epoch)return;
@@ -175,10 +188,11 @@
     if(restoring){if(!event.isTrusted)return;if(isFilter){stop(false);pending=null;}else return;}
     if(isFilter){pending=null;selected=null;const wasRun=entryRan;entryRan=false;checkpoint(wasRun?'push':'replace',false);}else if(!running)checkpoint('replace');
   });
-  window.addEventListener('popstate',event=>{const p=S.parse(location.href);if(!p.ok){stop();say(p.error);return;}restore(p.state||(event.state?.p3?event.state.conditions:null)||{v:1,tab:'detail'},{reason:'history',ran:!!event.state?.ran,scroll:event.state?.scroll});});
+  document.addEventListener('filtercommit',event=>{if(depth||restoring)return;const {tab}=active();if(event.detail?.tab&&event.detail.tab!==tab)return;pending=null;selected=null;const wasRun=entryRan;entryRan=false;checkpoint(wasRun?'push':'replace',false);});
+  window.addEventListener('popstate',event=>{const p=S.parse(location.href);if(!p.ok){stop();say(p.error);return;}restore(p.state||(event.state?.p3?event.state.conditions:null)||{v:1,tab:'detail'},{reason:'history',ran:!!event.state?.ran,scroll:event.state?.scroll,resultConditions:event.state?.resultConditions});});
   let scrollTimer;window.addEventListener('scroll',()=>{clearTimeout(scrollTimer);scrollTimer=setTimeout(()=>{if(!restoring&&history.state?.p3)history.replaceState({...history.state,scroll:[scrollX,scrollY]},'');},120);},{passive:true});
   window.addEventListener('hashchange',()=>{if(history.state?.p3)return;const p=S.parse(location.href);if(p.ok&&p.state)restore(p.state);else if(!p.ok)say(p.error);});
   renderRecent();
-  const initial=S.parse(location.href);if(initial.ok&&initial.state)restore(initial.state);else if(!initial.ok)say(initial.error);else if(history.state?.p3&&history.state.conditions)restore(history.state.conditions,{reason:'history',ran:!!history.state.ran,scroll:history.state.scroll});else{invoke('switchBuildingSubtab','detail');checkpoint('replace',false);}
+  const initial=S.parse(location.href);let historyOptions={};try{if(initial.state&&history.state?.p3&&S.encode(initial.state,location.href)===S.encode(history.state.conditions,location.href))historyOptions={reason:'history',ran:!!history.state.ran,scroll:history.state.scroll,resultConditions:history.state.resultConditions};}catch{/* URL is authoritative if optional history metadata is invalid. */}if(initial.ok&&initial.state)restore(initial.state,historyOptions);else if(!initial.ok)say(initial.error);else if(history.state?.p3&&history.state.conditions)restore(history.state.conditions,{reason:'history',ran:!!history.state.ran,scroll:history.state.scroll,resultConditions:history.state.resultConditions});else{invoke('switchBuildingSubtab','detail');checkpoint('replace',false);}
   window.SearchNavigation={capture,restore,itemId,checkpoint,replaying:()=>!!(restoring||replaying)};
 })();

@@ -11,7 +11,7 @@
     else if(tab==='bulk')title='여러 주소 한 번에 · 저장 조건';
     else if(tab==='general'){const names=(f.mapSourceGrid||['vacant','apt']).map(k=>({vacant:'빈집',apt:'공동주택',cond:'건축물'}[k])).filter(Boolean);title=`${scope} · ${names.join('·')||'선택 자료 없음'} 지도`;}
     else title=`${scope} · ${{housing:'공동주택 조회',demol:'철거·멸실 조회',vacant:'빈집 조회',cond:'건축물 조건 조회',figure:'건물윤곽지도',stats:'동구 통계'}[tab]||'검색 조건'}`;
-    const extra=[];for(const [key,v]of Object.entries(f)){const label=filters[key];if(!label)continue;extra.push(typeof v==='boolean'?`${label} ${v?'포함':'제외'}`:`${label} ${Array.isArray(v)?v.join('~'):v}`);}
+    const extra=[];for(const [key,v]of Object.entries(f)){const label=filters[key];if(!label)continue;const bounds=root.SearchState?.ranges[key],range=root.FilterModel&&bounds&&Array.isArray(v)&&typeof v[0]==='number'?root.FilterModel.rangeText(key,v,[bounds[0],key.includes('year')?new Date().getFullYear():bounds[1]]):null;extra.push(typeof v==='boolean'?`${label} ${v?'포함':'제외'}`:`${label} ${range||(Array.isArray(v)?v.join('~'):v)}`);}
     if(s.sort&&sortLabels[s.sort])extra.push(sortLabels[s.sort]);if(s.page)extra.push(`${s.page}페이지`);
     if(s.theme)extra.push({age:'연도 색상',purpose:'용도 색상',floor:'층수 색상',structure:'구조 색상'}[s.theme]||'기본 색상');if(s.shape==='square')extra.push('사각 배경');
     return title+(extra.length?' · '+extra.join(' / '):'');
