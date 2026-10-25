@@ -9,10 +9,27 @@ async function api(path, params){
   const qs = params ? "?" + new URLSearchParams(params).toString() : "";
   try{
     const r = await fetch(`/api/${path}${qs}`);
-    if(!r.ok) return { ok:false, status:r.status, data:null };
-    return { ok:true, status:r.status, data: await r.json() };
+    if(!r.ok){
+      console.warn('[api]', { kind:'http', status:r.status, query:path });
+      return { ok:false, status:r.status, data:null, kind:'http', cancelled:false, error:'불러오지 못했습니다. 다시 조회해 주세요.' };
+    }
+    let data;
+    try { data = await r.json(); }
+    catch {
+      console.warn('[api]', {kind:'format',status:r.status,query:path});
+      return {ok:false,status:r.status,data:null,kind:'format',cancelled:false,error:'불러오지 못했습니다. 다시 조회해 주세요.'};
+    }
+    const field = {juso:'juso',building:'titles',archpms:'items'}[path];
+    if(data?.error || !data || (field && !Array.isArray(data[field]))){
+      const kind = data?.error ? 'upstream' : 'format';
+      console.warn('[api]', { kind, status:r.status, query:path, op:params?.op || 'default' });
+      return { ok:false, status:r.status, data:null, kind, cancelled:false, error:'불러오지 못했습니다. 다시 조회해 주세요.' };
+    }
+    return { ok:true, status:r.status, data, kind:'success', cancelled:false, error:null };
   }catch(e){
-    return { ok:false, status:0, data:null, error:String(e?.message||e) };
+    const cancelled = e?.name === 'AbortError';
+    console.warn('[api]', { kind:cancelled ? 'cancelled' : 'network', status:0, query:path });
+    return { ok:false, status:0, data:null, cancelled, kind:cancelled ? 'cancelled' : 'network', error:'불러오지 못했습니다. 다시 조회해 주세요.' };
   }
 }
 
@@ -25,10 +42,11 @@ const apiSleep = (ms)=> new Promise(r=>setTimeout(r, ms));
 // 공공데이터포털이 느려지면 프록시가 8초 타임아웃으로 504를 내는데, 이를 그대로
 // 빈 결과로 삼으면 "조회 0건"으로 보인다. 지수 백오프 + 지터로 일시 오류만 되돌린다.
 async function apiRetry(path, params, { retries = 3, baseDelay = 400 } = {}){
+  retries = Math.min(3, Math.max(0, retries));
   let last = { ok:false, status:0, data:null };
   for(let attempt = 0; attempt <= retries; attempt++){
     last = await api(path, params);
-    if(last.ok || !RETRYABLE_STATUS.has(last.status)) return last;
+    if(last.ok || last.cancelled || !RETRYABLE_STATUS.has(last.status)) return last;
     if(attempt === retries) break;
     // 지터가 없으면 동시 5건이 같은 시점에 재시도해 한도를 다시 친다
     await apiSleep(baseDelay * 2 ** attempt + Math.random() * baseDelay);
@@ -38,7 +56,7 @@ async function apiRetry(path, params, { retries = 3, baseDelay = 400 } = {}){
 
 async function searchJuso(keyword){
   const { ok, data } = await api("juso", { keyword });
-  if(!ok) return [];
+  if(!ok) throw new Error('주소를 불러오지 못했습니다. 다시 조회해 주세요.');
   return Array.isArray(data.juso) ? data.juso : [];
 }
 
@@ -106,8 +124,9 @@ async function parcelGeomFromPNU(pnu){
 
 async function bldgisFromPNU(pnu){
   const { ok, data } = await api("vworld-bld", { pnu });
-  if(!ok || !data.found) return null;
-  return { properties: data.properties || {}, violtAny: data.violtAny === true };
+  if(!ok) return { state:'error' };
+  if(!data.found) return { state:'empty' };
+  return { state:'success', properties: data.properties || {}, violtAny: data.violtAny === true, scope:'parcel' };
 }
 
 async function loadBldgis(pnu){

@@ -71,9 +71,8 @@ test("조건조회 수집 루프: 실패를 집계·안내하고 빈 1페이지�
     PAGE.indexOf("async function runConditionSearch()"),
     PAGE.indexOf("function cUpdate(done,total)")
   );
-  assert.match(scan, /failedPages\+\+/);
-  assert.match(scan, /일부 조회 실패/);
-  // 1페이지가 비면 실측 페이지 크기가 없다 → 잔여 페이지를 만들지 않는다
-  assert.match(scan, /const pageSize = r\.titles\.length;/);
+  assert.match(scan, /startQuery\('condition'/);
+  assert.match(scan, /session\.ledger\.collect/);
+  assert.match(scan, /showQueryStatus\(session\)/);
   assert.doesNotMatch(scan, /Math\.max\(r\.titles\.length, 1\)/);
 });

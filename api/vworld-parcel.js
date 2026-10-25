@@ -34,10 +34,12 @@ async function fetchOne(pnu, key) {
     crs: "EPSG:4326", format: "json", size: "10", key, domain: DOMAIN,
   });
   const r = await fetchWithTimeout(`${VWORLD_URL}?${params}`);
-  if (!r.ok) return null;
+  if (!r.ok) throw Object.assign(new Error('parcel HTTP failure'), {status:r.status});
   const data = await r.json();
-  if (data?.response?.status !== "OK") return null;
-  const features = data?.response?.result?.featureCollection?.features || [];
+  if (data?.response?.status === 'NOT_FOUND') return null;
+  if (data?.response?.status !== "OK") throw new Error('parcel upstream failure');
+  const features = data?.response?.result?.featureCollection?.features;
+  if (!Array.isArray(features)) throw new Error('parcel format failure');
   if (!features.length) return null;
   return { properties: features[0].properties || {}, geometry: features[0].geometry || null };
 }
@@ -50,7 +52,11 @@ async function runPool(items, fn, concurrency) {
     while (i < items.length) {
       const idx = i++;
       try { results[idx] = await fn(items[idx], idx); }
-      catch { results[idx] = null; }
+      catch(e) {
+        const status = Number.isInteger(e?.status)?e.status:0;
+        console.warn('[vworld-parcel]', {kind:e?.name==='AbortError'?'timeout':'upstream',status});
+        results[idx] = {error:true,status};
+      }
     }
   }
   await Promise.all(Array.from({ length: Math.min(concurrency, items.length) }, worker));
@@ -80,8 +86,10 @@ async function handleBatch(pnus, res) {
 
   const raw = await runPool(list, p => fetchOne(p, key), BATCH_CONCURRENCY);
   const features = [];
+  const requests = [];
   for (let idx = 0; idx < list.length; idx++) {
     const got = raw[idx];
+    requests.push({pnu:list[idx],state:got?.error ? 'error' : got?.geometry ? 'success' : 'empty',status:got?.status || null});
     if (!got || !got.geometry) continue;
     features.push({
       type: "Feature",
@@ -90,8 +98,9 @@ async function handleBatch(pnus, res) {
     });
   }
   setSecurity(res);
-  res.setHeader("Cache-Control", "s-maxage=86400, stale-while-revalidate=3600");
-  return res.status(200).json({ found: features.length > 0, features });
+  const failed = requests.filter(r=>r.state==='error').length;
+  res.setHeader("Cache-Control", failed ? 'no-store' : "s-maxage=86400, stale-while-revalidate=3600");
+  return res.status(200).json({ found: features.length > 0, features, requests });
 }
 
 async function handleSingle({ x, y, pnu }, res) {
@@ -123,10 +132,11 @@ async function handleSingle({ x, y, pnu }, res) {
     if (!r.ok) return res.status(502).json({ error: "지적도 API 응답 오류" });
 
     const data = await r.json();
-    if (data?.response?.status !== "OK")
-      return res.status(200).json({ found: false, raw: data?.response?.status || "no result" });
+    if (data?.response?.status === 'NOT_FOUND') return res.status(200).json({found:false});
+    if (data?.response?.status !== "OK") throw new Error('parcel upstream failure');
 
-    const features = data?.response?.result?.featureCollection?.features || [];
+    const features = data?.response?.result?.featureCollection?.features;
+    if (!Array.isArray(features)) throw new Error('parcel format failure');
     if (!features.length) return res.status(200).json({ found: false, raw: "필지 없음" });
 
     const p = features[0].properties || {};
