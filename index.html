@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>광주 동구 건축물대장 일괄조회</title>
+<title>주소로 찾기 · 동구 건축물 정보</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -22,7 +22,7 @@
       <div class="gu-divider"></div>
       <div>
         <div class="eyebrow">전남광주통합특별시 동구</div>
-        <h1>건축물대장 <span class="light">일괄조회 </span></h1>
+        <h1>동구 건축물 정보</h1>
       </div>
     </div>
   </header>
@@ -40,12 +40,12 @@
   <!-- ===== 건축물 조회 ===== -->
   <div id="tab-building">
     <div class="b-subtabs">
-      <button class="b-subtab active" data-sub="bulk" onclick="switchBuildingSubtab('bulk')">일괄조회</button>
-      <button class="b-subtab" data-sub="cond" onclick="switchBuildingSubtab('cond')">조건조회</button>
-      <button class="b-subtab" data-sub="detail" onclick="switchBuildingSubtab('detail')">단건 상세조회</button>
+      <button class="b-subtab active" data-sub="detail" onclick="switchBuildingSubtab('detail')">주소로 찾기</button>
+      <button class="b-subtab" data-sub="bulk" onclick="switchBuildingSubtab('bulk')">여러 주소 한 번에</button>
+      <button class="b-subtab" data-sub="cond" onclick="switchBuildingSubtab('cond')">조건으로 찾기</button>
     </div>
 
-    <div id="building-sub-bulk" class="b-subpanel">
+    <div id="building-sub-bulk" class="b-subpanel" style="display:none">
   <!-- ===== TAB 1: 일괄조회 ===== -->
   <div id="tab-bulk">
   <!-- INPUT -->
@@ -211,11 +211,11 @@
   </div><!-- /tab-cond -->
     </div>
 
-    <div id="building-sub-detail" class="b-subpanel" style="display:none">
+    <div id="building-sub-detail" class="b-subpanel">
   <!-- ===== 단건 상세조회 ===== -->
   <div id="tab-detail">
     <div class="card">
-      <div class="card-head"><h2><span class="num-tag">검</span>단건 상세조회</h2></div>
+      <div class="card-head"><h2><span class="num-tag">검</span>주소 입력</h2></div>
       <div class="card-body">
         <div class="d-search-row">
           <input id="dInput" type="text" placeholder="예) 제봉로 167   ·   서남로 14   ·   경양로 234 110동">
@@ -638,6 +638,7 @@
 <script src="reliability.js"></script>
 <script src="stats-metadata.js"></script>
 <script src="search-state.js"></script>
+<script src="ui-labels.js"></script>
 <script>
 /* ============================================================
    1. 앱 로직 (순수 변환은 transform.js, API 데이터 레이어는 app-api.js)
@@ -1768,7 +1769,7 @@ function renderDetail(wantDong){
     return;
   }
   D_DONGS = D_TITLES.slice().sort((a,b)=>leadNum(a)-leadNum(b));   // 숫자 동 오름차순, 비숫자는 뒤(안정)
-  const pre = wantDong ? D_DONGS.findIndex(t=>dongDigits(t.dongNm)===wantDong) : -1;
+  const pre = D_DONGS.indexOf(pickDetailTitle(D_DONGS,wantDong));
   area.innerHTML = dongPickerHTML(D_DONGS) + `<div id="dDongCard"></div>`;
   D_DONGS.forEach((t,i)=>{ const b=document.getElementById("dDong"+i); if(b) b.addEventListener("click",()=>selectDong(i)); });
   selectDong(pre>=0 ? pre : 0);
@@ -1786,7 +1787,7 @@ function selectDong(i){
   const t = D_DONGS[i]; if(!t) return;
   D_SELECTED_TITLE=t;
   D_SELDONG = String(t.dongNm||"").trim();
-  document.querySelectorAll(".d-dong").forEach((b,j)=>b.classList.toggle("active", j===i));
+  document.querySelectorAll(".d-dong").forEach((b,j)=>{b.classList.toggle("active", j===i);b.setAttribute('aria-pressed',String(j===i));});
   document.getElementById("dDongCard").innerHTML = cardHTML(t, gbLabel(D_DONGS));
   wireSubtabs(D_SELDONG);
 }
@@ -1899,6 +1900,7 @@ function wireSubtabs(dongNm){
     btn.addEventListener("click", ()=>{
       document.querySelectorAll(".d-subtab").forEach(b=>b.classList.remove("active"));
       btn.classList.add("active");
+      document.querySelectorAll('#dResult .d-subtab').forEach(b=>b.setAttribute('aria-pressed',String(b===btn)));
       loadSubtab(btn.dataset.tab, dongNm);
     });
   });
@@ -2269,7 +2271,7 @@ document.getElementById("dInput")?.addEventListener("keydown", e=>{
 });
 
 /* ---- 건축물 조회 하부 탭 상태 ---- */
-let B_SUBTAB = "bulk";
+let B_SUBTAB = "detail";
 
 /* ---- 탭 전환 (building / housing / demol / vacant / stats / map) ---- */
 function switchTab(which){
@@ -2285,6 +2287,7 @@ function switchTab(which){
   if(which==="vacant") initVacantTab();
   if(which==="stats") initStatsTab();
   if(which==="map") switchMapSubtab(MAP_SUBTAB);
+  if(typeof syncScreenPresentation==='function')syncScreenPresentation();
 }
 
 function switchBuildingSubtab(key){
@@ -2296,6 +2299,7 @@ function switchBuildingSubtab(key){
     document.querySelector(`.b-subtab[data-sub="${k}"]`)?.classList.toggle("active", k===key);
   }
   if(key==="cond") loadHaengjeong();
+  if(typeof syncScreenPresentation==='function')syncScreenPresentation();
 }
 
 /* ============================================================
@@ -5555,6 +5559,7 @@ function switchMapSubtab(which){
   document.getElementById("map-sub-figure").style.display = which === "figure" ? "" : "none";
   if(which === "general") initMapTab();
   else initFigureGroundMap();
+  if(typeof syncScreenPresentation==='function')syncScreenPresentation();
 }
 
 async function initFigureGroundMap(){

@@ -1,0 +1,9 @@
+{
+  "checkedAt": "2026-10-25",
+  "source": "Production /api/building, sigunguCd=12210, bjdongCd=11800, platGbCd=0, bun=0031, ji=0000, numOfRows=1000, pageNo=1. Selected response fields only; no credentials.",
+  "titles": [
+    {"mgmBldrgstPk":1.0000000000000048e+21,"bldNm":"","dongNm":"","mainAtchGbCd":"1","mainAtchGbCdNm":"부속건축물","mainPurpsCdNm":"업무시설","totArea":44.78,"newPlatPlc":"전남광주통합특별시 동구 서남로 1 (서석동)"},
+    {"mgmBldrgstPk":1065124168,"bldNm":"","dongNm":"","mainAtchGbCd":"0","mainAtchGbCdNm":"주건축물","mainPurpsCdNm":"업무시설","totArea":11751.74,"newPlatPlc":"전남광주통합특별시 동구 서남로 1 (서석동)"},
+    {"mgmBldrgstPk":1065124169,"bldNm":"서석동 31","dongNm":"주건축물제2동","mainAtchGbCd":"0","mainAtchGbCdNm":"주건축물","mainPurpsCdNm":"업무시설","totArea":5920.75,"newPlatPlc":"전남광주통합특별시 동구 서남로 1 (서석동)"}
+  ]
+}
