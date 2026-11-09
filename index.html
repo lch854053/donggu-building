@@ -12,7 +12,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.fullscreen/2.4.0/Control.FullScreen.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.fullscreen/2.4.0/Control.FullScreen.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<link rel="stylesheet" href="styles.css?v=8">
+<link rel="stylesheet" href="styles.css?v=9">
 </head>
 <body>
 <div class="wrap">
@@ -219,7 +219,7 @@
       <div class="card-head"><h2><span class="num-tag">검</span>주소 입력</h2></div>
       <div class="card-body">
         <div class="d-search-row">
-          <div class="address-combobox"><label class="address-label" for="dInput">검색할 주소</label><input id="dInput" type="text" autocomplete="off" placeholder="예) 제봉로 167   ·   서남로 14   ·   경양로 234 110동" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="addressSuggestions"><ul id="addressSuggestions" class="address-suggestions" role="listbox" hidden></ul><span id="addressSuggestionStatus" class="sr-only" role="status" aria-live="polite"></span></div>
+          <div class="address-combobox"><label class="address-label" for="dInput">검색할 주소</label><input id="dInput" type="text" autocomplete="off" placeholder="예) 제봉로 167   ·   서남로 14   ·   경양로 234 110동" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="addressSuggestions" aria-describedby="addressSuggestionStatus"><ul id="addressSuggestions" class="address-suggestions" role="listbox" hidden></ul><span id="addressSuggestionStatus" class="suggestion-status" role="status" aria-live="polite"></span></div>
           <button class="run" id="dRunBtn" onclick="runDetail()">조회</button>
           <button class="ghost" onclick="clearDetail()">초기화</button>
         </div>
@@ -1608,6 +1608,7 @@ function clearCond(){
 /* ── 단건 상세(Detail) 상태 ── */
 let D_CAND   = null;   // 확정 필지키
 let D_TITLES = [];     // 표제부 rows
+let D_RESULT_TIME = null, D_RESULT_SOURCE = null; // 마지막으로 표시한 기본 자료의 조회 시각과 출처
 let D_SELDONG = null;  // 선택 동 dongNm
 let D_CACHE = {};    // 검색 세대별 필지 캐시. 이전 요청은 이전 객체만 수정한다.
 const D_GATE = requestGate(), D_TAB_GATE = requestGate();
@@ -1660,7 +1661,7 @@ async function runDetail(){
   if(!raw){ document.getElementById('dRunBtn').disabled=false; dStatus('<span class="badge warn">주소를 입력하세요</span>'); return; }
   const btn = document.getElementById("dRunBtn"); btn.disabled = true;
   document.getElementById("dResult").style.display = "none";
-  D_CAND=null; D_TITLES=[]; D_SELDONG=null; D_DONGS=[]; D_BLDGIS=null;
+  D_CAND=null; D_TITLES=[]; D_RESULT_TIME=null; D_RESULT_SOURCE=null; D_SELDONG=null; D_DONGS=[]; D_BLDGIS=null;
   D_CACHE = {}; D_LDA = null;
   dStatus('<span class="d-spin">주소 검색 중…</span>');
   try{
@@ -1688,7 +1689,7 @@ async function runDetail(){
     const res = await resolveByCandidates(candidates, top0);
     if(!current()) return;
     let titles = res.titles, usedParams = res.usedParams, errMsg = res.error;
-    let viaJuso = titles.length > 0;
+    let viaJuso = titles.length > 0, detailSource = '건축물대장 표제부';
     // 대장 도로명이 juso(입력)와 불일치(공공 데이터 오류)면 juso 도로명으로 교정 표시.
     // 지번 기반 대장 데이터는 타깃 건물이 맞으므로 버리지 않고 도로명만 보정(일괄조회와 동일).
     if(res.roadMismatch && titles.length){
@@ -1726,6 +1727,7 @@ async function runDetail(){
         if(main){
           const jusoRoad = stripParens(String(top0?.roadAddrPart1 || top0?.roadAddr || "")).trim();
           titles = [{ ...main, newPlatPlc: jusoRoad || main.platPlc, mainAtchGbCdNm: "주건축물" }];
+          detailSource = '건축인허가 기본개요';
           viaJuso = false;   // 인허가 경로 — 도로명 일치 필터 미적용
         }
       }
@@ -1749,7 +1751,7 @@ async function runDetail(){
       if(hit.length) titles = hit;
     }
 
-    D_CAND = usedParams; D_TITLES = titles; dStatus("");
+    D_CAND = usedParams; D_TITLES = titles; D_RESULT_SOURCE=detailSource; D_RESULT_TIME=new Date(); dStatus("");
     D_BLDGIS={state:'loading'};D_LDA={state:'loading'};
     renderDetail(wantDong);
     btn.disabled=false;
@@ -2278,7 +2280,7 @@ function clearDetail(){
   document.getElementById("dInput").value="";
   document.getElementById("dResult").style.display="none";
   dStatus("");
-  D_CAND=null; D_TITLES=[]; D_SELDONG=null; D_DONGS=[]; D_BLDGIS=null;
+  D_CAND=null; D_TITLES=[]; D_RESULT_TIME=null; D_RESULT_SOURCE=null; D_SELDONG=null; D_DONGS=[]; D_BLDGIS=null;
 }
 
 document.getElementById("dInput")?.addEventListener("keydown", e=>{
