@@ -23,6 +23,7 @@
       <div>
         <div class="eyebrow">전남광주통합특별시 동구</div>
         <h1>동구 건축물 정보</h1>
+        <p class="service-intro">주소 하나로 건축물 정보를 간편하게 확인하세요</p>
       </div>
     </div>
   </header>
@@ -218,11 +219,12 @@
       <div class="card-head"><h2><span class="num-tag">검</span>주소 입력</h2></div>
       <div class="card-body">
         <div class="d-search-row">
-          <input id="dInput" type="text" placeholder="예) 제봉로 167   ·   서남로 14   ·   경양로 234 110동">
+          <div class="address-combobox"><label class="address-label" for="dInput">검색할 주소</label><input id="dInput" type="text" autocomplete="off" placeholder="예) 제봉로 167   ·   서남로 14   ·   경양로 234 110동" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="addressSuggestions"><ul id="addressSuggestions" class="address-suggestions" role="listbox" hidden></ul><span id="addressSuggestionStatus" class="sr-only" role="status" aria-live="polite"></span></div>
           <button class="run" id="dRunBtn" onclick="runDetail()">조회</button>
           <button class="ghost" onclick="clearDetail()">초기화</button>
         </div>
         <div class="hint">지번·도로명 모두 가능. 아파트는 동(예: <b>108동</b>)을 함께 입력하면 해당 동이 먼저 선택됩니다.</div>
+        <nav class="quick-links" aria-label="다른 조회 방법"><button type="button" onclick="switchBuildingSubtab('bulk')">여러 주소 조회</button><button type="button" onclick="switchBuildingSubtab('cond')">조건으로 찾기</button><button type="button" onclick="switchTab('map')">지도에서 찾기</button><button type="button" onclick="switchTab('stats')">지역 현황 보기</button></nav>
         <div class="d-status" id="dStatus" style="display:none"></div>
       </div>
     </div>
@@ -1733,10 +1735,10 @@ async function runDetail(){
     // 일시 오류가 있었더라도 다른 후보/폴백에서 대장을 찾았으면 성공을 우선 (일괄조회와 일관)
     if(errMsg && !titles.length){ dStatus(`<span class="badge err">${esc(errMsg)}</span>`); return; }
     if(!usedParams){
-      dStatus(addressFailed ? '<span class="badge err">주소를 불러오지 못했습니다. 다시 조회해 주세요.</span>' : '<span class="badge none">동구 내 주소를 찾지 못했습니다</span>');
+      dStatus(addressFailed ? '<span class="badge err">주소를 불러오지 못했습니다. 잠시 후 다시 조회해 주세요.</span>' : '<span class="badge none">동구 내 주소를 찾지 못했습니다. 도로명이나 지번을 확인해 다시 입력해 주세요.</span>');
       return;
     }
-    if(!titles.length){ dStatus('<span class="badge none">대장 없음 (나대지·미등록)</span>'); return; }
+    if(!titles.length){ dStatus('<span class="badge none">이 주소에서 건축물대장 자료를 찾지 못했습니다. 주소를 확인하거나 담당 부서에 문의해 주세요. 실제 건물이 없다는 뜻은 아닙니다.</span>'); return; }
 
     // 한 지번에 도로명이 다른 여러 동이 등재된 경우(예: 캠퍼스=단일 지번)
     // 도로명으로 검색했으면 검색한 도로명과 일치하는 동만 남긴다.(매칭 없으면 전체 유지)
@@ -5785,6 +5787,7 @@ renderLastUpdated();
 <script src="ui-enhancements.js"></script>
 <script src="filter-ui.js"></script>
 <script src="result-ui.js"></script>
+<script src="address-autocomplete.js"></script>
 <script src="search-navigation.js"></script>
 </body>
 </html>

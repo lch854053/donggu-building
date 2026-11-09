@@ -150,12 +150,19 @@
     const summary=document.createElement('section');summary.className='result-detail-summary';summary.setAttribute('aria-label','선택 건물 요약');
     const b=mergeBuilding(t),title=document.createElement('h3');title.textContent=b.bldNm!=='-'?b.bldNm:b.newPlatPlc!=='-'?b.newPlatPlc:b.platPlc;summary.append(title);
     const data=[['도로명주소',b.newPlatPlc],['지번주소',b.platPlc],['선택 동',t.dongNm||'동명 미확인'],['주·부속 구분',F.designation(t)],['주용도',b.mainPurps],['연면적',cell(b.totArea,'area',' ㎡')],['층수',`지상 ${cell(b.grndFlr,'floor','층')} / 지하 ${cell(b.ugrndFlr,'floor','층')}`],['사용승인',F.date(b.useAprDay)]];
-    const dl=document.createElement('dl');for(const [k,v]of data){const dt=document.createElement('dt'),dd=document.createElement('dd');dt.textContent=k;dd.textContent=v&&v!=='-'?v:'미확인';dl.append(dt,dd);}summary.append(dl);overview.prepend(summary);
+    const dl=document.createElement('dl');for(const [k,v]of data){const dt=document.createElement('dt'),dd=document.createElement('dd');dt.textContent=k;dd.textContent=v&&v!=='-'?v:'미확인';dl.append(dt,dd);}summary.append(dl);
+    if(kind!=='폐쇄말소'){
+      const copy=document.createElement('button');copy.type='button';copy.className='result-action copy-core';copy.textContent='핵심정보 복사';
+      const lines=[['건물명',b.bldNm],['주소',b.newPlatPlc&&b.newPlatPlc!=='-'?b.newPlatPlc:b.platPlc],...data.filter(([k])=>['주용도','연면적','층수','사용승인'].includes(k))];
+      copy.dataset.copyText=lines.map(([k,v])=>`${k}: ${v&&v!=='-'?v:'미확인'}`).join('\n')+'\n자료 출처: 건축물대장 또는 건축인허가 조회 결과\n조회 시각: '+new Date().toLocaleString('ko-KR');summary.append(copy);
+    }
+    overview.prepend(summary);
     // P1 parcel-scope GIS warnings and matching uncertainty remain outside collapsed sections.
     const warnings=document.createElement('div');warnings.className='d-kv result-visible-supplements';summary.after(warnings);
     for(const slot of overview.querySelectorAll('.supplement-slot'))warnings.append(slot);
     const details=document.createElement('details');details.className='result-detail-more';details.innerHTML='<summary>세부정보 · 면적·주차·구조 등</summary>';warnings.after(details);
     for(const part of [...overview.children])if(part.matches('.d-addr,.d-sec-title,.d-kv:not(.result-visible-supplements)'))details.append(part);
+    const terms=document.createElement('details');terms.className='result-evidence';terms.innerHTML='<summary>건폐율·용적률이란?</summary><p>건폐율은 대지면적에 대한 건축면적의 비율이고, 용적률은 대지면적에 대한 용적률 산정 연면적의 비율입니다.</p>';details.append(terms);
     const closed=kind==='폐쇄말소',parcel=closed&&MRESULTS[M_DET_IDX]?pnu('demol',MRESULTS[M_DET_IDX]):!closed&&D_CAND?toPNU(D_CAND):'미확인';
     const evidence=document.createElement('details');evidence.className='result-evidence';const heading=document.createElement('summary');heading.textContent='자료 근거 · 선택 동과 필지';evidence.append(heading);const p=document.createElement('p');p.textContent=`${closed?'폐쇄말소대장':'건축물대장 표제부'} · 레코드 ID ${t.mgmBldrgstPk||'미확인'} · 필지 ${parcel} · 수집일 ${t.collectedAt||'미확인 (실시간 응답)'} · 동 선택은 대장 표제부 기준. ${closed?'철거·멸실 기록과의 개별 동 연결을 확정하지 않습니다.':'GIS 높이·위반정보는 필지 대표 자료이며 선택 동과의 직접 연결은 확인되지 않았습니다.'}`;evidence.append(p);details.after(evidence);
     return template.innerHTML;
@@ -194,5 +201,6 @@
   const mapOriginal=showMapDetailCard;showMapDetailCard=function(source,data){const value=mapOriginal(source,data);mapCard(source,data);return value;};
   const renderOriginal=renderDetail;renderDetail=function(...args){const value=renderOriginal(...args);const root=$('dResult');if(!root.querySelector('.result-return-search')){const b=button('검색으로 돌아가기',()=>{$('dInput').focus();$('dInput').scrollIntoView({block:'center'});});b.classList.add('result-return-search');root.append(b);}return value;};
   for(const tab of Object.keys(configs))mount(tab);
+  document.addEventListener('click',async e=>{const copy=e.target.closest('.copy-core');if(!copy)return;try{await navigator.clipboard.writeText(copy.dataset.copyText);copy.textContent='복사 완료';}catch{copy.textContent='복사 실패 · 텍스트를 직접 선택해 주세요';const text=document.createElement('textarea');text.value=copy.dataset.copyText;text.className='copy-fallback';text.setAttribute('aria-label','복사할 핵심정보');copy.after(text);text.select();}});
   window.ResultUI={render,summary,locationFor,detailLink,state,models};
 })();
