@@ -17,7 +17,6 @@
 import { writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import {statsMetadata} from './lib/stats-metadata.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
@@ -131,7 +130,6 @@ async function main() {
     indicators,
   };
   const file = join(ROOT, "stats_donggu.json");
-  for(const ind of out.indicators)ind.metadata=statsMetadata('kosis',ind,out);
   await writeFile(file, JSON.stringify(out, null, 2));
   console.log(`\n✓ ${file} 생성 (지표 ${indicators.length}개)`);
 }
