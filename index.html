@@ -12,7 +12,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.fullscreen/2.4.0/Control.FullScreen.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.fullscreen/2.4.0/Control.FullScreen.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<link rel="stylesheet" href="styles.css?v=8">
+<link rel="stylesheet" href="styles.css?v=9">
 </head>
 <body>
 <div class="wrap">
@@ -23,6 +23,7 @@
       <div>
         <div class="eyebrow">전남광주통합특별시 동구</div>
         <h1>동구 건축물 정보</h1>
+        <p class="service-intro">주소 하나로 건축물 정보를 간편하게 확인하세요</p>
       </div>
     </div>
   </header>
@@ -218,11 +219,12 @@
       <div class="card-head"><h2><span class="num-tag">검</span>주소 입력</h2></div>
       <div class="card-body">
         <div class="d-search-row">
-          <input id="dInput" type="text" placeholder="예) 제봉로 167   ·   서남로 14   ·   경양로 234 110동">
+          <div class="address-combobox"><label class="address-label" for="dInput">검색할 주소</label><input id="dInput" type="text" autocomplete="off" placeholder="예) 제봉로 167   ·   서남로 14   ·   경양로 234 110동" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="addressSuggestions" aria-describedby="addressSuggestionStatus"><ul id="addressSuggestions" class="address-suggestions" role="listbox" hidden></ul><span id="addressSuggestionStatus" class="suggestion-status" role="status" aria-live="polite"></span></div>
           <button class="run" id="dRunBtn" onclick="runDetail()">조회</button>
           <button class="ghost" onclick="clearDetail()">초기화</button>
         </div>
         <div class="hint">지번·도로명 모두 가능. 아파트는 동(예: <b>108동</b>)을 함께 입력하면 해당 동이 먼저 선택됩니다.</div>
+        <nav class="quick-links" aria-label="다른 조회 방법"><button type="button" onclick="switchBuildingSubtab('bulk')">여러 주소 조회</button><button type="button" onclick="switchBuildingSubtab('cond')">조건으로 찾기</button><button type="button" onclick="switchTab('map')">지도에서 찾기</button><button type="button" onclick="switchTab('stats')">지역 현황 보기</button></nav>
         <div class="d-status" id="dStatus" style="display:none"></div>
       </div>
     </div>
@@ -1606,6 +1608,7 @@ function clearCond(){
 /* ── 단건 상세(Detail) 상태 ── */
 let D_CAND   = null;   // 확정 필지키
 let D_TITLES = [];     // 표제부 rows
+let D_RESULT_TIME = null, D_RESULT_SOURCE = null; // 마지막으로 표시한 기본 자료의 조회 시각과 출처
 let D_SELDONG = null;  // 선택 동 dongNm
 let D_CACHE = {};    // 검색 세대별 필지 캐시. 이전 요청은 이전 객체만 수정한다.
 const D_GATE = requestGate(), D_TAB_GATE = requestGate();
@@ -1658,7 +1661,7 @@ async function runDetail(){
   if(!raw){ document.getElementById('dRunBtn').disabled=false; dStatus('<span class="badge warn">주소를 입력하세요</span>'); return; }
   const btn = document.getElementById("dRunBtn"); btn.disabled = true;
   document.getElementById("dResult").style.display = "none";
-  D_CAND=null; D_TITLES=[]; D_SELDONG=null; D_DONGS=[]; D_BLDGIS=null;
+  D_CAND=null; D_TITLES=[]; D_RESULT_TIME=null; D_RESULT_SOURCE=null; D_SELDONG=null; D_DONGS=[]; D_BLDGIS=null;
   D_CACHE = {}; D_LDA = null;
   dStatus('<span class="d-spin">주소 검색 중…</span>');
   try{
@@ -1686,7 +1689,7 @@ async function runDetail(){
     const res = await resolveByCandidates(candidates, top0);
     if(!current()) return;
     let titles = res.titles, usedParams = res.usedParams, errMsg = res.error;
-    let viaJuso = titles.length > 0;
+    let viaJuso = titles.length > 0, detailSource = '건축물대장 표제부';
     // 대장 도로명이 juso(입력)와 불일치(공공 데이터 오류)면 juso 도로명으로 교정 표시.
     // 지번 기반 대장 데이터는 타깃 건물이 맞으므로 버리지 않고 도로명만 보정(일괄조회와 동일).
     if(res.roadMismatch && titles.length){
@@ -1724,6 +1727,7 @@ async function runDetail(){
         if(main){
           const jusoRoad = stripParens(String(top0?.roadAddrPart1 || top0?.roadAddr || "")).trim();
           titles = [{ ...main, newPlatPlc: jusoRoad || main.platPlc, mainAtchGbCdNm: "주건축물" }];
+          detailSource = '건축인허가 기본개요';
           viaJuso = false;   // 인허가 경로 — 도로명 일치 필터 미적용
         }
       }
@@ -1733,10 +1737,10 @@ async function runDetail(){
     // 일시 오류가 있었더라도 다른 후보/폴백에서 대장을 찾았으면 성공을 우선 (일괄조회와 일관)
     if(errMsg && !titles.length){ dStatus(`<span class="badge err">${esc(errMsg)}</span>`); return; }
     if(!usedParams){
-      dStatus(addressFailed ? '<span class="badge err">주소를 불러오지 못했습니다. 다시 조회해 주세요.</span>' : '<span class="badge none">동구 내 주소를 찾지 못했습니다</span>');
+      dStatus(addressFailed ? '<span class="badge err">주소를 불러오지 못했습니다. 잠시 후 다시 조회해 주세요.</span>' : '<span class="badge none">동구 내 주소를 찾지 못했습니다. 도로명이나 지번을 확인해 다시 입력해 주세요.</span>');
       return;
     }
-    if(!titles.length){ dStatus('<span class="badge none">대장 없음 (나대지·미등록)</span>'); return; }
+    if(!titles.length){ dStatus('<span class="badge none">이 주소에서 건축물대장 자료를 찾지 못했습니다. 주소를 확인하거나 담당 부서에 문의해 주세요. 실제 건물이 없다는 뜻은 아닙니다.</span>'); return; }
 
     // 한 지번에 도로명이 다른 여러 동이 등재된 경우(예: 캠퍼스=단일 지번)
     // 도로명으로 검색했으면 검색한 도로명과 일치하는 동만 남긴다.(매칭 없으면 전체 유지)
@@ -1747,7 +1751,7 @@ async function runDetail(){
       if(hit.length) titles = hit;
     }
 
-    D_CAND = usedParams; D_TITLES = titles; dStatus("");
+    D_CAND = usedParams; D_TITLES = titles; D_RESULT_SOURCE=detailSource; D_RESULT_TIME=new Date(); dStatus("");
     D_BLDGIS={state:'loading'};D_LDA={state:'loading'};
     renderDetail(wantDong);
     btn.disabled=false;
@@ -2276,7 +2280,7 @@ function clearDetail(){
   document.getElementById("dInput").value="";
   document.getElementById("dResult").style.display="none";
   dStatus("");
-  D_CAND=null; D_TITLES=[]; D_SELDONG=null; D_DONGS=[]; D_BLDGIS=null;
+  D_CAND=null; D_TITLES=[]; D_RESULT_TIME=null; D_RESULT_SOURCE=null; D_SELDONG=null; D_DONGS=[]; D_BLDGIS=null;
 }
 
 document.getElementById("dInput")?.addEventListener("keydown", e=>{
@@ -5785,6 +5789,7 @@ renderLastUpdated();
 <script src="ui-enhancements.js"></script>
 <script src="filter-ui.js"></script>
 <script src="result-ui.js"></script>
+<script src="address-autocomplete.js"></script>
 <script src="search-navigation.js"></script>
 </body>
 </html>
