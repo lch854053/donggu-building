@@ -301,23 +301,7 @@ function hdongOf(p, HJ){
   return (HJ.jibun2hdong || {})[key] || "";
 }
 
-function fmt(n){ return n==null || String(n).trim()==='' || !Number.isFinite(Number(n)) ? "-" : Number(n).toLocaleString("ko-KR"); }
-
-function normalizeRangePair(low,high,min,max,precision=1){
-  const clean=(value,fallback)=>{
-    const n=value==null || String(value).trim()==='' ? fallback : Number(value);
-    return Math.min(max,Math.max(min,Number((Math.round((Number.isFinite(n)?n:fallback)/precision)*precision).toFixed(8))));
-  };
-  const a=clean(low,min),b=clean(high,max);
-  return a<=b?[a,b]:[b,a];
-}
-
-function bjdScopeForHdong(hdong,mapping){
-  const all=!hdong || hdong==='__ALL__';
-  const declared=all?Object.values(mapping?.hdong2bjd || {}).flat():(mapping?.hdong2bjd?.[hdong] || []);
-  const parcels=Object.entries(mapping?.jibun2hdong || {}).filter(([key,name])=>all || name===hdong).map(([key])=>key.slice(0,5));
-  return [...new Set([...declared,...parcels])];
-}
+function fmt(n){ return n==null ? "-" : Number(n).toLocaleString("ko-KR"); }
 
 function esc(s){ return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 
@@ -388,19 +372,6 @@ function pickMainTitle(rows){
     if(s > bestScore){ best = candidates[i]; bestScore = s; }
   }
   return best;
-}
-
-// Detail keeps every row; main-building designation takes priority over purpose completeness.
-// Within the designated main rows reuse the existing representative policy, never area ranking.
-function pickDetailTitle(rows, wantDong){
-  if(!Array.isArray(rows)||!rows.length)return null;
-  const requested=wantDong ? rows.find(r=>dongDigits(r.dongNm)===wantDong) : null;
-  if(requested)return requested;
-  const mains=rows.filter(r=>{
-    const name=String(r.mainAtchGbCdNm||'').trim();
-    return name ? name==='주건축물' : String(r.mainAtchGbCd??'').trim()==='0';
-  });
-  return mains.length ? pickMainTitle(mains)||mains[0] : pickMainTitle(rows)||rows[0];
 }
 
 // 공백 제거
